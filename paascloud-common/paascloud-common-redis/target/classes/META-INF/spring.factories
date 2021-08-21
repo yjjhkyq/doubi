@@ -1,0 +1,6 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.paascloud.redis.configure.RedisConfig,\
+  com.paascloud.redis.service.RedisService,\
+  com.paascloud.redis.service.SpringService
+
+  

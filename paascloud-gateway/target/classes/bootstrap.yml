@@ -1,0 +1,31 @@
+# Tomcat
+server:
+  port: 8080
+
+# Spring
+spring:
+  application:
+    # 应用名称
+    name: paascloud-gateway
+  profiles:
+    # 环境配置
+    active: dev
+
+---
+spring:
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      discovery:
+        # 服务注册地址
+        server-addr: 118.24.105.140:8848
+        namespace: 7657749b-b8f4-423b-a6ba-5425e63e8f86
+      config:
+        # 配置中心地址
+        server-addr: 118.24.105.140:8848
+        # 配置文件格式
+        file-extension: yml
+        namespace: 7657749b-b8f4-423b-a6ba-5425e63e8f86
+        group: dev
+---
