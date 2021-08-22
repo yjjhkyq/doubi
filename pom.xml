@@ -4,22 +4,22 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.paascloud</groupId>
-    <artifactId>paascloud</artifactId>
+    <groupId>com.x</groupId>
+    <artifactId>x</artifactId>
     <version>1.0.0</version>
     <modules>
-        <module>paascloud-common</module>
-        <module>paascloud-gateway</module>
-        <module>paascloud-monitor</module>
-        <module>paascloud-provider-api</module>
-        <module>paascloud-provider</module>
+        <module>x-common</module>
+        <module>x-gateway</module>
+        <module>x-monitor</module>
+        <module>x-provider-api</module>
+        <module>x-provider</module>
     </modules>
 
-    <name>paascloud</name>
+    <name>x</name>
     <url></url>
     <description>葡萄熟了云平台</description>
     <properties>
-        <paascloud.version>1.0.0</paascloud.version>
+        <x.version>1.0.0</x.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>11</java.version>
@@ -197,38 +197,38 @@
                 <version>${guava.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.paascloud</groupId>
-                <artifactId>paascloud-common-swagger</artifactId>
+                <groupId>com.x</groupId>
+                <artifactId>x-common-swagger</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>
-                <groupId>com.paascloud</groupId>
-                <artifactId>paascloud-common-core</artifactId>
+                <groupId>com.x</groupId>
+                <artifactId>x-common-core</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>
-                <groupId>com.paascloud</groupId>
-                <artifactId>paascloud-common-util</artifactId>
+                <groupId>com.x</groupId>
+                <artifactId>x-common-util</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>
-                <groupId>com.paascloud</groupId>
-                <artifactId>paascloud-common-redis</artifactId>
+                <groupId>com.x</groupId>
+                <artifactId>x-common-redis</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>
-                <groupId>com.paascloud.provider.api</groupId>
-                <artifactId>paascloud-provider-api-customer</artifactId>
+                <groupId>com.x.provider.api</groupId>
+                <artifactId>x-provider-api-customer</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>
-                <groupId>com.paascloud.provider.api</groupId>
-                <artifactId>paascloud-provider-api-oss</artifactId>
+                <groupId>com.x.provider.api</groupId>
+                <artifactId>x-provider-api-oss</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>
-                <groupId>com.paascloud.provider.api</groupId>
-                <artifactId>paascloud-provider-api-vod</artifactId>
+                <groupId>com.x.provider.api</groupId>
+                <artifactId>x-provider-api-vod</artifactId>
                 <version>1.0.0</version>
             </dependency>
         </dependencies>

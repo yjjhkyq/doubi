@@ -1,0 +1,8 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.x.core.utils.SpringUtils,\
+  com.x.core.aspects.GlobalExceptionHandler,\
+  com.x.core.configure.MybatisPlusConfig,\
+  com.x.core.configure.XFeignAutoConfiguration,\
+  com.x.core.aspects.MyBatisPlusMetaObjectHandler
+
+  

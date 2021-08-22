@@ -1,0 +1,16 @@
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          lowerCaseServiceId: true
+          enabled: true
+      routes:
+        - id: x-provider-customer
+          uri: lb://x-provider-customer
+          predicates:
+            - Path=/customer/**
+          filters:
+            - StripPrefix=1
+  main:
+    allow-bean-definition-overriding: true

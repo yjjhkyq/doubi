@@ -1,8 +1,0 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.paascloud.core.utils.SpringUtils,\
-  com.paascloud.core.aspects.GlobalExceptionHandler,\
-  com.paascloud.core.configure.MybatisPlusConfig,\
-  com.paascloud.core.configure.PaascloudFeignAutoConfiguration,\
-  com.paascloud.core.aspects.MyBatisPlusMetaObjectHandler
-
-  
