@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.time.Duration;
+import java.util.Base64;
 
 @Service
 public class TencentSignatureServiceImpl {
@@ -54,9 +55,7 @@ public class TencentSignatureServiceImpl {
     }
 
     private String base64Encode(byte[] buffer) {
-//        BASE64Encoder encoder = new BASE64Encoder();
-//        return encoder.encode(buffer);
-        return "";
+        return Base64.getEncoder().encodeToString(buffer);
     }
 
     public void setSecretId(String secretId) {
@@ -76,6 +75,6 @@ public class TencentSignatureServiceImpl {
     }
 
     public void setSignValidDuration(Duration duration) {
-        this.signValidDuration = signValidDuration;
+        this.signValidDuration = duration;
     }
 }

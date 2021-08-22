@@ -4,8 +4,10 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.x.core.exception.ApiException;
 import com.x.core.web.api.R;
+import com.x.provider.api.vod.enums.MediaTypeEnum;
 import com.x.provider.api.vod.enums.ReviewResultEnum;
 import com.x.provider.api.vod.model.ao.GetContentReviewResultAO;
+import com.x.provider.api.vod.model.ao.ListMediaUrlAO;
 import com.x.provider.api.vod.model.dto.ContentReviewResultDTO;
 import com.x.provider.vod.configure.TencentVodConfig;
 import com.x.provider.vod.mapper.ContentReviewResultMapper;
@@ -69,7 +71,7 @@ public class VodServiceImpl implements VodService {
         sign.setSecretId(tencentVodConfig.getSecretId());
         sign.setSecretKey(tencentVodConfig.getSecretKey());
         sign.setRandom(new Random().nextInt(java.lang.Integer.MAX_VALUE));
-        sign.setSignValidDuration(Duration.ofMinutes(2));
+        sign.setSignValidDuration(Duration.ofSeconds(10 * 60));
         try {
             String signature = sign.getUploadSignature(tencentVodConfig.getTaskStreamName());
             result.setSignature(signature);
@@ -125,6 +127,16 @@ public class VodServiceImpl implements VodService {
         });
     }
 
+    @Override
+    public Map<String, String> listMediaUrl(ListMediaUrlAO listMediaUrlAO) {
+        listMediaUrlAO.setFileIds(listMediaUrlAO.getFileIds().stream().distinct().collect(Collectors.toList()));
+        if (listMediaUrlAO.getMediaType().equals(MediaTypeEnum.COVER)) {
+            return getMediaInfo(listMediaUrlAO.getFileIds()).stream().filter(item -> !StringUtils.isEmpty(item.getCoverUrl())).collect(
+                    Collectors.toMap(MediaInfo::getFileId, MediaInfo::getCoverUrl));
+        }
+        return new HashMap<>();
+    }
+
     public MediaInfo getMediaInfo(long id, String fileId){
         var query = new LambdaQueryWrapper<MediaInfo>();
         if (id > 0){
@@ -134,6 +146,16 @@ public class VodServiceImpl implements VodService {
             query.eq(MediaInfo::getFileId, fileId);
         }
         return mediaInfoMapper.selectOne(query);
+    }
+
+    public List<MediaInfo> getMediaInfo(List<String> fileIds){
+        var query = new LambdaQueryWrapper<MediaInfo>();
+
+        if (fileIds.isEmpty()){
+            return Collections.emptyList();
+        }
+        query.in(MediaInfo::getFileId, fileIds);
+        return mediaInfoMapper.selectList(query);
     }
 
     public List<ContentReviewResult> listContentReviewResult(String fileId){
