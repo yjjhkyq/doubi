@@ -14,9 +14,9 @@ import java.util.Map;
 @FeignClient(contextId = "vodService", value = ServiceNameConstants.VOD_SERVICE, fallbackFactory = VodFallbackFactory.class)
 public interface VodRpcService {
 
-    @PostMapping(ServiceNameConstants.VOD_RPC_URL_PREFIX + "/contentReview")
+    @PostMapping(ServiceNameConstants.VOD_RPC_URL_PREFIX + "/content/review")
     R<Void> contentReview(@RequestBody GetContentReviewResultAO getContentReviewResultAO);
 
-    @PostMapping(ServiceNameConstants.VOD_RPC_URL_PREFIX + "/listMediaUrl")
+    @PostMapping(ServiceNameConstants.VOD_RPC_URL_PREFIX + "/media/url")
     Map<String, String> listMediaUrl(@RequestBody ListMediaUrlAO listMediaUrlAO);
 }

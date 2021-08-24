@@ -12,9 +12,9 @@ import java.util.Map;
 
 @FeignClient(contextId = "ossService", value = ServiceNameConstants.OSS_SERVICE, fallbackFactory = OssFallbackFactory.class)
 public interface OssRpcService {
-    @GetMapping(ServiceNameConstants.OSS_RPC_URL_PREFIX + "/getOjectBrowseUrl")
-    R<String> getOjectBrowseUrl(@RequestParam("objectKey") String objectKey);
+    @GetMapping(ServiceNameConstants.OSS_RPC_URL_PREFIX + "/browser/url")
+    R<String> getObjectBrowseUrl(@RequestParam("objectKey") String objectKey);
 
-    @GetMapping(ServiceNameConstants.OSS_RPC_URL_PREFIX + "/listOjectBrowseUrl")
-    R<Map<String, String>> listOjectBrowseUrl(@RequestParam("objectKeys") List<String> objectKeys);
+    @GetMapping(ServiceNameConstants.OSS_RPC_URL_PREFIX + "/browser/url/list")
+    R<Map<String, String>> listObjectBrowseUrl(@RequestParam("objectKeys") List<String> objectKeys);
 }

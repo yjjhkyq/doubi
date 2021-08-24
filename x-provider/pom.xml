@@ -13,6 +13,7 @@
         <module>x-provider-customer</module>
         <module>x.provider-oss</module>
         <module>x-provider-vod</module>
+        <module>x-provider-video</module>
     </modules>
 
     <artifactId>x-provider</artifactId>

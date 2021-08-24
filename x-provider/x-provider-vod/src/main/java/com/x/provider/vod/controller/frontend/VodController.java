@@ -18,7 +18,7 @@ public class VodController extends BaseController {
         this.vodService = vodService;
     }
 
-    @PostMapping("/getVodUploadParam")
+    @PostMapping("/upload/param")
     public R<VodUploadParamVO> getVodUploadParam(){
         return R.ok(vodService.getVodUploadParam(getCurrentCustomerId()));
     }

@@ -36,7 +36,7 @@ public class CustomerRpcController extends BaseRpcController implements Customer
         this.applicationConfig = applicationConfig;
     }
 
-    @GetMapping("/getCustomer")
+    @GetMapping("/data")
     @Override
     public R<CustomerDTO> getCustomer(@RequestParam("customerId") long customerId,
                                       @RequestParam("customerOptions")List<String> customerOptions) {

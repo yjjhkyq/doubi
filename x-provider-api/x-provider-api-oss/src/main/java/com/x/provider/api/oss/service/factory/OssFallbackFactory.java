@@ -15,12 +15,12 @@ public class OssFallbackFactory implements FallbackFactory<OssRpcService> {
     public OssRpcService create(Throwable throwable) {
         return new OssRpcService() {
             @Override
-            public R<String> getOjectBrowseUrl(String objectKey) {
+            public R<String> getObjectBrowseUrl(String objectKey) {
                 return null;
             }
 
             @Override
-            public R<Map<String, String>> listOjectBrowseUrl(List<String> objectKeys) {
+            public R<Map<String, String>> listObjectBrowseUrl(List<String> objectKeys) {
                 return null;
             }
         };

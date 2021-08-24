@@ -25,13 +25,13 @@ public class VodRpcController implements VodRpcService {
     }
 
     @Override
-    @PostMapping("/getMediaUrl")
+    @PostMapping("/media/url")
     public Map<String, String> listMediaUrl(ListMediaUrlAO listMediaUrlAO) {
         return vodService.listMediaUrl(listMediaUrlAO);
     }
 
     @Override
-    @PostMapping("/contentReview")
+    @PostMapping("/content/review")
     public R<Void> contentReview(@RequestBody GetContentReviewResultAO getContentReviewResultAO) {
         vodService.contentReview(getContentReviewResultAO);
         return R.ok();

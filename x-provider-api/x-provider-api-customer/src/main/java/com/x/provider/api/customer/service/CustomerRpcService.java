@@ -13,7 +13,7 @@ import java.util.List;
 
 @FeignClient(contextId = "customerService", value = ServiceNameConstants.CUSTOMER_SERVICE, fallbackFactory = CustomerFallbackFactory.class)
 public interface CustomerRpcService {
-    @GetMapping(ServiceNameConstants.CUSTOMER_URL_PREFIX + "/getCustomer")
+    @GetMapping(ServiceNameConstants.CUSTOMER_URL_PREFIX + "/data")
     R<CustomerDTO> getCustomer(@RequestParam("customerId")long customerId, @RequestParam("customerOptions")List<String> customerOptions);
 
     @PostMapping(ServiceNameConstants.CUSTOMER_URL_PREFIX + "/authorize")

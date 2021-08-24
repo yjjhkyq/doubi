@@ -25,12 +25,12 @@ public class OssController extends BaseFrontendController {
         this.tencentOssService = tencentOssService;
     }
 
-    @GetMapping("/getOjectBrowseUrl")
+    @GetMapping("/browser/url")
     public R<String> getOjectBrowseUrl(@RequestParam String objectKey){
         return R.ok(ossService.getOjectBrowseUrl(objectKey));
     }
 
-    @GetMapping("/getTencentOssUploadCredentia")
+    @GetMapping("/tencent/upload/credential")
     public R<TencentOssCredentialVO> getTencentOssUploadCredentia(@RequestParam @NotBlank String extName){
         return R.ok(tencentOssService.getTencentOssUploadCredentia(getCurrentCustomerId(), extName));
     }

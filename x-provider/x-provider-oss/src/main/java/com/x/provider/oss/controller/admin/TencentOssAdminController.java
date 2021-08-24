@@ -24,7 +24,7 @@ public class TencentOssAdminController extends BaseAdminController {
         this.tencentOssService = tencentOssService;
     }
 
-    @PostMapping("/testUpload")
+    @PostMapping("/upload/test")
     public R<Void> upload(MultipartFile multipartFile) throws IOException {
         TencentOssCredentialVO tencentOssUploadCredentia = tencentOssService.getTencentOssUploadCredentia(getCurrentCustomerId(), FileUtil.extName(multipartFile.getOriginalFilename()));
         tencentOssService.upload(tencentOssUploadCredentia, multipartFile.getInputStream());

@@ -25,26 +25,26 @@ public class OssRpcController implements OssRpcService, GreenRpcService {
         this.greenService = greenService;
     }
 
-    @GetMapping("/getOjectBrowseUrl")
+    @GetMapping("/browser/url")
     @Override
-    public R<String> getOjectBrowseUrl(@RequestParam String objectKey){
+    public R<String> getObjectBrowseUrl(@RequestParam String objectKey){
         return R.ok(ossService.getOjectBrowseUrl(objectKey));
     }
 
-    @GetMapping("/listOjectBrowseUrl")
+    @GetMapping("/browser/url/list")
     @Override
-    public R<Map<String, String>> listOjectBrowseUrl(@RequestParam List<String> objectKeys) {
+    public R<Map<String, String>> listObjectBrowseUrl(@RequestParam List<String> objectKeys) {
         return R.ok(ossService.listOjectBrowseUrl(objectKeys));
     }
 
-    @PostMapping("/greenAttributeAsync")
+    @PostMapping("/attribute/green/async")
     @Override
     public R<Void> greenAttributeAsync(@RequestBody AttributeGreenRpcAO greenData) {
         greenService.greenAttributeAsync(greenData);
         return R.ok();
     }
 
-    @PostMapping("/greenAttributeSync")
+    @PostMapping("/attribute/green/sync")
     @Override
     public R<AttributeGreenResultDTO> greenAttributeSync(@RequestBody AttributeGreenRpcAO attribute) {
         return R.ok(greenService.greenAttributeSync(attribute));

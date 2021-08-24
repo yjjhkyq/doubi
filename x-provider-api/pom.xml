@@ -14,6 +14,7 @@
         <module>x-provider-api-customer</module>
         <module>x-provider-api-oss</module>
         <module>x-provider-api-vod</module>
+        <module>x-provider-api-video</module>
     </modules>
 
     <artifactId>x-provider-api</artifactId>

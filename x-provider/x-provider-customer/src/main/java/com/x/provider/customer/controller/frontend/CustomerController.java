@@ -7,7 +7,6 @@ import com.x.core.web.controller.BaseFrontendController;
 import com.x.provider.api.oss.service.OssRpcService;
 import com.x.provider.customer.enums.SystemCustomerAttributeName;
 import com.x.provider.customer.model.ao.*;
-import com.x.provider.customer.model.ao.*;
 import com.x.provider.customer.model.domain.Customer;
 import com.x.provider.customer.model.domain.CustomerRelation;
 import com.x.provider.customer.model.vo.CustomerHomePageVO;
@@ -57,25 +56,25 @@ public class CustomerController extends BaseFrontendController {
         return R.ok();
     }
 
-    @PostMapping("/changePassword")
+    @PostMapping("/password/change")
     public R<Void> changePassword(@RequestBody @Validated ChangePasswordByOldPasswordAO changePasswordByOldPasswordAO){
         customerService.changePassword(getCurrentCustomerId(), changePasswordByOldPasswordAO);
         return R.ok();
     }
 
-    @PostMapping("/changeUserName")
+    @PostMapping("/user/name/change")
     public R<Void> changeUserName(@RequestBody @Validated ChangeUserNameAO changeUserNameAO){
         customerService.changeUserName(getCurrentCustomerId(), changeUserNameAO);
         return R.ok();
     }
 
-    @PostMapping("/setCustomerAttribute")
+    @PostMapping("/attribute/set")
     public R<Void> setCustomerAttribute(@RequestBody @Validated SetCustomerAttributeAO setCustomerAttribute){
         customerService.setCustomerDraftAttribute(getCurrentCustomerId(), SystemCustomerAttributeName.valueOf(setCustomerAttribute.getAttributeName()), setCustomerAttribute.getValue());
         return R.ok();
     }
 
-    @GetMapping("/getCustomerHomePage")
+    @GetMapping("/homepage/")
     public R<CustomerHomePageVO> getCustomerHomePage(@RequestParam long customerId){
         Customer customer = customerService.getCustomer(customerId);
         ApiAssetUtil.isTrue(!customer.isSystemAccount(), ResultCode.FORBIDDEN);
@@ -87,7 +86,7 @@ public class CustomerController extends BaseFrontendController {
         return R.ok(customerHomePage);
     }
 
-    @GetMapping("/getRelation")
+    @GetMapping("/relation")
     public R<Integer> getRelation(@RequestParam @Validated @Min(1) long toCustomerId){
         return R.ok(customerRelationService.getRelation(getCurrentCustomerId(), toCustomerId).getValue());
     }
@@ -98,30 +97,30 @@ public class CustomerController extends BaseFrontendController {
         return R.ok();
     }
 
-    @PostMapping("/relation/unFollowing")
+    @PostMapping("/relation/unfollowing")
     public R<Void> unFollowing(@RequestParam @Validated @Min(1) long toCustomerId){
         customerRelationService.unFollowing(getCurrentCustomerId(), toCustomerId);
         return R.ok();
     }
 
-    @GetMapping("/relation/getFansCount")
+    @GetMapping("/relation/fans/count")
     public R<Long> getFansCount(@RequestParam @Validated @Min(1)  long customerId){
         return R.ok(customerRelationService.getFansCount(customerId));
     }
 
-    @GetMapping("/relation/getFollowCount")
+    @GetMapping("/relation/follow/count")
     public R<Long> getFollowCount(@RequestParam @Validated @Min(1)  long customerId){
         return R.ok(customerRelationService.getFollowCount(customerId));
     }
 
-    @GetMapping("/relation/listFollow")
+    @GetMapping("/relation/follows")
     public R<List<FlowFansListItemVO>> listFollow(@RequestParam int page, @RequestParam @Validated @Min(1)  long customerId){
         List<CustomerRelation> follows = customerRelationService.listFollow(customerId, getPage(), getDefaultFrontendPageSize());
         List<FlowFansListItemVO> result = prepareFollowFansListIem(true, follows);
         return R.ok(result);
     }
 
-    @GetMapping("/relation/listFans")
+    @GetMapping("/relation/fans")
     public R<List<FlowFansListItemVO>> listFans(@RequestParam int page, @RequestParam @Validated @Min(1)  long customerId){
         List<CustomerRelation> fans = customerRelationService.listFans(customerId, getPage(), getDefaultFrontendPageSize());
         List<FlowFansListItemVO> result = prepareFollowFansListIem(false, fans);
@@ -146,7 +145,7 @@ public class CustomerController extends BaseFrontendController {
             });
         });
         if (objectKeys.size() > 0) {
-            final R<Map<String, String>> attributeUrls = ossRpcService.listOjectBrowseUrl(objectKeys);
+            final R<Map<String, String>> attributeUrls = ossRpcService.listObjectBrowseUrl(objectKeys);
             result.stream().forEach(item -> {
                 item.getCustomerAttributes().entrySet().stream().forEach(attribute -> {
                     if (CustomerService.MEDIA_CUSTOMER_ATTRIBUTE_NAME.contains(attribute.getKey())) {
@@ -166,7 +165,7 @@ public class CustomerController extends BaseFrontendController {
         if (CollectionUtils.isEmpty(mediaAttribute)){
             return;
         }
-        final R<Map<String, String>> attributeUrls = ossRpcService.listOjectBrowseUrl(mediaAttribute.values().stream().collect(Collectors.toList()));
+        final R<Map<String, String>> attributeUrls = ossRpcService.listObjectBrowseUrl(mediaAttribute.values().stream().collect(Collectors.toList()));
         attributes.entrySet().stream().forEach(item -> {
             if (allMediaCustomerAttributeNames.contains(item.getKey())){
                 item.setValue(attributeUrls.getData().getOrDefault(item.getValue(), Strings.EMPTY));

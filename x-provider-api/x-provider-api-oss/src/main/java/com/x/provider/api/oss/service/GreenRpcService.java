@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @FeignClient(contextId = "greenService", value = ServiceNameConstants.OSS_SERVICE, fallbackFactory = GreenFallbackFactory.class)
 public interface GreenRpcService {
-    @PostMapping(ServiceNameConstants.OSS_RPC_URL_PREFIX + "/greenAttributeAsync")
+    @PostMapping(ServiceNameConstants.OSS_RPC_URL_PREFIX + "/attribute/green/async")
     R<Void> greenAttributeAsync(@RequestBody AttributeGreenRpcAO attribute);
 
-    @PostMapping(ServiceNameConstants.OSS_RPC_URL_PREFIX + "/greenAttributeSync")
+    @PostMapping(ServiceNameConstants.OSS_RPC_URL_PREFIX + "/attribute/green/sync")
     R<AttributeGreenResultDTO> greenAttributeSync(@RequestBody AttributeGreenRpcAO attribute);
 }
