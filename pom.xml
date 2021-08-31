@@ -18,7 +18,7 @@
 
     <name>x</name>
     <url></url>
-    <description>葡萄熟了云平台</description>
+    <description>x</description>
     <properties>
         <x.version>1.0.0</x.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -230,6 +230,11 @@
             <dependency>
                 <groupId>com.x.provider.api</groupId>
                 <artifactId>x-provider-api-vod</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.x.provider.api</groupId>
+                <artifactId>x-provider-api-finance</artifactId>
                 <version>1.0.0</version>
             </dependency>
         </dependencies>

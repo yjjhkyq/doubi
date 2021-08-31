@@ -1,0 +1,26 @@
+package com.x.provider.api.finance.model.dto;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Data;
+
+import java.util.Date;
+
+@Data
+public class SecurityDTO {
+    private long id;
+    private String code;
+    private String symbol;
+    private String name;
+    private String fullName;
+    private String enName;
+    private String cnSpell;
+    private String exchange;
+    private String type;
+    private String parentCode;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date createdOnUtc;
+
+    /** 更新时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date updatedOnUtc;
+}

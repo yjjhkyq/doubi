@@ -11,9 +11,10 @@
     <packaging>pom</packaging>
     <modules>
         <module>x-provider-customer</module>
-        <module>x.provider-oss</module>
+        <module>x-provider-oss</module>
         <module>x-provider-vod</module>
         <module>x-provider-video</module>
+        <module>x-provider-finance</module>
     </modules>
 
     <artifactId>x-provider</artifactId>
