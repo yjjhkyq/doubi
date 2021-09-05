@@ -152,4 +152,8 @@ public class DateUtils extends org.apache.commons.lang3.time.DateUtils
         // long sec = diff % nd % nh % nm / ns;
         return day + "天" + hour + "小时" + min + "分钟";
     }
+
+    public static Date minDate(){
+        return dateTime(YYYY_MM_DD, "1999-01-01");
+    }
 }

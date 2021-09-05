@@ -41,6 +41,21 @@ spring:
     host: localhost
     port: 6379
     password: 123456
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: provider-finance
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring:
+          json:
+            trusted:
+              packages: '*'
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 mybatis-plus:
   typeAliasesPackage: com.x.provider.finance.model.domain
@@ -59,3 +74,18 @@ ribbon:
 
 tushare:
   token: tushare token
+
+
+xxl:
+  job:
+    admin:
+      addresses: http://localhost:8080/xxl-job-admin
+    accessToken: ''
+    executor:
+      appname: x-provider-finance
+      address: ''
+      ip: ''
+      port: 9999
+      logpath: /data/logs/xxl-job/provider-finance
+      logretentiondays: 30
+

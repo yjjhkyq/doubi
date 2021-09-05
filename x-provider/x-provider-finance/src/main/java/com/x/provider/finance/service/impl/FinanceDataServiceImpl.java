@@ -1,8 +1,11 @@
 package com.x.provider.finance.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.x.provider.api.finance.enums.FinanceDataTypeEnum;
 import com.x.provider.api.finance.model.ao.ListIndustryAO;
 import com.x.provider.api.finance.model.ao.ListSecurityAO;
+import com.x.provider.api.finance.model.event.FinanceDataChangedEvent;
+import com.x.provider.api.finance.model.event.FinanceDataChangedEventEnum;
 import com.x.provider.finance.mapper.IndustryMapper;
 import com.x.provider.finance.mapper.SecurityMapper;
 import com.x.provider.finance.model.domain.Industry;
@@ -12,6 +15,7 @@ import com.x.provider.finance.service.FinanceDataService;
 import com.x.util.ChineseCharToEn;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -27,14 +31,16 @@ public class FinanceDataServiceImpl implements FinanceDataService {
     private final DataProducer dataProducer;
     private final SecurityMapper securityMapper;
     private final IndustryMapper industryMapper;
-
+    private final KafkaTemplate<String, Object> kafkaTemplate;
     @Autowired
     public FinanceDataServiceImpl(DataProducer dataProducer,
                                   SecurityMapper securityMapper,
-                                  IndustryMapper industryMapper){
+                                  IndustryMapper industryMapper,
+                                   KafkaTemplate<String, Object> kafkaTemplate){
         this.dataProducer = dataProducer;
         this.securityMapper = securityMapper;
         this.industryMapper = industryMapper;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     @Override
@@ -43,24 +49,34 @@ public class FinanceDataServiceImpl implements FinanceDataService {
         Map<String, Security> securityMapExisted = securityMapper.selectList(new LambdaQueryWrapper<>()).stream().collect(Collectors.toMap(Security::getCode, item -> item));
         List<Security> updateSecurity = new ArrayList<>(securityMap.size());
         List<Security> addSecurity = new ArrayList<>(securityMap.size());
-        securityMap.entrySet().forEach(item -> {
-            if (securityMapExisted.containsKey(item.getKey()) && !equal(item.getValue(), securityMapExisted.get(item.getKey()))){
-                Security security = securityMapExisted.get(item.getKey());
-                security.setName(item.getValue().getName());
-                security.setCnSpell(item.getValue().getCnSpell());
-                security.setSymbol(item.getValue().getSymbol());
-                updateSecurity.add(security);
-            }
-            else {
-                addSecurity.add(item.getValue());
-            }
-        });
-        updateSecurity.forEach(item -> {
-            securityMapper.updateById(item);
-        });
-        addSecurity.forEach(item -> {
-            securityMapper.insert(item);
-        });
+//        securityMap.entrySet().forEach(item -> {
+//            if (securityMapExisted.containsKey(item.getKey()) && !equal(item.getValue(), securityMapExisted.get(item.getKey()))){
+//                Security security = securityMapExisted.get(item.getKey());
+//                security.setName(item.getValue().getName());
+//                security.setCnSpell(item.getValue().getCnSpell());
+//                security.setSymbol(item.getValue().getSymbol());
+//                updateSecurity.add(security);
+//            }
+//            else {
+//                addSecurity.add(item.getValue());
+//            }
+//        });
+//        updateSecurity.forEach(item -> {
+//            securityMapper.updateById(item);
+//        });
+//        addSecurity.forEach(item -> {
+//            securityMapper.insert(item);
+//        });
+        updateSecurity.add(Security.builder().id(1L).build());
+        addSecurity.add(Security.builder().id(2L).build());
+        if (!updateSecurity.isEmpty()){
+            kafkaTemplate.send(FinanceDataChangedEventEnum.TOPIC_NAME, FinanceDataTypeEnum.SECURITY.name(), FinanceDataChangedEvent.builder().financeDataChangedEventEnum(FinanceDataChangedEventEnum.UPDATE)
+                    .financeDataType(FinanceDataTypeEnum.SECURITY).ids(updateSecurity.stream().map(item -> String.valueOf(item.getId())).collect(Collectors.toList())).build());
+        }
+        if (!addSecurity.isEmpty()){
+            kafkaTemplate.send(FinanceDataChangedEventEnum.TOPIC_NAME, FinanceDataTypeEnum.SECURITY.name(), FinanceDataChangedEvent.builder().financeDataChangedEventEnum(FinanceDataChangedEventEnum.ADD)
+                    .financeDataType(FinanceDataTypeEnum.SECURITY).ids(updateSecurity.stream().map(item -> String.valueOf(item.getId())).collect(Collectors.toList())).build());
+        }
     }
 
     @Override

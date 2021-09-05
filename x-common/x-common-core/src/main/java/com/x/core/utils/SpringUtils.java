@@ -8,6 +8,10 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 /**
  * spring工具类 方便在非spring管理环境中获取bean
  * 
@@ -51,6 +55,14 @@ public final class SpringUtils implements BeanFactoryPostProcessor
     {
         T result = (T) beanFactory.getBean(clz);
         return result;
+    }
+
+    public static <T> Map<String, T> getBeansOfType(Class<T> cls){
+        return beanFactory.getBeansOfType(cls);
+    }
+
+    public static <T> List<T> getBanListOfType(Class<T> cls){
+        return beanFactory.getBeansOfType(cls).values().stream().collect(Collectors.toList());
     }
 
     /**

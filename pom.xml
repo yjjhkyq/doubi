@@ -237,6 +237,16 @@
                 <artifactId>x-provider-api-finance</artifactId>
                 <version>1.0.0</version>
             </dependency>
+            <dependency>
+                <groupId>com.x.provider.api</groupId>
+                <artifactId>x-provider-api-video</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.x</groupId>
+                <artifactId>x-common-xxljob</artifactId>
+                <version>1.0.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
