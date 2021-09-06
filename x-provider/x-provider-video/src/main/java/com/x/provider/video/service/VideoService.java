@@ -7,4 +7,5 @@ public interface VideoService {
     long createVideo(CreateVideoAO createVideoAO, long customerId);
     void deleteVideo(long id);
     void onVodContentReview(ContentReviewResultDTO contentReviewResultDTO);
+    void topMyVideo(long videoId, boolean top, long customerId);
 }
