@@ -15,6 +15,7 @@ import com.x.provider.video.model.domain.Video;
 import com.x.provider.video.model.domain.VideoTopic;
 import com.x.provider.video.service.TopicService;
 import com.x.provider.video.service.VideoService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -23,8 +24,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class VideoServiceImpl implements VideoService {
 
@@ -34,15 +37,18 @@ public class VideoServiceImpl implements VideoService {
     private final VideoTopicMapper videoTopicMapper;
     private final TopicService topicService;
     private final VodRpcService vodRpcService;
+    private final Executor executor;
 
     public VideoServiceImpl(VideoMapper videoMapper,
                             TopicService topicService,
                             VideoTopicMapper videoTopicMapper,
-                            VodRpcService vodRpcService){
+                            VodRpcService vodRpcService,
+                            Executor executor){
         this.videoMapper = videoMapper;
         this.topicService = topicService;
         this.videoTopicMapper = videoTopicMapper;
         this.vodRpcService = vodRpcService;
+        this.executor = executor;
     }
 
     @Override
@@ -57,7 +63,10 @@ public class VideoServiceImpl implements VideoService {
         topicList.forEach(item -> {
             videoTopicMapper.insert(VideoTopic.builder().topicId(item.getId()).videoId(video.getId()).videoStatus(video.getVideoStatus()).build());
         });
-        vodRpcService.contentReview(GetContentReviewResultAO.builder().fileIds(Arrays.asList(video.getFileId())).notifyUrl(Constants.VIDEO_REVIEW_NOTIFY_RUL).build());
+        //以后这个地方改为kafka
+        executor.execute(() -> {
+            vodRpcService.contentReview(GetContentReviewResultAO.builder().fileIds(Arrays.asList(video.getFileId())).notifyUrl(Constants.VIDEO_REVIEW_NOTIFY_RUL).build());
+        });
         return video.getId();
     }
 
@@ -71,10 +80,12 @@ public class VideoServiceImpl implements VideoService {
     public void onVodContentReview(ContentReviewResultDTO contentReviewResultDTO){
         var videoOpt = getVideo(contentReviewResultDTO.getFileId());
         if (videoOpt.isEmpty()){
+            log.error("no video find, file id:{}", contentReviewResultDTO.getFileId());
             return;
         }
         VideoStatusEnum videoStatus = ReviewResultEnum.BLOCK.equals(contentReviewResultDTO.getReviewResult()) ? VideoStatusEnum.UNPUBLISH : VideoStatusEnum.PUBLISH;
         Video video = videoOpt.get();
+        video.setReviewed(true);
         var videoTopics = videoTopicMapper.selectList(new LambdaQueryWrapper<VideoTopic>().eq(VideoTopic::getVideoId, video.getId()));
         if (VideoStatusEnum.PUBLISH == videoStatus) {
             video.setVideoStatus(videoStatus.ordinal());

@@ -11,9 +11,11 @@ import com.x.provider.api.vod.model.ao.ListMediaUrlAO;
 import com.x.provider.api.vod.model.dto.ContentReviewResultDTO;
 import com.x.provider.vod.configure.TencentVodConfig;
 import com.x.provider.vod.mapper.ContentReviewResultMapper;
+import com.x.provider.vod.mapper.ContentReviewResultNotifyMapper;
 import com.x.provider.vod.mapper.MediaInfoMapper;
 import com.x.provider.vod.mapper.MediaTranscodeItemMapper;
 import com.x.provider.vod.model.domain.ContentReviewResult;
+import com.x.provider.vod.model.domain.ContentReviewResultNotify;
 import com.x.provider.vod.model.domain.MediaInfo;
 import com.x.provider.vod.model.domain.MediaTranscodeItem;
 import com.x.provider.vod.model.vo.VodUploadParamVO;
@@ -46,6 +48,7 @@ public class VodServiceImpl implements VodService {
     private final RedisKeyService redisKeyService;
     private final RestTemplate restTemplate;
     private final RedisService redisService;
+    private final ContentReviewResultNotifyMapper contentReviewResultNotifyMapper;
 
     public VodServiceImpl(TencentVodConfig tencentVodConfig,
                           MediaInfoMapper mediaInfoMapper,
@@ -53,7 +56,8 @@ public class VodServiceImpl implements VodService {
                           MediaTranscodeItemMapper mediaTranscodeItemMapper,
                           RedisKeyService redisKeyService,
                           RestTemplate restTemplate,
-                          RedisService redisService){
+                          RedisService redisService,
+                          ContentReviewResultNotifyMapper contentReviewResultNotifyMapper){
         this.tencentVodConfig = tencentVodConfig;
         this.mediaInfoMapper = mediaInfoMapper;
         this.contentReviewResultMapper = contentReviewResultMapper;
@@ -61,6 +65,7 @@ public class VodServiceImpl implements VodService {
         this.redisKeyService = redisKeyService;
         this.restTemplate = restTemplate;
         this.redisService = redisService;
+        this.contentReviewResultNotifyMapper = contentReviewResultNotifyMapper;
     }
 
     @Override
@@ -116,6 +121,7 @@ public class VodServiceImpl implements VodService {
     @Override
     public void contentReview(GetContentReviewResultAO getContentReviewResultAO) {
         getContentReviewResultAO.getFileIds().forEach(item ->{
+            contentReviewResultNotifyMapper.insert(ContentReviewResultNotify.builder().fileId(item).notifySuccess(false).notifyUrl(getContentReviewResultAO.getNotifyUrl()).retryCount(0).build());
             try(DistributeRedisLock lock = new DistributeRedisLock(redisKeyService.getContentReviewNotifyLockKey(item))) {
                 Optional<ReviewResultEnum> contentReviewResult = getContentReviewResult(item);
                 if (contentReviewResult.isPresent()){
@@ -175,8 +181,21 @@ public class VodServiceImpl implements VodService {
     }
 
     private void notifyContentReviewResult(String fileId, String notifyUrl, ReviewResultEnum reviewResultEnum) {
-        ContentReviewResultDTO contentReviewResultDTO = ContentReviewResultDTO.builder().fileId(fileId).reviewResult(reviewResultEnum.name()).build();
-        restTemplate.postForEntity(notifyUrl, contentReviewResultDTO, R.class);
+        List<ContentReviewResultNotify> contentReviewResultNotifyList = getContentReviewResultNotify(fileId, notifyUrl);
+        boolean notifySuccess = false;
+        try {
+            ContentReviewResultDTO contentReviewResultDTO = ContentReviewResultDTO.builder().fileId(fileId).reviewResult(reviewResultEnum.name()).build();
+            restTemplate.postForEntity(notifyUrl, contentReviewResultDTO, R.class);
+            notifySuccess = true;
+        }
+        catch (Exception e){
+            log.error(e.getMessage(), e);
+        }
+        for (ContentReviewResultNotify notify: contentReviewResultNotifyList) {
+            notify.setNotifySuccess(notifySuccess);
+            notify.setRetryCount(notify.getRetryCount() +1);
+            contentReviewResultNotifyMapper.updateById(notify);
+        }
     }
 
     private Optional<ReviewResultEnum> getContentReviewResult(String fileId){
@@ -279,5 +298,16 @@ public class VodServiceImpl implements VodService {
                 .name(mediaBasicInfo.getName())
                 .size(mediaMetaData.getSize())
                 .type(mediaBasicInfo.getType()).build();
+    }
+
+    private List<ContentReviewResultNotify> getContentReviewResultNotify(String fileId, String notifyUrl){
+        var query = new LambdaQueryWrapper<ContentReviewResultNotify>();
+        if (!StringUtils.isEmpty(fileId)){
+            query.eq(ContentReviewResultNotify::getFileId, fileId);
+        }
+        if (!StringUtils.isEmpty(notifyUrl)){
+            query.eq(ContentReviewResultNotify::getNotifyUrl, notifyUrl);
+        }
+        return contentReviewResultNotifyMapper.selectList(query);
     }
 }
