@@ -2,6 +2,7 @@ package com.x.provider.oss.controller.rpc;
 
 import com.x.core.web.api.R;
 import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
+import com.x.provider.api.oss.model.ao.GreenRpcAO;
 import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
 import com.x.provider.api.oss.service.GreenRpcService;
 import com.x.provider.api.oss.service.OssRpcService;
@@ -48,5 +49,10 @@ public class OssRpcController implements OssRpcService, GreenRpcService {
     @Override
     public R<AttributeGreenResultDTO> greenAttributeSync(@RequestBody AttributeGreenRpcAO attribute) {
         return R.ok(greenService.greenAttributeSync(attribute));
+    }
+
+    @Override
+    public R<String> greenSync(GreenRpcAO greenAO) {
+        return R.ok(greenService.green(greenAO).name());
     }
 }

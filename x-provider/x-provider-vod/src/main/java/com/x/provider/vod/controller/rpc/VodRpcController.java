@@ -1,6 +1,7 @@
 package com.x.provider.vod.controller.rpc;
 
 import com.x.core.web.api.R;
+import com.x.provider.api.vod.model.ao.DeleteMediaAO;
 import com.x.provider.api.vod.model.ao.GetContentReviewResultAO;
 import com.x.provider.api.vod.model.ao.ListMediaUrlAO;
 import com.x.provider.api.vod.service.VodRpcService;
@@ -26,8 +27,14 @@ public class VodRpcController implements VodRpcService {
 
     @Override
     @PostMapping("/media/url")
-    public Map<String, String> listMediaUrl(ListMediaUrlAO listMediaUrlAO) {
+    public Map<String, String> listMediaUrl(@RequestBody ListMediaUrlAO listMediaUrlAO) {
         return vodService.listMediaUrl(listMediaUrlAO);
+    }
+
+    @Override
+    public R<Void> deleteMedia(@RequestBody DeleteMediaAO deleteMediaAO) {
+        vodService.deleteMedia(deleteMediaAO.getFileId());
+        return R.ok();
     }
 
     @Override

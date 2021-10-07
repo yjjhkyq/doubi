@@ -16,6 +16,8 @@
         <module>x-provider-api-vod</module>
         <module>x-provider-api-video</module>
         <module>x-provider-api-finance</module>
+        <module>x-provider-api-statistic</module>
+        <module>x-provider-api-general</module>
     </modules>
 
     <artifactId>x-provider-api</artifactId>

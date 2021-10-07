@@ -12,4 +12,5 @@ public interface VodService {
     void onEvent(EventContent eventContent);
     void contentReview(GetContentReviewResultAO getContentReviewResultAO);
     Map<String, String> listMediaUrl(ListMediaUrlAO getMediaUrlAO);
+    void deleteMedia(String fileId);
 }

@@ -87,6 +87,22 @@
             <groupId>com.x.provider.api</groupId>
             <artifactId>x-provider-api-vod</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.x.provider.api</groupId>
+            <artifactId>x-provider-api-statistic</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.x.provider.api</groupId>
+            <artifactId>x-provider-api-oss</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.x.provider.api</groupId>
+            <artifactId>x-provider-api-general</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.x</groupId>
+            <artifactId>x-common-util</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

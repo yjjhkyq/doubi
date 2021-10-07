@@ -1,8 +1,10 @@
 package com.x.provider.video.component;
 
-import com.x.core.utils.JsonUtil;
 import com.x.provider.api.finance.model.event.FinanceDataChangedEvent;
 import com.x.provider.api.finance.model.event.FinanceDataChangedEventEnum;
+import com.x.provider.api.general.model.event.StarRequestEvent;
+import com.x.provider.general.service.StarService;
+import com.x.provider.video.constant.EventTopic;
 import com.x.provider.video.service.TopicService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -19,7 +21,7 @@ public class KafkaConsumer {
     }
 
     @KafkaListener(topics = FinanceDataChangedEventEnum.TOPIC_NAME)
-    public void receive(FinanceDataChangedEvent data) {
-        topicService.onFinanceDataChanged(data);
+    public void receive(FinanceDataChangedEvent event) {
+        topicService.onFinanceDataChanged(event);
     }
 }

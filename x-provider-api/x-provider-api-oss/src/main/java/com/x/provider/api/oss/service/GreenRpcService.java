@@ -3,6 +3,7 @@ package com.x.provider.api.oss.service;
 import com.x.core.web.api.R;
 import com.x.provider.api.oss.constants.ServiceNameConstants;
 import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
+import com.x.provider.api.oss.model.ao.GreenRpcAO;
 import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
 import com.x.provider.api.oss.service.factory.GreenFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -16,4 +17,7 @@ public interface GreenRpcService {
 
     @PostMapping(ServiceNameConstants.OSS_RPC_URL_PREFIX + "/attribute/green/sync")
     R<AttributeGreenResultDTO> greenAttributeSync(@RequestBody AttributeGreenRpcAO attribute);
+
+    @PostMapping(ServiceNameConstants.OSS_RPC_URL_PREFIX + "/green/sync")
+    R<String> greenSync(@RequestBody GreenRpcAO greenAO);
 }

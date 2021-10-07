@@ -183,6 +183,7 @@ public class CustomerServiceImpl implements CustomerService {
     public void setCustomerDraftAttribute(long customerId, SystemCustomerAttributeName attributeName, String value) {
         switch (attributeName){
             case NICK_NAME:
+            case SIGNATURE:
                 R<AttributeGreenResultDTO> greenResult = greenRpcService.greenAttributeSync(new AttributeGreenRpcAO(redisKeyService.getGlobalAttributeKeyGroup(AttributeKeyGroupEnum.CUSTOMER.toString()),
                         customerId, attributeName.toString(), value, GreenDataTypeEnum.TEXT));
                 ApiAssetUtil.isTrue(SuggestionTypeEnum.valueOf(greenResult.getData().getSuggestionType()).equals(SuggestionTypeEnum.PASS), ResultCode.GREEN_BLOCKED);

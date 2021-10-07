@@ -15,11 +15,14 @@ import com.x.provider.video.mapper.TopicMapper;
 import com.x.provider.video.model.domain.Topic;
 import com.x.provider.video.service.TopicFillBaseService;
 import com.x.provider.video.service.TopicService;
+import com.x.util.ChineseCharToEn;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.io.UnsupportedEncodingException;
+import java.sql.Struct;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -97,6 +100,19 @@ public class TopicServiceImpl implements TopicService {
         return topicMapper.selectList(query);
     }
 
+    public List<Topic> listOrCreateTopics(List<String> topicTitles){
+        List<Topic> result = listTopic(topicTitles);
+        List<String> existedTopicTitles = result.stream().map(Topic::getTitle).collect(Collectors.toList());
+        List<Topic> needCreateTopics = new ArrayList<>();
+        topicTitles.stream().filter(item -> !existedTopicTitles.contains(item)).forEach(item -> {
+            Topic topic = Topic.builder().searchKeyWord(StrUtil.format("{},{}", item, getFirstLetter(item))).effectValue(0)
+                    .sourceType(TopicSourceTypeEnum.CUSTOMER_CUSTOMIZE.ordinal()).systemTopic(false).title(item).sourceId("0").build();
+            topicMapper.insert(topic);
+            result.add(topic);
+        });
+        return result;
+    }
+
     private List listTopicSource(TopicSourceTypeEnum topicSourceType, Date afterDate, List<String> ids){
         var idList = ids.stream().map(item -> Long.parseLong(item)).collect(Collectors.toList());
         FinanceDataTypeEnum financeDataType = FINANCE_DATA_TYPE_MAP.get(topicSourceType);
@@ -133,6 +149,16 @@ public class TopicServiceImpl implements TopicService {
                 break;
             default:
                 log.error("no topic fill service find for topic source type:{}", topicSourceType);
+        }
+    }
+
+    private String getFirstLetter(String source){
+        try {
+            return ChineseCharToEn.getAllFirstLetter(source);
+        }
+        catch (UnsupportedEncodingException e){
+            log.error(e.getMessage(), e);
+            return source;
         }
     }
 }

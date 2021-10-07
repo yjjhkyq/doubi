@@ -14,12 +14,15 @@ import lombok.*;
 @TableName("video")
 public class Video extends BaseEntity {
   @TableId
-  private long id;
-  private long customerId;
+  private Long id;
+  private Long customerId;
   private String fileId;
   private String title;
   @TableField("is_reviewed")
-  private boolean reviewed;
-  private int videoStatus;
+  private Boolean reviewed;
+  private Integer videoStatus;
+  @TableField("is_top")
+  private Boolean top;
+  private Long topValue;
 
 }

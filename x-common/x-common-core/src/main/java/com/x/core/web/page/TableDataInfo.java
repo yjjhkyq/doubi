@@ -16,7 +16,12 @@ public class TableDataInfo<T> implements Serializable
     private long total;
 
     /** 列表数据 */
-    private List<T> rows;
+    private List<T> list;
+
+    private boolean hasMore;
+
+    private long pageSize;
+
 
     /**
      * 表格数据对象
@@ -31,10 +36,12 @@ public class TableDataInfo<T> implements Serializable
      * @param list 列表数据
      * @param total 总记录数
      */
-    public TableDataInfo(List<T> list, long total)
+    public TableDataInfo(List<T> list, long total, long pageSize)
     {
-        this.rows = list;
+        this.list = list;
         this.total = total;
+        this.pageSize = pageSize;
+        this.hasMore = this.list.size() >= list.size() ? true : false;
     }
 
     public long getTotal()
@@ -47,13 +54,29 @@ public class TableDataInfo<T> implements Serializable
         this.total = total;
     }
 
-    public List<?> getRows()
+    public List<?> getList()
     {
-        return rows;
+        return list;
     }
 
-    public void setRows(List<T> rows)
+    public void setList(List<T> list)
     {
-        this.rows = rows;
+        this.list = list;
+    }
+
+    public boolean isHasMore() {
+        return hasMore;
+    }
+
+    public void setHasMore(boolean hasMore) {
+        this.hasMore = hasMore;
+    }
+
+    public long getPageSize() {
+        return pageSize;
+    }
+
+    public void setPageSize(long pageSize) {
+        this.pageSize = pageSize;
     }
 }

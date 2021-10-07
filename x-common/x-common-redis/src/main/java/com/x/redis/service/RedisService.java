@@ -350,6 +350,16 @@ public class RedisService {
         return redisTemplate.opsForZSet().rank(key, value);
     }
 
+    public Long incr(String key, String field, long value){
+        return redisTemplate.opsForHash().increment(key, field, value);
+    }
+
+    public Double incr(String key, String field, double value){
+        return redisTemplate.opsForHash().increment(key, field, value);
+    }
+
+
+
     /**
      * redis 锁
      * @param key

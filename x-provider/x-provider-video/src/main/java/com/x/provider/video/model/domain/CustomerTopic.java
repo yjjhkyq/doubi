@@ -13,9 +13,9 @@ import lombok.*;
 @TableName("customer_topic")
 public class CustomerTopic extends BaseEntity {
   @TableId
-  private long id;
-  private long customerId;
-  private long topicId;
-  private long favorite;
+  private Long id;
+  private Long customerId;
+  private Long topicId;
+  private Long favorite;
 
 }

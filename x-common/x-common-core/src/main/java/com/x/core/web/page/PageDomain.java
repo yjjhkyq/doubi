@@ -21,6 +21,10 @@ public class PageDomain
 
     private String isAsc;
 
+    private String cursorStr;
+
+    private long cursorLong;
+
     public String getOrderBy()
     {
         if (StringUtils.isEmpty(orderByColumn))
@@ -68,5 +72,21 @@ public class PageDomain
     public void setIsAsc(String isAsc)
     {
         this.isAsc = isAsc;
+    }
+
+    public String getCursorStr() {
+        return cursorStr;
+    }
+
+    public void setCursorStr(String cursorStr) {
+        this.cursorStr = cursorStr;
+    }
+
+    public long getCursorLong() {
+        return cursorLong;
+    }
+
+    public void setCursorLong(long cursorLong) {
+        this.cursorLong = cursorLong;
     }
 }

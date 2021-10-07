@@ -2,6 +2,9 @@ package com.x.provider.vod.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.tencentcloudapi.common.Credential;
+import com.tencentcloudapi.common.exception.TencentCloudSDKException;
+import com.tencentcloudapi.vod.v20180717.VodClient;
 import com.x.core.exception.ApiException;
 import com.x.core.web.api.R;
 import com.x.provider.api.vod.enums.MediaTypeEnum;
@@ -49,7 +52,7 @@ public class VodServiceImpl implements VodService {
     private final RestTemplate restTemplate;
     private final RedisService redisService;
     private final ContentReviewResultNotifyMapper contentReviewResultNotifyMapper;
-
+    private final VodClient vodClient;
     public VodServiceImpl(TencentVodConfig tencentVodConfig,
                           MediaInfoMapper mediaInfoMapper,
                           ContentReviewResultMapper contentReviewResultMapper,
@@ -66,6 +69,9 @@ public class VodServiceImpl implements VodService {
         this.restTemplate = restTemplate;
         this.redisService = redisService;
         this.contentReviewResultNotifyMapper = contentReviewResultNotifyMapper;
+        Credential credential = new Credential(this.tencentVodConfig.getSecretId(), this.tencentVodConfig.getSecretKey());
+        this.vodClient = new VodClient(credential, TencentVodConfig.AP_CHENGDU);
+
     }
 
     @Override
@@ -141,6 +147,20 @@ public class VodServiceImpl implements VodService {
                     Collectors.toMap(MediaInfo::getFileId, MediaInfo::getCoverUrl));
         }
         return new HashMap<>();
+    }
+
+    @Override
+    public void deleteMedia(String fileId) {
+        DeleteMediaRequest deleteMediaRequest = new DeleteMediaRequest();
+        deleteMediaRequest.setFileId(fileId);
+
+        try {
+            this.vodClient.DeleteMedia(deleteMediaRequest);
+        }
+        catch (TencentCloudSDKException e){
+            log.error(e.getErrorCode(), e);
+            throw new ApiException(e.getMessage());
+        }
     }
 
     public MediaInfo getMediaInfo(long id, String fileId){
@@ -248,6 +268,10 @@ public class VodServiceImpl implements VodService {
             return;
         }
         List<ContentReviewResult> contentReviewResults = prepare(fileId, aiContentReviewResults);
+        Optional<ContentReviewResult> noPass = contentReviewResults.stream().filter(item -> !ReviewResultEnum.PASS.equals(item.getSuggestion())).findAny();
+        if (noPass.isPresent()){
+            deleteMedia(fileId);
+        }
         try(DistributeRedisLock lock = new DistributeRedisLock(redisKeyService.getContentReviewNotifyLockKey(fileId))){
             String notifyUrl = redisService.getCacheObject(redisKeyService.getContentReviewNotifyUrl(fileId));
             if (!StringUtils.isEmpty(notifyUrl)){

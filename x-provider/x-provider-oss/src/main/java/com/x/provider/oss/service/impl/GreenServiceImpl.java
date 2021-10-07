@@ -1,7 +1,9 @@
 package com.x.provider.oss.service.impl;
 
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
+import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
+import com.x.provider.api.oss.model.ao.GreenRpcAO;
 import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
 import com.x.provider.oss.service.GreenService;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +43,11 @@ public class GreenServiceImpl implements GreenService {
     public void onGreenResultNotify(Map<String, Object> result) {
         baiduGreenService.onGreenResultNotify(result);
         tencentGreenService.onGreenResultNotify(result);
+    }
+
+    @Override
+    public SuggestionTypeEnum green(GreenRpcAO greenRpcAO) {
+        return null;
     }
 
     private GreenService getGreenService(GreenDataTypeEnum greenDataType){

@@ -2,6 +2,7 @@ package com.x.provider.api.oss.service.factory;
 
 import com.x.core.web.api.R;
 import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
+import com.x.provider.api.oss.model.ao.GreenRpcAO;
 import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
 import com.x.provider.api.oss.service.GreenRpcService;
 import feign.hystrix.FallbackFactory;
@@ -19,6 +20,11 @@ public class GreenFallbackFactory implements FallbackFactory<GreenRpcService> {
 
             @Override
             public R<AttributeGreenResultDTO> greenAttributeSync(AttributeGreenRpcAO attribute) {
+                return null;
+            }
+
+            @Override
+            public R<String> greenSync(GreenRpcAO greenAO) {
                 return null;
             }
         };

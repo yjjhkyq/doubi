@@ -4,6 +4,7 @@ import com.baidu.aip.contentcensor.AipContentCensor;
 import com.baidu.aip.contentcensor.EImgType;
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
 import com.x.provider.api.oss.enums.SuggestionTypeEnum;
+import com.x.provider.api.oss.model.ao.GreenRpcAO;
 import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
 import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
 import com.x.provider.oss.configure.BaiduConfig;
@@ -52,6 +53,23 @@ public class BaiduGreenServiceImpl implements GreenService {
 
     @Override
     public void onGreenResultNotify(Map<String, Object> result) {
+    }
+
+    @Override
+    public SuggestionTypeEnum green(GreenRpcAO greenRpcAO) {
+        AipContentCensor client = new AipContentCensor(baiduConfig.getAppId(), baiduConfig.getApiKey(), baiduConfig.getSecretKey());
+        JSONObject parseResult = null;
+        GreenDataTypeEnum greenDataTypeEnum = GreenDataTypeEnum.valueOf(greenRpcAO.getDataType());
+        switch (greenDataTypeEnum){
+            case PICTURE:
+            case VIDEO:
+                parseResult = client.imageCensorUserDefined(greenRpcAO.getValue(), EImgType.URL, null);
+                break;
+            case TEXT:
+                parseResult = client.textCensorUserDefined(greenRpcAO.getValue());
+                break;
+        }
+        return parseGreenResult(parseResult);
     }
 
     private SuggestionTypeEnum parseGreenResult(JSONObject jsonObject){

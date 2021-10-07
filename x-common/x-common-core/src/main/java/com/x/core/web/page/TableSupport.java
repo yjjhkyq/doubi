@@ -16,6 +16,8 @@ import java.util.function.Function;
  */
 public class TableSupport
 {
+    private static final String CURSOR = "cursor";
+
     /**
      * 当前记录起始索引
      */
@@ -35,6 +37,7 @@ public class TableSupport
      * 排序的方向 "desc" 或者 "asc".
      */
     public static final String IS_ASC = "isAsc";
+
 
     /**
      * 封装分页对象
@@ -56,7 +59,11 @@ public class TableSupport
 
     public static IPage buildIPageRequest(){
         PageDomain pageDomain = getPageDomain();
-        return new Page<>(pageDomain.getPageNum(), pageDomain.getPageSize(), true);
+        return buildIPageRequest(pageDomain);
+    }
+
+    public static IPage buildIPageRequest(PageDomain pageDomain){
+        return new Page<>(pageDomain.getPageNum(), pageDomain.getPageSize(), false);
     }
 
     public static <T, R> TableDataInfo<R> buildTableDataInfo(IPage<T> page, Function<T, R> funcation){
@@ -64,6 +71,6 @@ public class TableSupport
         page.getRecords().forEach(s -> {
             result.add(funcation.apply(s));
         });
-        return new TableDataInfo<R>(result, page.getTotal());
+        return new TableDataInfo<R>(result, page.getTotal(), page.getSize());
     }
 }

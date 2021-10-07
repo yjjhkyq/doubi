@@ -2,6 +2,7 @@ package com.x.provider.api.vod.service;
 
 import com.x.core.web.api.R;
 import com.x.provider.api.vod.constants.ServiceNameConstants;
+import com.x.provider.api.vod.model.ao.DeleteMediaAO;
 import com.x.provider.api.vod.model.ao.GetContentReviewResultAO;
 import com.x.provider.api.vod.model.ao.ListMediaUrlAO;
 import com.x.provider.api.vod.service.factory.VodFallbackFactory;
@@ -19,4 +20,7 @@ public interface VodRpcService {
 
     @PostMapping(ServiceNameConstants.VOD_RPC_URL_PREFIX + "/media/url")
     Map<String, String> listMediaUrl(@RequestBody ListMediaUrlAO listMediaUrlAO);
+
+    @PostMapping(ServiceNameConstants.VOD_RPC_URL_PREFIX + "/media/delete")
+    R<Void> deleteMedia(@RequestBody DeleteMediaAO deleteMediaAO);
 }

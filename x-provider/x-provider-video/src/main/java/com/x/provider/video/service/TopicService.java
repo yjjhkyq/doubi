@@ -14,4 +14,5 @@ public interface TopicService {
     List<Topic> searchTopic(String keyword);
     Optional<Topic> getTopic(long id, String title);
     List<Topic> listTopic(List<String> titles);
+    List<Topic> listOrCreateTopics(List<String> topicTitles);
 }

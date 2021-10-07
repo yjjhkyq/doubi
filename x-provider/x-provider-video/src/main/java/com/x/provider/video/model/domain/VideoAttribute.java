@@ -17,9 +17,9 @@ import java.util.Date;
 @TableName("video_attribute")
 public class VideoAttribute extends BaseEntity {
   @TableId(type = IdType.INPUT)
-  private long videoId;
+  private Long videoId;
   @TableField("is_top")
-  private boolean top;
-  private long topValue;
+  private Boolean top;
+  private Long topValue;
 
 }

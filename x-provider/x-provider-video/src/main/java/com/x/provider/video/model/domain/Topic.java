@@ -14,14 +14,14 @@ import lombok.*;
 @TableName("topic")
 public class Topic extends BaseEntity {
   @TableId
-  private long id;
+  private Long id;
   private String title;
-  private int effectValue;
-  private int sourceType;
+  private Integer effectValue;
+  private Integer sourceType;
   private String searchKeyWord;
   private String sourceId;
   private String topicDescription;
   @TableField("is_system_topic")
-  private boolean systemTopic;
+  private Boolean systemTopic;
 
 }

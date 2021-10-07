@@ -9,11 +9,11 @@ import javax.validation.constraints.NotBlank;
 @Data
 @ApiModel
 public class UserNamePasswordRegisterAO {
-    @ApiModelProperty(name = "用户名")
     @NotBlank
+    @ApiModelProperty(name = "用户名")
     private String userName;
 
-    @ApiModelProperty(name = "密码")
     @NotBlank
+    @ApiModelProperty(name = "密码")
     private String password;
 }

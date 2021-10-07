@@ -3,6 +3,7 @@ package com.x.provider.oss.service.impl;
 import com.x.core.web.api.R;
 import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
+import com.x.provider.api.oss.model.ao.GreenRpcAO;
 import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
 import com.x.provider.oss.configure.TencentOssConfig;
 import com.x.provider.oss.service.GreenService;
@@ -52,6 +53,11 @@ public class TencentGreenServiceImpl implements GreenService {
         } else{
             log.error("gren result error, error code:{}  error message:{}", result.get("code"), result.get("message"));
         }
+    }
+
+    @Override
+    public SuggestionTypeEnum green(GreenRpcAO greenRpcAO) {
+        return null;
     }
 
     @Override
