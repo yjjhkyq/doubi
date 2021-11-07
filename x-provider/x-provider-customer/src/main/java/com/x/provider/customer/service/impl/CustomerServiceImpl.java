@@ -7,12 +7,15 @@ import com.x.core.utils.ApiAssetUtil;
 import com.x.core.utils.IdUtils;
 import com.x.core.web.api.R;
 import com.x.core.web.api.ResultCode;
+import com.x.provider.api.general.model.ao.ValidateVerificationCodeAO;
+import com.x.provider.api.general.service.SmsRpcService;
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
 import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
 import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
 import com.x.provider.api.oss.service.GreenRpcService;
-import com.x.provider.customer.constant.Constants;
+import com.x.provider.customer.configure.ApplicationConfig;
+import com.x.provider.customer.constant.CustomerConstants;
 import com.x.provider.customer.enums.AttributeKeyGroupEnum;
 import com.x.provider.customer.enums.SystemCustomerAttributeName;
 import com.x.provider.customer.enums.SystemRoleNameEnum;
@@ -21,10 +24,7 @@ import com.x.provider.customer.mapper.CustomerMapper;
 import com.x.provider.customer.mapper.CustomerPasswordMapper;
 import com.x.provider.customer.mapper.CustomerRoleMapper;
 import com.x.provider.customer.mapper.RoleMapper;
-import com.x.provider.customer.model.ao.ChangePasswordByOldPasswordAO;
-import com.x.provider.customer.model.ao.ChangeUserNameAO;
-import com.x.provider.customer.model.ao.UserNamePasswordLoginAO;
-import com.x.provider.customer.model.ao.UserNamePasswordRegisterAO;
+import com.x.provider.customer.model.ao.*;
 import com.x.provider.customer.model.domain.Customer;
 import com.x.provider.customer.model.domain.CustomerPassword;
 import com.x.provider.customer.model.domain.CustomerRole;
@@ -64,6 +64,8 @@ public class CustomerServiceImpl implements CustomerService {
     private final EntityChangedEventBus entityChangedEventBus;
     private final GenericAttributeService genericAttributeService;
     private final GreenRpcService greenRpcService;
+    private final ApplicationConfig applicationConfig;
+    private final SmsRpcService smsRpcService;
 
     public CustomerServiceImpl(RedisKeyService redisKeyService,
                                RedisService redisService,
@@ -74,7 +76,9 @@ public class CustomerServiceImpl implements CustomerService {
                                PasswordEncoderService passwordEncoderService,
                                EntityChangedEventBus entityChangedEventBus,
                                GenericAttributeService genericAttributeService,
-                               GreenRpcService greenRpcService){
+                               GreenRpcService greenRpcService,
+                               ApplicationConfig applicationConfig,
+                               SmsRpcService smsRpcService){
         this.redisKeyService = redisKeyService;
         this.redisService = redisService;
         this.customerMapper =customerMapper;
@@ -85,6 +89,8 @@ public class CustomerServiceImpl implements CustomerService {
         this.entityChangedEventBus = entityChangedEventBus;
         this.genericAttributeService = genericAttributeService;
         this.greenRpcService = greenRpcService;
+        this.applicationConfig = applicationConfig;
+        this.smsRpcService = smsRpcService;
     }
 
     @Override
@@ -106,12 +112,30 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public String login(UserNamePasswordLoginAO userNamePasswordLoginAO) {
-        Customer customer = getCustomer(userNamePasswordLoginAO.getUserName());
+    public String loginByPassword(LoginByPasswordAO userNamePasswordLoginAO) {
+        Customer customer = getCustomer(0L, userNamePasswordLoginAO.getUserName(), userNamePasswordLoginAO.getPhone(), null);
         ApiAssetUtil.notNull(customer, UserResultCode.USER_NAME_OR_PWD_ERROR);
         ApiAssetUtil.isTrue(customer.isActive(), UserResultCode.CUSTOMER_NOT_ACTIVE);
         CustomerPassword customerPassword = getCustomerPassword(customer.getId());
-        ApiAssetUtil.isTrue(passwordEncoderService.matches(userNamePasswordLoginAO.getPassword(), customerPassword.getPasswordSalt(), customerPassword.getPassword()));
+        ApiAssetUtil.isTrue(passwordEncoderService.matches(userNamePasswordLoginAO.getPassword(), customerPassword.getPasswordSalt(), customerPassword.getPassword()), UserResultCode.USER_NAME_OR_PWD_ERROR);
+        String token = IdUtils.fastSimpleUUID();
+        redisService.setCacheObject(redisKeyService.getCustomerLoginInfoKey(token), Long.valueOf(customer.getId()), TOKEN_EXPIRED_DURATION);
+        return token;
+    }
+
+    @Override
+    public String loginOrRegisterBySms(LoginOrRegBySmsAO loginOrRegByPhoneAO) {
+        smsRpcService.validateVerificationCode(ValidateVerificationCodeAO.builder().phoneNumber(loginOrRegByPhoneAO.getPhoneNumber()).sms(loginOrRegByPhoneAO.getSmsVerificationCode()).build());
+        Customer customer = getCustomerByPhone(loginOrRegByPhoneAO.getPhoneNumber());
+        if (customer == null){
+            customer = Customer.builder().phone(loginOrRegByPhoneAO.getPhoneNumber()).build();
+            customerMapper.insert(customer);
+            Role registeredRole = getRole(SystemRoleNameEnum.REGISTERED.name());
+            CustomerRole customerRole = new CustomerRole(customer.getId(), registeredRole.getId());
+            customerRoleMapper.insert(customerRole);
+            entityChangedEventBus.postEntityInserted(new CustomerChangedEvent(customer));
+            entityChangedEventBus.postEntityInserted(new CustomerRoleChangedEvent(customerRole));
+        }
         String token = IdUtils.fastSimpleUUID();
         redisService.setCacheObject(redisKeyService.getCustomerLoginInfoKey(token), Long.valueOf(customer.getId()), TOKEN_EXPIRED_DURATION);
         return token;
@@ -135,10 +159,15 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public void changePassword(long customerId, ChangePasswordByOldPasswordAO changePasswordAO) {
         CustomerPassword customerPassword = getCustomerPassword(customerId);
-        ApiAssetUtil.isTrue(passwordEncoderService.matches(changePasswordAO.getOldPassword(), customerPassword.getPasswordSalt(), customerPassword.getPassword()),
-                UserResultCode.PASSWORD_ERROR);
-        customerPassword.setPassword(passwordEncoderService.encode(changePasswordAO.getNewPassword(), customerPassword.getPasswordSalt()));
-        customerPasswordMapper.updateById(customerPassword);
+        if (customerPassword == null){
+            customerPassword = new CustomerPassword(customerId, RandomUtil.randomNumbers(4));
+            customerPassword.setPassword(passwordEncoderService.encode(changePasswordAO.getNewPassword(), customerPassword.getPasswordSalt()));
+            customerPasswordMapper.insert(customerPassword);
+        }
+        else {
+            customerPassword.setPassword(passwordEncoderService.encode(changePasswordAO.getNewPassword(), customerPassword.getPasswordSalt()));
+            customerPasswordMapper.updateById(customerPassword);
+        }
         entityChangedEventBus.postEntityUpdated(new CustomerPasswordChangedEvent(customerPassword));
     }
 
@@ -156,13 +185,13 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public Customer getCustomer(String userName) {
         return redisService.getCacheObject(redisKeyService.getCustomerKey(userName), () ->
-            getCustomer(0, userName));
+            getCustomer(0, userName, null, null));
     }
 
     @Override
     public Customer getCustomer(long id) {
         return redisService.getCacheObject(redisKeyService.getCustomerKey(id), () ->
-            getCustomer(id, null));
+            getCustomer(id, null, null, null));
     }
 
     @Override
@@ -200,7 +229,7 @@ public class CustomerServiceImpl implements CustomerService {
         genericAttributeService.addOrUpdateDraftAttribute(AttributeKeyGroupEnum.CUSTOMER.toString(), customerId, attributeName.toString(), value);
         try {
             greenRpcService.greenAttributeAsync(new AttributeGreenRpcAO(redisKeyService.getGlobalAttributeKeyGroup(AttributeKeyGroupEnum.CUSTOMER.toString()),
-                    customerId, attributeName.toString(), value, GreenDataTypeEnum.PICTURE, Constants.CUSTOMER_ATTRIBUTE_GREEN_CALLBACK_RUL));
+                    customerId, attributeName.toString(), value, GreenDataTypeEnum.PICTURE, CustomerConstants.CUSTOMER_ATTRIBUTE_GREEN_CALLBACK_RUL));
         }
         catch (Exception e){
             log.error(e.getMessage(), e);
@@ -211,7 +240,9 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     public Map<String, String> listCustomerAttribute(long customerId) {
-        return genericAttributeService.listAttributeMap(AttributeKeyGroupEnum.CUSTOMER.toString(), customerId);
+        Map<String, String> attributeMap = genericAttributeService.listAttributeMap(AttributeKeyGroupEnum.CUSTOMER.toString(), customerId);
+        fillDefaultAttribute(attributeMap);
+        return attributeMap;
     }
 
     @Override
@@ -220,6 +251,7 @@ public class CustomerServiceImpl implements CustomerService {
         attributeNames.forEach(item -> {
             attributes.put(item.toString(), genericAttributeService.getAttributeValue(AttributeKeyGroupEnum.CUSTOMER.toString(), customerId, item.toString()));
         });
+        fillDefaultAttribute(attributes);
         return attributes;
     }
 
@@ -231,13 +263,19 @@ public class CustomerServiceImpl implements CustomerService {
         genericAttributeService.deleteDraftAttribute(AttributeKeyGroupEnum.CUSTOMER.toString(), customerId, attributeName.toString());
     }
 
-    public Customer getCustomer(long id, String userName){
+    public Customer getCustomer(long id, String userName, String phone, String email){
         LambdaQueryWrapper<Customer> customerLambdaQueryWrapper = new LambdaQueryWrapper<>();
         if (id > 0){
             customerLambdaQueryWrapper.eq(Customer::getId, id);
         }
         if (!StringUtils.isEmpty(userName)){
             customerLambdaQueryWrapper.eq(Customer::getUserName, userName);
+        }
+        if (!StringUtils.isEmpty(phone)){
+            customerLambdaQueryWrapper.eq(Customer::getPhone, phone);
+        }
+        if (!StringUtils.isEmpty(email)){
+            customerLambdaQueryWrapper.eq(Customer::getEmail, email);
         }
         return customerMapper.selectOne(customerLambdaQueryWrapper);
     }
@@ -265,5 +303,15 @@ public class CustomerServiceImpl implements CustomerService {
             roleLambdaQueryWrapper.eq(Role::getSystemName, systemName);
         }
         return roleMapper.selectOne(roleLambdaQueryWrapper);
+    }
+
+    private Customer getCustomerByPhone(String phone){
+        return getCustomer(0L, null, phone, null);
+    }
+
+    private void fillDefaultAttribute(Map<String, String> attribute){
+        attribute.putIfAbsent(SystemCustomerAttributeName.NICK_NAME.name(), applicationConfig.getDefaultNickName());
+        attribute.putIfAbsent(SystemCustomerAttributeName.AVATAR_ID.name(), applicationConfig.getDefaultAvatarId());
+        attribute.putIfAbsent(SystemCustomerAttributeName.PERSONAL_HOMEPAGE_BACKGROUND_ID.name(), applicationConfig.getDefaultPersonalHomePageBackgroundId());
     }
 }

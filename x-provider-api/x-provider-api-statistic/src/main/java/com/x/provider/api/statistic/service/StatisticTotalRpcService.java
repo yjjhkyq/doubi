@@ -18,6 +18,8 @@ import java.util.List;
 public interface StatisticTotalRpcService {
     @PostMapping(ServiceNameConstants.RPC_URL_PREFIX_STATISTIC_TOTAL + "/map")
     R<ListStatisticTotalMapDTO> listStatisticTotalMap(@RequestBody ListStatisticTotalBatchAO listStatisticTotalAO);
+    @PostMapping(ServiceNameConstants.RPC_URL_PREFIX_STATISTIC_TOTAL + "/list/batch")
+    R<List<ListStatisticTotalDTO>> listStatisticTotalBatch(@RequestBody ListStatisticTotalBatchAO listStatisticTotalBatchAO);
     @PostMapping(ServiceNameConstants.RPC_URL_PREFIX_STATISTIC_TOTAL + "/list")
     R<List<ListStatisticTotalDTO>> listStatisticTotal(@RequestBody ListStatTotalAO listStatTotalAO);
     @PostMapping(ServiceNameConstants.RPC_URL_PREFIX_STATISTIC_TOTAL + "/inc")

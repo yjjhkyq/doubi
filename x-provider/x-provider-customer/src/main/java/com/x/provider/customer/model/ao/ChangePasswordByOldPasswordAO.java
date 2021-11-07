@@ -9,9 +9,6 @@ import javax.validation.constraints.NotBlank;
 @Data
 @ApiModel
 public class ChangePasswordByOldPasswordAO {
-    @ApiModelProperty(name = "旧密码")
-    @NotBlank
-    private String oldPassword;
 
     @ApiModelProperty(name = "新密码")
     @NotBlank

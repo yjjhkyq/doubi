@@ -1,5 +1,6 @@
 package com.x.provider.oss.service.impl;
 
+import com.x.core.utils.JsonUtil;
 import com.x.core.web.api.R;
 import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
@@ -37,6 +38,7 @@ public class TencentGreenServiceImpl implements GreenService {
 
     @Override
     public void onGreenResultNotify(Map<String, Object> result){
+        log.info("green result notify, result:{}", JsonUtil.toJSONString(result));
         if((int)result.get("code") == 0){
             Map<String, Object> data = (Map<String, Object>)result.get("data");
             String url = (String) data.get("url");

@@ -2,7 +2,7 @@ package com.x.provider.customer.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.x.core.cache.event.EntityChangedEventBus;
-import com.x.provider.customer.enums.CustomerRelationEnum;
+import com.x.provider.api.customer.enums.CustomerRelationEnum;
 import com.x.provider.customer.mapper.CustomerRelationMapper;
 import com.x.provider.customer.model.domain.CustomerRelation;
 import com.x.provider.customer.service.CustomerRelationService;
@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class CustomerRelationServiceImpl implements CustomerRelationService {
@@ -93,6 +94,11 @@ public class CustomerRelationServiceImpl implements CustomerRelationService {
             keys.add(redisKeyService.getCustomerRelationKey(customerId, item));
         });
         return redisService.listCacheObject(keys);
+    }
+
+    @Override
+    public List<Long> listFollow(long customerId) {
+        return redisService.rangeLong((redisKeyService.getCustomerRelationOfFollowKey(customerId))).stream().collect(Collectors.toList());
     }
 
     @Override

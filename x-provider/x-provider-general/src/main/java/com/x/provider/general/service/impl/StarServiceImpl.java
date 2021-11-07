@@ -2,7 +2,12 @@ package com.x.provider.general.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.x.core.utils.BeanUtil;
+import com.x.core.web.page.TableSupport;
+import com.x.provider.api.general.enums.StarItemTypeEnum;
+import com.x.provider.api.general.model.ao.ListStarAO;
+import com.x.provider.api.general.model.ao.StarAO;
 import com.x.provider.api.general.model.event.StarEvent;
 import com.x.provider.api.general.model.event.StarRequestEvent;
 import com.x.provider.api.statistic.constants.StatisticEventTopic;
@@ -14,6 +19,7 @@ import com.x.provider.general.model.domain.Star;
 import com.x.provider.general.service.StarService;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -48,6 +54,7 @@ public class StarServiceImpl implements StarService {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void onStarRequest(StarRequestEvent starRequestEvent) {
         boolean firstStar = getStar(0, starRequestEvent.getItemId(), starRequestEvent.getStarCustomerId(), starRequestEvent.getItemType()) == null;
@@ -66,9 +73,16 @@ public class StarServiceImpl implements StarService {
 
             Star star = getStar(0, starRequestEvent.getItemId(), starRequestEvent.getStarCustomerId(), starRequestEvent.getItemType());
             StarEvent starEvent = BeanUtil.prepare(star, StarEvent.class);
+            starEvent.setItemId(String.valueOf(star.getItemId()));
             starEvent.setFirstStar(firstStar);
             kafkaTemplate.send(GeneralEventTopic.TOPIC_NAME_STAR, StrUtil.format("{}:{}", starRequestEvent.getItemType(), starRequestEvent.getItemId()), starEvent);
         }
+    }
+
+    @Override
+    public void star(StarAO starAO) {
+        kafkaTemplate.send(com.x.provider.api.general.constants.GeneralEventTopic.TOPIC_NAME_STAR_REQUEST, StrUtil.format("{}{}", starAO.getItemType(), starAO.getItemId()),
+                BeanUtil.prepare(starAO, StarRequestEvent.class));
     }
 
     @Override
@@ -78,18 +92,14 @@ public class StarServiceImpl implements StarService {
     }
 
     @Override
-    public List<Star> listStar(long associationItemId, long starCustomerId) {
-        return listStar(associationItemId, 0, starCustomerId, 0);
+    public IPage<Star> listStar(ListStarAO listStarAO) {
+        LambdaQueryWrapper<Star> query = buildQuery(listStarAO.getAssociationItemId(), 0, listStarAO.getStarCustomerId(), listStarAO.getItemType());
+        return starMapper.selectPage(TableSupport.buildIPageRequest(listStarAO), query.orderByDesc(Star::getCreatedOnUtc));
     }
 
     private Star getStar(long associationItemId, long itemId, long starCustomerId, int itemType){
         LambdaQueryWrapper<Star> query = buildQuery(associationItemId, itemId, starCustomerId, itemType);
         return starMapper.selectOne(query);
-    }
-
-    private List<Star> listStar(long associationItemId, long itemId, long starCustomerId, int itemType){
-        LambdaQueryWrapper<Star> query = buildQuery(associationItemId, itemId, starCustomerId, itemType);
-        return starMapper.selectList(query);
     }
 
     private LambdaQueryWrapper<Star> buildQuery(long associationItemId, long itemId, long starCustomerId, int itemType) {

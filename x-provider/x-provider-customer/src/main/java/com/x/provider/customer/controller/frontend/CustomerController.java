@@ -4,6 +4,9 @@ import com.x.core.utils.ApiAssetUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.api.ResultCode;
 import com.x.core.web.controller.BaseFrontendController;
+import com.x.core.web.page.TableDataInfo;
+import com.x.provider.api.general.model.ao.SendVerificationCodeAO;
+import com.x.provider.api.general.service.SmsRpcService;
 import com.x.provider.api.oss.service.OssRpcService;
 import com.x.provider.customer.enums.SystemCustomerAttributeName;
 import com.x.provider.customer.model.ao.*;
@@ -34,13 +37,16 @@ public class CustomerController extends BaseFrontendController {
     private final CustomerService customerService;
     private final CustomerRelationService customerRelationService;
     private final OssRpcService ossRpcService;
+    private final SmsRpcService smsRpcService;
 
     public CustomerController(CustomerService customerService,
                               CustomerRelationService customerRelationService,
-                              OssRpcService ossRpcService){
+                              OssRpcService ossRpcService,
+                              SmsRpcService smsRpcService){
         this.customerService = customerService;
         this.customerRelationService = customerRelationService;
         this.ossRpcService = ossRpcService;
+        this.smsRpcService = smsRpcService;
     }
 
     @ApiOperation(value = "用户名密码注册")
@@ -50,10 +56,22 @@ public class CustomerController extends BaseFrontendController {
         return R.ok();
     }
 
-    @ApiOperation(value = "用户名密码登陆,返回token,下次方法其它接口是在此Token至于http header Authorization 中，值为 Bear token")
-    @PostMapping("/login")
-    public R<String> login(@RequestBody @Validated UserNamePasswordLoginAO userNamePasswordLoginAO){
-        return R.ok(customerService.login(userNamePasswordLoginAO));
+    @ApiOperation(value = "根据密码登陆,返回token,下次方法其它接口是在此Token至于http header Authorization 中，值为 Bear token")
+    @PostMapping("/login/by/password")
+    public R<String> loginByPassword(@RequestBody @Validated LoginByPasswordAO userNamePasswordLoginAO){
+        return R.ok(customerService.loginByPassword(userNamePasswordLoginAO));
+    }
+
+    @ApiOperation(value = "根据短信验证码登陆或者注册, 返回token,下次方法其它接口是在此Token至于http header Authorization 中，值为 Bear token")
+    @PostMapping("/login/register/by/sms")
+    public R<String> loginOrRegisterBySms(@RequestBody @Validated LoginOrRegBySmsAO loginOrRegBySmsAO){
+        return R.ok(customerService.loginOrRegisterBySms(loginOrRegBySmsAO));
+    }
+
+    @ApiOperation(value = "发送短信验证码")
+    @PostMapping("/sms/verification/code/send")
+    public R<Void> loginOrRegisterBySms(@RequestBody @Validated SendSmsVerificationCodeAO sendSmsVerificationCodeAO){
+        return smsRpcService.sendVerificationCode(SendVerificationCodeAO.builder().phoneNumber(sendSmsVerificationCodeAO.getPhoneNumber()).build());
     }
 
     @ApiOperation(value = "注销")
@@ -133,18 +151,18 @@ public class CustomerController extends BaseFrontendController {
 
     @ApiOperation(value = "查询关注列表")
     @GetMapping("/relation/follows")
-    public R<List<FlowFansListItemVO>> listFollow(@RequestParam int page, @RequestParam @Validated @Min(1)  @ApiParam(value = "用户id") long customerId){
+    public R<TableDataInfo<FlowFansListItemVO>> listFollow(@RequestParam int page, @RequestParam @Validated @Min(1)  @ApiParam(value = "用户id") long customerId){
         List<CustomerRelation> follows = customerRelationService.listFollow(customerId, getPage(), getDefaultFrontendPageSize());
         List<FlowFansListItemVO> result = prepareFollowFansListIem(true, follows);
-        return R.ok(result);
+        return R.ok(new TableDataInfo<>(result, 0, getDefaultFrontendPageSize()));
     }
 
     @ApiOperation(value = "查询粉丝列表")
     @GetMapping("/relation/fans")
-    public R<List<FlowFansListItemVO>> listFans(@RequestParam int page, @RequestParam @Validated @Min(1)  @ApiParam(value = "用户id") long customerId){
+    public R<TableDataInfo<FlowFansListItemVO>> listFans(@RequestParam int page, @RequestParam @Validated @Min(1)  @ApiParam(value = "用户id") long customerId){
         List<CustomerRelation> fans = customerRelationService.listFans(customerId, getPage(), getDefaultFrontendPageSize());
         List<FlowFansListItemVO> result = prepareFollowFansListIem(false, fans);
-        return R.ok(result);
+        return R.ok(new TableDataInfo<>(result, 0, getDefaultFrontendPageSize()));
     }
 
     private List<FlowFansListItemVO> prepareFollowFansListIem(boolean follow,  List<CustomerRelation> customers) {

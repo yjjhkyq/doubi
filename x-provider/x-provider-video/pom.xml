@@ -62,7 +62,10 @@
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.x</groupId>
+            <artifactId>x-common-util</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.x</groupId>
             <artifactId>x-common-swagger</artifactId>
@@ -76,33 +79,34 @@
             <artifactId>x-common-redis</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.x.provider.api</groupId>
+            <groupId>com.x</groupId>
             <artifactId>x-provider-api-finance</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.x.provider.api</groupId>
+            <groupId>com.x</groupId>
             <artifactId>x-provider-api-video</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.x.provider.api</groupId>
+            <groupId>com.x</groupId>
             <artifactId>x-provider-api-vod</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.x.provider.api</groupId>
+            <groupId>com.x</groupId>
             <artifactId>x-provider-api-statistic</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.x.provider.api</groupId>
+            <groupId>com.x</groupId>
             <artifactId>x-provider-api-oss</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.x.provider.api</groupId>
+            <groupId>com.x</groupId>
             <artifactId>x-provider-api-general</artifactId>
         </dependency>
         <dependency>
             <groupId>com.x</groupId>
-            <artifactId>x-common-util</artifactId>
+            <artifactId>x-provider-api-customer</artifactId>
         </dependency>
+
     </dependencies>
 
     <build>

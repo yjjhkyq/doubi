@@ -24,6 +24,9 @@ public class BeanUtil {
 
     public static <T, R> R prepare(T source, Class<R> destCls){
         try {
+            if (source == null){
+                return null;
+            }
             R r = destCls.getConstructor().newInstance();
             BeanUtils.copyProperties(source, r);
             return r;

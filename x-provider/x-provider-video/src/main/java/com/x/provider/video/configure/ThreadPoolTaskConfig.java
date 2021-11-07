@@ -8,7 +8,7 @@ import java.util.concurrent.Executor;
 
 @Configuration
 public class ThreadPoolTaskConfig {
-    @Bean
+    @Bean(name = "videoDefaultExecutor")
     public Executor executor(){
         return ThreadPoolUtil.createExecutor("video-default-executor");
     }

@@ -15,6 +15,6 @@ public enum StarItemTypeEnum implements IntegerEnum {
 
     @Override
     public Integer getValue() {
-        return null;
+        return value;
     }
 }

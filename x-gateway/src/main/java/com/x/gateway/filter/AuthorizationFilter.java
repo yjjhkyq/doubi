@@ -39,7 +39,7 @@ public class AuthorizationFilter extends AbstractGatewayFilterFactory<Object> {
             } else{
                 ServerHttpResponse response = exchange.getResponse();
                 return exchange.getResponse().writeWith(
-                        Mono.just(response.bufferFactory().wrap(JSON.toJSONBytes(R.fail(ResultCode.UNAUTHORIZED)))));
+                        Mono.just(response.bufferFactory().wrap(JSON.toJSONBytes(R.build(ResultCode.UNAUTHORIZED)))));
             }
         };
     }

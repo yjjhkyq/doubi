@@ -86,7 +86,7 @@
             <artifactId>x-common-redis</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.x.provider.api</groupId>
+            <groupId>com.x</groupId>
             <artifactId>x-provider-api-oss</artifactId>
         </dependency>
     </dependencies>

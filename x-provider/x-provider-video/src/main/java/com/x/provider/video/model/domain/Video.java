@@ -24,5 +24,6 @@ public class Video extends BaseEntity {
   @TableField("is_top")
   private Boolean top;
   private Long topValue;
+  private double duration;
 
 }

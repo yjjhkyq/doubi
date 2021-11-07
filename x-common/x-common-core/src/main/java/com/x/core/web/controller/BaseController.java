@@ -43,9 +43,13 @@ public class BaseController
     }
 
     protected long getCurrentCustomerId(){
-        long currentCustomerId = SecurityUtils.getCurrentCustomerId();
-        currentCustomerId = 3;
+        long currentCustomerId = getCurrentCustomerIdAndNotCheckLogin();
         ApiAssetUtil.isTrue(currentCustomerId > 0, ResultCode.UNAUTHORIZED);
+        return currentCustomerId;
+    }
+
+    protected long getCurrentCustomerIdAndNotCheckLogin(){
+        long currentCustomerId = SecurityUtils.getCurrentCustomerId();
         return currentCustomerId;
     }
 //    /**

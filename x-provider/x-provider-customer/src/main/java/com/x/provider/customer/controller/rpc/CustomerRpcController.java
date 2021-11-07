@@ -5,6 +5,8 @@ import com.x.core.utils.ApiAssetUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.controller.BaseRpcController;
 import com.x.provider.api.customer.enums.CustomerOptions;
+import com.x.provider.api.customer.model.ao.ListCustomerAO;
+import com.x.provider.api.customer.model.dto.CustomerAttributeDTO;
 import com.x.provider.api.customer.model.dto.CustomerDTO;
 import com.x.provider.api.customer.model.dto.RoleDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
@@ -15,32 +17,90 @@ import com.x.provider.customer.enums.SystemCustomerAttributeName;
 import com.x.provider.customer.enums.SystemRoleNameEnum;
 import com.x.provider.customer.model.domain.Customer;
 import com.x.provider.customer.model.domain.Role;
+import com.x.provider.customer.service.CustomerRelationService;
 import com.x.provider.customer.service.CustomerService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("/rpc/customer")
 public class CustomerRpcController extends BaseRpcController implements CustomerRpcService {
     private final CustomerService customerService;
     private final ApplicationConfig applicationConfig;
+    private final CustomerRelationService customerRelationService;
 
     public CustomerRpcController(CustomerService customerService,
-                                 ApplicationConfig applicationConfig){
+                                 ApplicationConfig applicationConfig,
+                                 CustomerRelationService customerRelationService){
         this.customerService = customerService;
         this.applicationConfig = applicationConfig;
+        this.customerRelationService = customerRelationService;
     }
 
     @GetMapping("/data")
     @Override
     public R<CustomerDTO> getCustomer(@RequestParam("customerId") long customerId,
                                       @RequestParam("customerOptions")List<String> customerOptions) {
-        customerOptions =Optional.ofNullable(customerOptions).orElse(Arrays.asList(CustomerOptions.CUSTOMER.toString()));
+        CustomerDTO customerDTO = getCustomerInfo(customerId, customerOptions);
+        return R.ok(customerDTO);
+    }
+
+
+    @PostMapping("/list")
+    @Override
+    public R<Map<Long, CustomerDTO>> listCustomer(@RequestBody ListCustomerAO listCustomerAO) {
+        Map<Long, CustomerDTO> customerList = new HashMap<>(listCustomerAO.getCustomerIds().size());
+        listCustomerAO.getCustomerIds().forEach(item -> {
+            CustomerDTO customer = getCustomerInfo(item, listCustomerAO.getCustomerOptions());
+            customerList.put(customer.getId(), customer);
+        });
+        return R.ok(customerList);
+    }
+
+    @PostMapping("/authorize")
+    @Override
+    public R<Long> authorize(@RequestParam("token") String token, @RequestParam("path") String path){
+        logger.info("authorize, token:{} path:{}", token, path);
+        if (applicationConfig.getAuthIgnoreUrls().stream().anyMatch(item -> item.startsWith(path))){
+            return R.ok(0L);
+        }
+        long customerId = StringUtils.hasText(token) ? customerService.validateToken(token) : 0;
+        List<Role> roles = customerService.listCustomerRole(customerId);
+        if (path.startsWith(Constants.ADMIN_URL_PREFIX)){
+            ApiAssetUtil.isTrue(roles.stream().allMatch(item -> item.getSystemName().equals(SystemRoleNameEnum.ADMINISTRATORS.toString())));
+        }
+
+        if (path.startsWith(Constants.FRONT_END_URL_PREFIX)){
+            ApiAssetUtil.isTrue(roles.stream().allMatch(item -> item.getSystemName().equals(SystemRoleNameEnum.REGISTERED.toString())));
+        }
+        return R.ok(customerId);
+    }
+
+    @PostMapping("/relation")
+    @Override
+    public R<Integer> getCustomerRelation(@RequestParam("fromCustomerId") long fromCustomerId, @RequestParam("toCustomerId") long toCustomerId) {
+        return R.ok(customerRelationService.getRelation(fromCustomerId, toCustomerId).getValue());
+    }
+
+    @PostMapping("/follow/list")
+    @Override
+    public R<List<Long>> listFollow(@RequestParam long customerId) {
+        return R.ok(customerRelationService.listFollow(customerId));
+    }
+
+    @PostMapping("/notifyCustomerGreenResult")
+    public R<Void> notifyCustomerGreenResult(@RequestBody AttributeGreenResultDTO greenResult){
+        customerService.onCustomerDraftAttributeGreenFinshed(Long.parseLong(greenResult.getEntityId())
+                , SystemCustomerAttributeName.valueOf(greenResult.getKey()), greenResult.getValue()
+                , SuggestionTypeEnum.valueOf(greenResult.getSuggestionType()));
+        return R.ok();
+    }
+
+    private CustomerDTO getCustomerInfo(long customerId, List<String> customerOptions) {
+        customerOptions = Optional.ofNullable(customerOptions).orElse(Arrays.asList(CustomerOptions.CUSTOMER.toString()));
         CustomerDTO customerDTO = new CustomerDTO();
         customerDTO.setId(customerId);
 
@@ -58,33 +118,13 @@ public class CustomerRpcController extends BaseRpcController implements Customer
                         customerDTO.getRoles().add(roleDTO);
                     });
                     break;
+                case CUSTOMER_ATTRIBUTE:
+                    Map<String, String> customerAttribute = customerService.listCustomerAttribute(customerId);
+                    customerDTO.setCustomerAttribute(CustomerAttributeDTO.builder().avatarId(customerAttribute.get(SystemCustomerAttributeName.AVATAR_ID.name()))
+                            .nickName(customerAttribute.get(SystemCustomerAttributeName.NICK_NAME.name())).personalHomePageBackgroundId(customerAttribute.get(SystemCustomerAttributeName.PERSONAL_HOMEPAGE_BACKGROUND_ID.name()))
+                            .signature(customerAttribute.get(SystemCustomerAttributeName.SIGNATURE.name())).build());
             }
         });
-        return R.ok(customerDTO);
-    }
-
-    @PostMapping("/authorize")
-    public R<Long> authorize(@RequestParam("token") String token, @RequestParam("path") String path){
-        long customerId = StringUtils.hasText(token) ? customerService.validateToken(token) : 0;
-        if (applicationConfig.getAuthIgnoreUrls().stream().anyMatch(item -> item.startsWith(path))){
-            return R.ok(customerId);
-        }
-        List<Role> roles = customerService.listCustomerRole(customerId);
-        if (path.startsWith(Constants.ADMIN_URL_PREFIX)){
-            ApiAssetUtil.isTrue(roles.stream().allMatch(item -> item.getSystemName().equals(SystemRoleNameEnum.ADMINISTRATORS.toString())));
-        }
-
-        if (path.startsWith(Constants.FRONT_END_URL_PREFIX)){
-            ApiAssetUtil.isTrue(roles.stream().allMatch(item -> item.getSystemName().equals(SystemRoleNameEnum.REGISTERED.toString())));
-        }
-        return R.ok(customerId);
-    }
-
-    @PostMapping("/notifyCustomerGreenResult")
-    public R<Void> notifyCustomerGreenResult(@RequestBody AttributeGreenResultDTO greenResult){
-        customerService.onCustomerDraftAttributeGreenFinshed(Long.parseLong(greenResult.getEntityId())
-                , SystemCustomerAttributeName.valueOf(greenResult.getKey()), greenResult.getValue()
-                , SuggestionTypeEnum.valueOf(greenResult.getSuggestionType()));
-        return R.ok();
+        return customerDTO;
     }
 }

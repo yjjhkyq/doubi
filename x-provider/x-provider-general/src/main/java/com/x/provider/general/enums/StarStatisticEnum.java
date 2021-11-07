@@ -6,6 +6,7 @@ import com.x.provider.api.statistic.enums.StatTotalItemNameEnum;
 import com.x.provider.api.statistic.enums.StatisticObjectClassEnum;
 import com.x.provider.api.statistic.enums.StatisticPeriodEnum;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -13,7 +14,7 @@ import java.util.stream.Collectors;
 public enum StarStatisticEnum {
 
     VIDEO_STAR_TOTAL(StarItemTypeEnum.VIDEO, StatisticObjectClassEnum.VIDEO, StatisticPeriodEnum.ALL, StatTotalItemNameEnum.VIDEO_STAR_COUNT),
-    COMMENT_STAR_TOTAL(StarItemTypeEnum.COMMENT, StatisticObjectClassEnum.COMMENT, StatisticPeriodEnum.ALL, StatTotalItemNameEnum.VIDEO_COMMENT_COUNT),
+    COMMENT_STAR_TOTAL(StarItemTypeEnum.COMMENT, StatisticObjectClassEnum.COMMENT, StatisticPeriodEnum.ALL, StatTotalItemNameEnum.VIDEO_COMMENT_STAR_COUNT),
     ;
     private StarItemTypeEnum starItemType;
     private StatisticObjectClassEnum statisticObjectClass;

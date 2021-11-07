@@ -1,12 +1,16 @@
 package com.x.provider.api.customer.service.factory;
 
 import com.x.core.web.api.R;
+import com.x.provider.api.customer.enums.CustomerRelationEnum;
+import com.x.provider.api.customer.model.ao.ListCustomerAO;
 import com.x.provider.api.customer.model.dto.CustomerDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
 import feign.hystrix.FallbackFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class CustomerFallbackFactory implements FallbackFactory<CustomerRpcService> {
@@ -19,8 +23,24 @@ public class CustomerFallbackFactory implements FallbackFactory<CustomerRpcServi
             }
 
             @Override
+            public R<Map<Long, CustomerDTO>> listCustomer(ListCustomerAO listCustomerAO) {
+                return null;
+            }
+
+
+            @Override
             public R<Long> authorize(String token, String path) {
                 return null;
+            }
+
+            @Override
+            public R<Integer> getCustomerRelation(long fromCustomerId, long toCustomerId) {
+                return R.ok(CustomerRelationEnum.NO_RELATION.getValue());
+            }
+
+            @Override
+            public R<List<Long>> listFollow(long customerId) {
+                return R.ok(new ArrayList<>());
             }
         };
     }

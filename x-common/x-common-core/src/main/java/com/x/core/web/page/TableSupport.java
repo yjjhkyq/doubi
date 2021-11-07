@@ -38,15 +38,17 @@ public class TableSupport
      */
     public static final String IS_ASC = "isAsc";
 
+    private static final Integer DEFAULT_PAGE = 1;
 
+    private static final Integer DEFAULT_PAGE_SIZE = 20;
     /**
      * 封装分页对象
      */
     public static PageDomain getPageDomain()
     {
         PageDomain pageDomain = new PageDomain();
-        pageDomain.setPageNum(ServletUtils.getParameterToInt(PAGE));
-        pageDomain.setPageSize(ServletUtils.getParameterToInt(PAGE_SIZE));
+        pageDomain.setPageNum(ServletUtils.getParameterToInt(PAGE, DEFAULT_PAGE));
+        pageDomain.setPageSize(ServletUtils.getParameterToInt(PAGE_SIZE, DEFAULT_PAGE_SIZE));
         pageDomain.setOrderByColumn(ServletUtils.getParameter(ORDER_BY_COLUMN));
         pageDomain.setIsAsc(ServletUtils.getParameter(IS_ASC));
         return pageDomain;
@@ -66,11 +68,27 @@ public class TableSupport
         return new Page<>(pageDomain.getPageNum(), pageDomain.getPageSize(), false);
     }
 
+    public static IPage buildIPageRequest(CursorPageRequest cursorPageRequest){
+        return new Page<>(0, cursorPageRequest.getPageSize(), false);
+    }
+
     public static <T, R> TableDataInfo<R> buildTableDataInfo(IPage<T> page, Function<T, R> funcation){
         List<R> result = new ArrayList<R>(page.getRecords().size());
         page.getRecords().forEach(s -> {
             result.add(funcation.apply(s));
         });
         return new TableDataInfo<R>(result, page.getTotal(), page.getSize());
+    }
+
+    public static <R> TableDataInfo<R> buildTableDataInfo(PageDomain pageDomain, List<R> source){
+        return new TableDataInfo<R>(source, 0, pageDomain.getPageSize());
+    }
+
+    public static <T, R> TableDataInfo<R> buildTableDataInfo(PageDomain pageDomain, List<T> source, Function<T, R> funcation){
+        List<R> result = new ArrayList<R>(source.size());
+        source.forEach(s -> {
+            result.add(funcation.apply(s));
+        });
+        return new TableDataInfo<R>(result, 0, pageDomain.getPageSize());
     }
 }

@@ -38,6 +38,15 @@ public class DateUtils extends org.apache.commons.lang3.time.DateUtils
         return new Date();
     }
 
+    public static Date today(){
+        try {
+            return parseDate(getDate(), YYYY_MM_DD);
+        }
+        catch (ParseException e){
+            throw new RuntimeException(e);
+        }
+    }
+
     /**
      * 获取当前日期, 默认格式为yyyy-MM-dd
      * 

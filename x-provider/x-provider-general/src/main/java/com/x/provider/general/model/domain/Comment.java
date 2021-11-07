@@ -14,10 +14,13 @@ import lombok.*;
 public class Comment extends BaseEntity {
   @TableId
   private long id;
-  private long itemId;
-  private int itemType;
-  private long commentCustomerId;
+  private Long itemId;
+  private Integer itemType;
+  private Long commentCustomerId;
+  private String commentCustomerNickName;
   private String content;
-  private long replyCommentId;
-  private long replyRootId;
+  private Long replyCommentId;
+  private Long replyRootId;
+  private Long replyCustomerId;
+  private String replyCustomerNickName;
 }

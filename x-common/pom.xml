@@ -17,6 +17,7 @@
         <module>x-common-swagger</module>
         <module>x-common-redis</module>
         <module>x-common-xxljob</module>
+        <module>x-common-kafka</module>
     </modules>
 
 

@@ -44,7 +44,7 @@ public class CommentRpcController implements CommentRpcService {
     @Override
     public R<Void> commentReply(@RequestBody CommentReplyAO commentReplyAO) {
         commentService.commentReply(commentReplyAO.getCommentId(), commentReplyAO.getCommentCustomerId(), commentReplyAO.getContent());
-        return null;
+        return R.ok();
     }
 
     @PostMapping("list")

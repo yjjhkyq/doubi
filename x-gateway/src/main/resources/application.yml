@@ -12,5 +12,22 @@ spring:
             - Path=/customer/**
           filters:
             - StripPrefix=1
+        - id: x-provider-video
+          uri: lb://x-provider-video
+          predicates:
+            - Path=/video/**
+          filters:
+            - StripPrefix=1
+        - id: x-provider-oss
+          uri: lb://x-provider-oss
+          predicates:
+            - Path=/oss/**
+          filters:
+            - StripPrefix=1
   main:
     allow-bean-definition-overriding: true
+
+custom:
+  feign:
+    decode:
+      enabled: false

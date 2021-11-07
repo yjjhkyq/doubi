@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
-@FeignClient(contextId = "generalCommentService", value = ServiceNameConstants.SERVICE, fallbackFactory = StarFallbackFactory.class)
+@FeignClient(contextId = "generalCommentService", value = ServiceNameConstants.SERVICE)
 public interface CommentRpcService {
     @PostMapping(ServiceNameConstants.RPC_URL_PREFIX_COMMENT + "/insert")
     R<Void> comment(@RequestBody CommentAO commentAO);

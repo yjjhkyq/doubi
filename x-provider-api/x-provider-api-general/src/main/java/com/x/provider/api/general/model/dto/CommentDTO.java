@@ -14,7 +14,10 @@ public class CommentDTO {
     private String itemId;
     private int itemType;
     private long commentCustomerId;
+    private String commentCustomerNickName;
     private String content;
     private long replyCommentId;
     private long replyRootId;
+    private long replyCustomerId;
+    private String replyCustomerNickName;
 }

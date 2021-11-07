@@ -14,6 +14,8 @@ public class CustomerDTO {
     private Date updatedOnUtc;
     private String phone;
 
+    private CustomerAttributeDTO customerAttribute;
+
     private List<RoleDTO> roles = new ArrayList<>();
 
     public long getId() {
@@ -89,5 +91,13 @@ public class CustomerDTO {
 
     public void setRoles(List<RoleDTO> roles) {
         this.roles = roles;
+    }
+
+    public CustomerAttributeDTO getCustomerAttribute() {
+        return customerAttribute;
+    }
+
+    public void setCustomerAttribute(CustomerAttributeDTO customerAttribute) {
+        this.customerAttribute = customerAttribute;
     }
 }

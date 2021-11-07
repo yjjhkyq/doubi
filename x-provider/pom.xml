@@ -16,6 +16,7 @@
         <module>x-provider-video</module>
         <module>x-provider-finance</module>
         <module>x-provider-statistic</module>
+        <module>x-provider-general</module>
     </modules>
 
     <artifactId>x-provider</artifactId>

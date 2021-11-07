@@ -11,18 +11,18 @@ import com.x.provider.api.finance.model.event.FinanceDataChangedEvent;
 import com.x.provider.api.finance.service.FinanceRpcService;
 import com.x.provider.api.video.enums.TopicSourceTypeEnum;
 import com.x.provider.video.configure.ApplicationConfig;
+import com.x.provider.video.mapper.TopicCustomerFavoriteMapper;
 import com.x.provider.video.mapper.TopicMapper;
 import com.x.provider.video.model.domain.Topic;
+import com.x.provider.video.model.domain.TopicCustomerFavorite;
 import com.x.provider.video.service.TopicFillBaseService;
 import com.x.provider.video.service.TopicService;
 import com.x.util.ChineseCharToEn;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.io.UnsupportedEncodingException;
-import java.sql.Struct;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,13 +39,16 @@ public class TopicServiceImpl implements TopicService {
     private final TopicMapper topicMapper;
     private final FinanceRpcService financeRpcService;
     private final ApplicationConfig applicationConfig;
+    private final TopicCustomerFavoriteMapper topicCustomerFavoriteMapper;
 
     public TopicServiceImpl(TopicMapper topicMapper,
                             FinanceRpcService financeRpcService,
-                            ApplicationConfig applicationConfig){
+                            ApplicationConfig applicationConfig,
+                            TopicCustomerFavoriteMapper topicCustomerFavoriteMapper){
         this.topicMapper = topicMapper;
         this.financeRpcService = financeRpcService;
         this.applicationConfig = applicationConfig;
+        this.topicCustomerFavoriteMapper = topicCustomerFavoriteMapper;
     }
 
     @Override
@@ -111,6 +114,57 @@ public class TopicServiceImpl implements TopicService {
             result.add(topic);
         });
         return result;
+    }
+
+    @Override
+    public void favoriteTopic(Long customerId, Long topicId, Boolean favorite) {
+        Optional<Topic> topic = getTopic(topicId, null);
+        if (topic.isEmpty()){
+            return;
+        }
+        Optional<TopicCustomerFavorite> topicCustomerFavorite = getTopicCustomerFavorite(customerId, topicId);
+        if (topicCustomerFavorite.isPresent()){
+            if (topicCustomerFavorite.get().getFavorite().equals(!favorite)){
+                topicCustomerFavoriteMapper.updateById(TopicCustomerFavorite.builder().id(topicCustomerFavorite.get().getId()).favorite(favorite).build());
+            }
+            return;
+        }
+        topicCustomerFavoriteMapper.insert(TopicCustomerFavorite.builder().favorite(favorite).customerId(customerId).topicSourceType(topic.get().getSourceType()).build());
+    }
+
+    @Override
+    public Boolean isFavoriteTopic(Long customerId, Long topicId) {
+        if (customerId <= 0){
+            return false;
+        }
+        Optional<TopicCustomerFavorite> topicCustomerFavorite = getTopicCustomerFavorite(customerId, topicId);
+        if (topicCustomerFavorite.isPresent() && topicCustomerFavorite.get().getFavorite()){
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public List<TopicCustomerFavorite> listTopicCustomerFavorite(Long customerId, TopicSourceTypeEnum topicSourceTypeEnum) {
+        return topicCustomerFavoriteMapper.selectList(buildQuery(customerId, 0L, topicSourceTypeEnum == null ? -1 : topicSourceTypeEnum.ordinal()));
+    }
+
+    private Optional<TopicCustomerFavorite> getTopicCustomerFavorite(Long customerId, Long topicId){
+        return Optional.ofNullable(topicCustomerFavoriteMapper.selectOne(buildQuery(customerId, topicId, -1)));
+    }
+
+    private LambdaQueryWrapper<TopicCustomerFavorite> buildQuery(Long customerId, Long topicId, int topicSourceType){
+        LambdaQueryWrapper<TopicCustomerFavorite> query = new LambdaQueryWrapper<>();
+        if (customerId >0){
+            query = query.eq(TopicCustomerFavorite::getCustomerId, customerId);
+        }
+        if (topicId > 0){
+            query = query.eq(TopicCustomerFavorite::getTopicId, topicId);
+        }
+        if (topicSourceType >= 0){
+            query = query.eq(TopicCustomerFavorite::getTopicSourceType, topicSourceType);
+        }
+        return query;
     }
 
     private List listTopicSource(TopicSourceTypeEnum topicSourceType, Date afterDate, List<String> ids){

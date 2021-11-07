@@ -8,6 +8,7 @@ import com.x.provider.api.statistic.enums.StatisticObjectClassEnum;
 import com.x.provider.api.statistic.enums.StatisticPeriodEnum;
 import io.swagger.models.auth.In;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -15,7 +16,7 @@ import java.util.stream.Collectors;
 public enum CommentStatisticEnum {
 
     VIDEO_COMMENT_TOTAL(CommentItemTypeEnum.VIDEO, false, StatisticObjectClassEnum.VIDEO, StatisticPeriodEnum.ALL, StatTotalItemNameEnum.VIDEO_COMMENT_COUNT),
-    VIDEO_COMMENT_REPLY_TOTAL(CommentItemTypeEnum.VIDEO, false, StatisticObjectClassEnum.COMMENT, StatisticPeriodEnum.ALL, StatTotalItemNameEnum.VIDEO_COMMENT_REPLY_COUNT),
+    VIDEO_COMMENT_REPLY_TOTAL(CommentItemTypeEnum.VIDEO, true, StatisticObjectClassEnum.COMMENT, StatisticPeriodEnum.ALL, StatTotalItemNameEnum.VIDEO_COMMENT_REPLY_COUNT),
     ;
     private Boolean reply;
     private CommentItemTypeEnum itemType;

@@ -1,6 +1,6 @@
 package com.x.core.web.api;
 
-import com.x.core.exception.ApiException;
+import com.x.core.exception.ApiFeignException;
 import feign.FeignException;
 import feign.Response;
 import feign.codec.Decoder;
@@ -21,7 +21,7 @@ public class XResponseEntityDecoder extends ResponseEntityDecoder {
         if (result instanceof R){
             R rpcResult = (R)result;
             if (!rpcResult.isOk()){
-                throw new ApiException(rpcResult.getCode(), rpcResult.getMessage());
+                throw new ApiFeignException(rpcResult.getCode(), rpcResult.getMessage());
             }
         }
         return result;

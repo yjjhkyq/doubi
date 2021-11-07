@@ -42,17 +42,17 @@ public class R<T> implements Serializable
         return restResult(data, ResultCode.FAILED);
     }
 
-    public static <T> R<T> fail(long code, String msg)
+    public static <T> R<T> build(long code, String msg)
     {
         return restResult(null, code, msg);
     }
 
-    public static <T> R<T> fail(IErrorCode errorCode, T t)
+    public static <T> R<T> build(IErrorCode errorCode, T t)
     {
 
         return restResult(t, errorCode);
     }
-    public static <T> R<T> fail(IErrorCode errorCode)
+    public static R<Void> build(IErrorCode errorCode)
     {
         return restResult(null, errorCode);
     }

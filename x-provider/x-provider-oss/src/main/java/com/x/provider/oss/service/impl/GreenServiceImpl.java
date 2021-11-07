@@ -47,7 +47,7 @@ public class GreenServiceImpl implements GreenService {
 
     @Override
     public SuggestionTypeEnum green(GreenRpcAO greenRpcAO) {
-        return null;
+        return getGreenService(GreenDataTypeEnum.valueOf(greenRpcAO.getDataType())).green(greenRpcAO);
     }
 
     private GreenService getGreenService(GreenDataTypeEnum greenDataType){

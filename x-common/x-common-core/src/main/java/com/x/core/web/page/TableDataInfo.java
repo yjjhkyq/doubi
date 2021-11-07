@@ -1,7 +1,9 @@
 package com.x.core.web.page;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * 表格分页数据对象
@@ -22,12 +24,15 @@ public class TableDataInfo<T> implements Serializable
 
     private long pageSize;
 
+    private String cursor;
+
 
     /**
      * 表格数据对象
      */
     public TableDataInfo()
     {
+        this.list = new ArrayList<>();
     }
 
     /**
@@ -41,7 +46,19 @@ public class TableDataInfo<T> implements Serializable
         this.list = list;
         this.total = total;
         this.pageSize = pageSize;
-        this.hasMore = this.list.size() >= list.size() ? true : false;
+        this.hasMore = this.list.size() > 0 ? true : false;
+    }
+
+    /**
+     * 分页
+     *
+     * @param list 列表数据
+     */
+    public TableDataInfo(List<T> list, boolean hasMore, String cursor)
+    {
+        this.list = list;
+        this.hasMore = hasMore;
+        this.cursor = cursor;
     }
 
     public long getTotal()
@@ -54,7 +71,7 @@ public class TableDataInfo<T> implements Serializable
         this.total = total;
     }
 
-    public List<?> getList()
+    public List<T> getList()
     {
         return list;
     }
@@ -78,5 +95,18 @@ public class TableDataInfo<T> implements Serializable
 
     public void setPageSize(long pageSize) {
         this.pageSize = pageSize;
+    }
+
+    public <D> TableDataInfo<D> prepare(Function<T,D> prepare){
+        TableDataInfo<D> tableDataInfo = new TableDataInfo<>();
+        tableDataInfo.total = total;
+        tableDataInfo.hasMore = hasMore;
+        tableDataInfo.pageSize = pageSize;
+        List<D> resultList = new ArrayList<>(list.size());
+        list.forEach(item -> {
+            resultList.add(prepare.apply(item));
+        });
+        tableDataInfo.setList(resultList);
+        return tableDataInfo;
     }
 }

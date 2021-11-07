@@ -51,8 +51,9 @@ public class OssRpcController implements OssRpcService, GreenRpcService {
         return R.ok(greenService.greenAttributeSync(attribute));
     }
 
+    @PostMapping("/green/sync")
     @Override
-    public R<String> greenSync(GreenRpcAO greenAO) {
+    public R<String> greenSync(@RequestBody GreenRpcAO greenAO) {
         return R.ok(greenService.green(greenAO).name());
     }
 }

@@ -73,7 +73,7 @@ public class BaiduGreenServiceImpl implements GreenService {
     }
 
     private SuggestionTypeEnum parseGreenResult(JSONObject jsonObject){
-        SuggestionTypeEnum result = SuggestionTypeEnum.REVIEW;
+        SuggestionTypeEnum result = SuggestionTypeEnum.PASS;
         if (jsonObject.has("error_code")){
             log.error("baidu green sdk error, error code: {} eror msg: {}", jsonObject.getLong("error_code"), jsonObject.getString("error_msg"));
             return result;

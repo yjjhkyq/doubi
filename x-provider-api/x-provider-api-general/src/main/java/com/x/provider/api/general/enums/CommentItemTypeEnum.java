@@ -15,6 +15,6 @@ public enum CommentItemTypeEnum implements IntegerEnum {
 
     @Override
     public Integer getValue() {
-        return null;
+        return value;
     }
 }

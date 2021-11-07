@@ -3,41 +3,44 @@ package com.x.provider.video.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.x.core.utils.ApiAssetUtil;
+import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
+import com.x.core.web.page.PageDomain;
 import com.x.provider.api.general.enums.StarItemTypeEnum;
+import com.x.provider.api.general.model.event.StarEvent;
 import com.x.provider.api.general.model.event.StarRequestEvent;
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
 import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.ao.GreenRpcAO;
 import com.x.provider.api.oss.service.GreenRpcService;
+import com.x.provider.api.video.constants.VideoEventTopic;
 import com.x.provider.api.video.enums.VideoStatusEnum;
+import com.x.provider.api.video.model.event.VideoChangedEvent;
 import com.x.provider.api.vod.enums.ReviewResultEnum;
 import com.x.provider.api.vod.model.ao.GetContentReviewResultAO;
 import com.x.provider.api.vod.model.dto.ContentReviewResultDTO;
+import com.x.provider.api.vod.model.dto.MediaInfoDTO;
 import com.x.provider.api.vod.service.VodRpcService;
-import com.x.provider.general.service.StarService;
 import com.x.provider.video.constant.Constants;
-import com.x.provider.video.constant.EventTopic;
 import com.x.provider.video.enums.VideoErrorEnum;
 import com.x.provider.video.mapper.VideoAttributeMapper;
 import com.x.provider.video.mapper.VideoMapper;
 import com.x.provider.video.mapper.VideoTopicMapper;
-import com.x.provider.video.model.ao.CreateVideoAO;
+import com.x.provider.video.model.ao.homepage.CreateVideoAO;
 import com.x.provider.video.model.domain.Video;
 import com.x.provider.video.model.domain.VideoAttribute;
 import com.x.provider.video.model.domain.VideoTopic;
+import com.x.provider.video.service.RedisKeyService;
 import com.x.provider.video.service.TopicService;
 import com.x.provider.video.service.VideoService;
+import com.x.redis.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
@@ -54,8 +57,10 @@ public class VideoServiceImpl implements VideoService {
     private final Executor executor;
     private final VideoAttributeMapper videoAttributeMapper;
     private final GreenRpcService greenRpcService;
-    private final StarService starService;
+    private final RedisKeyService redisKeyService;
+    private final RedisService redisService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+
     public VideoServiceImpl(VideoMapper videoMapper,
                             TopicService topicService,
                             VideoTopicMapper videoTopicMapper,
@@ -63,7 +68,8 @@ public class VideoServiceImpl implements VideoService {
                             Executor executor,
                             VideoAttributeMapper videoAttributeMapper,
                             GreenRpcService greenRpcService,
-                            StarService starService,
+                            RedisKeyService redisKeyService,
+                            RedisService redisService,
                             KafkaTemplate<String, Object> kafkaTemplate){
         this.videoMapper = videoMapper;
         this.topicService = topicService;
@@ -72,7 +78,8 @@ public class VideoServiceImpl implements VideoService {
         this.executor = executor;
         this.videoAttributeMapper = videoAttributeMapper;
         this.greenRpcService = greenRpcService;
-        this.starService = starService;
+        this.redisKeyService = redisKeyService;
+        this.redisService = redisService;
         this.kafkaTemplate = kafkaTemplate;
     }
 
@@ -99,9 +106,13 @@ public class VideoServiceImpl implements VideoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteVideo(long id) {
+        Optional<Video> video = getVideo(id, null);
+        if (video.isEmpty()){
+            return;
+        }
         videoMapper.deleteById(id);
         videoTopicMapper.delete(new LambdaQueryWrapper<VideoTopic>().eq(VideoTopic::getVideoId, id));
-        //TODO:发布vidoe删除事件
+        sendVideoChangedEvent(video.get(), VideoChangedEvent.EventTypeEnum.VIDEO_DELETED);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -117,18 +128,24 @@ public class VideoServiceImpl implements VideoService {
         var videoTopics = videoTopicMapper.selectList(new LambdaQueryWrapper<VideoTopic>().eq(VideoTopic::getVideoId, video.getId()));
         if (VideoStatusEnum.PUBLISH == videoStatus) {
             video.setVideoStatus(videoStatus.ordinal());
+            R<MediaInfoDTO> mediaInfo = vodRpcService.getMediaInfo(video.getFileId());
+            if (mediaInfo.getData() == null){
+                return;
+            }
+            video.setDuration(mediaInfo.getData().getDuration());
             videoMapper.updateById(video);
             videoTopics.forEach(item -> {
                 item.setVideoStatus(video.getVideoStatus());
                 videoTopicMapper.updateById(item);
             });
-            //TODO：发布VIDEO发布事件
+            sendVideoChangedEvent(video, VideoChangedEvent.EventTypeEnum.VIDEO_PUBLISHED);
         }
         else{
             videoMapper.deleteById(video.getId());
             videoTopics.forEach(item -> {
                 videoTopicMapper.deleteBatchIds(videoTopics.stream().map(VideoTopic::getId).collect(Collectors.toList()));
             });
+            sendVideoChangedEvent(video, VideoChangedEvent.EventTypeEnum.VIDEO_DELETED);
             //TODO:发送消息通知用户审核失败
         }
     }
@@ -143,18 +160,66 @@ public class VideoServiceImpl implements VideoService {
     }
 
     @Override
-    public IPage<Video> listVideo(long customerId, IPage page){
-        return videoMapper.selectPage(page, new LambdaQueryWrapper<Video>().eq(Video::getCustomerId, customerId).orderByDesc(Video::getTopValue).orderByDesc(Video::getCreatedOnUtc));
+    public Optional<Video> getVideo(long videoId) {
+        return getVideo(videoId, null);
     }
 
     @Override
-    public void star(long starCustomerId, long starVideoId, boolean star) {
-        Optional<Video> video = getVideo(starVideoId, null);
-        if (video.isEmpty()){
-            return;
+    public IPage<Video> listVideo(long customerId, IPage page){
+        return videoMapper.selectPage(page, new LambdaQueryWrapper<Video>().eq(Video::getCustomerId, customerId).eq(Video::getVideoStatus, VideoStatusEnum.PUBLISH.ordinal()).orderByDesc(Video::getTopValue).orderByDesc(Video::getCreatedOnUtc));
+    }
+
+    @Override
+    public List<Video> listVideo(List<Long> ids) {
+        return videoMapper.selectList(new LambdaQueryWrapper<Video>().in(Video::getId, ids));
+    }
+
+    @Override
+    public void onStar(StarEvent starEvent) {
+        if (starEvent.getItemType().equals(StarItemTypeEnum.VIDEO.getValue())){
+            if(starEvent.isStar()) {
+                addVideoStarList(Long.parseLong(starEvent.getItemId()), starEvent.getStarCustomerId());
+                return;
+            }
+            removeFromVideoStarList(Long.parseLong(starEvent.getItemId()), starEvent.getStarCustomerId());
         }
-        kafkaTemplate.send(EventTopic.TOPIC_NAME_STAR_REQUEST, video.get().getId().toString(), StarRequestEvent.builder().itemId(video.get().getId())
-                .itemType( StarItemTypeEnum.VIDEO.getValue()).starCustomerId(starCustomerId).star(star).build());
+    }
+
+    @Override
+    public List<Video> listCustomerStarVideo(PageDomain pageDomain, long starCustomerId) {
+        Set<Long> starVideoIds = redisService.reverseRangeLong(redisKeyService.getCustomerStarVideoKey(starCustomerId), pageDomain.getPageNum(), pageDomain.getPageSize());
+        if (starVideoIds.size() == 0){
+            return Collections.emptyList();
+        }
+        List<Video> videos = listVideo(starVideoIds);
+        if (starVideoIds.size() != videos.size()){
+            starVideoIds.removeAll(videos.stream().map(Video::getId).collect(Collectors.toSet()));
+            starVideoIds.parallelStream().forEach(item -> {
+                removeFromVideoStarList(item, starCustomerId);
+            });
+            return listCustomerStarVideo(pageDomain, starCustomerId);
+        }
+        return videos;
+    }
+
+    public List<VideoTopic> listVideoTopic(Long videoId){
+        LambdaQueryWrapper<VideoTopic> query = new LambdaQueryWrapper<>();
+        if (videoId != null){
+            query = query.eq(VideoTopic::getVideoId, videoId);
+        }
+        return videoTopicMapper.selectList(query);
+    }
+
+    private List<Video> listVideo(Set<Long> ids){
+        return videoMapper.selectBatchIds(ids);
+    }
+
+    private void addVideoStarList(Long videoId, Long customerId){
+        redisService.zadd(redisKeyService.getCustomerStarVideoKey(customerId), videoId, System.currentTimeMillis());
+    }
+
+    private void removeFromVideoStarList(Long videoId, Long customerId){
+        redisService.zremove(redisKeyService.getCustomerStarVideoKey(customerId), videoId);
     }
 
     public Optional<Video> getVideo(String fileId){
@@ -190,5 +255,15 @@ public class VideoServiceImpl implements VideoService {
             result.add(item.replaceFirst(TOPIC_PREFIX, ""));
         });
         return result;
+    }
+
+    public List<Video> listVideo(List<Long> customerIds, Date afterUpdateDate){
+        return videoMapper.selectList(new LambdaQueryWrapper<Video>().in(Video::getCustomerId, customerIds).eq(Video::getVideoStatus, VideoStatusEnum.PUBLISH.ordinal()).ge(Video::getUpdatedOnUtc, afterUpdateDate));
+    }
+
+    private void sendVideoChangedEvent(Video video, VideoChangedEvent.EventTypeEnum eventTypeEnum){
+        VideoChangedEvent changedEvent = BeanUtil.prepare(video, VideoChangedEvent.class);
+        changedEvent.setEventType(eventTypeEnum.getValue());
+        kafkaTemplate.send(VideoEventTopic.TOPIC_NAME_VIDEO_CHANGED, String.valueOf(video.getId()), changedEvent);
     }
 }

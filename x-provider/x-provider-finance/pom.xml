@@ -84,7 +84,7 @@
             <artifactId>x-common-xxljob</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.x.provider.api</groupId>
+            <groupId>com.x</groupId>
             <artifactId>x-provider-api-finance</artifactId>
         </dependency>
     </dependencies>

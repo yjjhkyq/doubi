@@ -77,7 +77,7 @@
         </dependency>
 
         <dependency>
-            <groupId>com.x.provider.api</groupId>
+            <groupId>com.x</groupId>
             <artifactId>x-provider-api-statistic</artifactId>
         </dependency>
     </dependencies>

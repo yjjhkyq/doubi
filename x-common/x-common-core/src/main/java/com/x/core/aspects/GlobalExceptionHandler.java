@@ -1,6 +1,7 @@
 package com.x.core.aspects;
 
 import com.x.core.exception.ApiException;
+import com.x.core.exception.ApiFeignException;
 import com.x.core.web.api.R;
 import com.x.core.web.api.ResultCode;
 import org.slf4j.Logger;
@@ -49,11 +50,21 @@ public class GlobalExceptionHandler {
     /**
      * 业务异常
      */
+    @ExceptionHandler(ApiFeignException.class)
+    public R businessException(ApiFeignException e)
+    {
+        log.error("api feign exception {} {}", e.getCode(), e.getMessage());
+        return R.build(e.getCode(), e.getMessage());
+    }
+
+    /**
+     * 业务异常
+     */
     @ExceptionHandler(ApiException.class)
     public R businessException(ApiException e)
     {
         log.error("api exception {} {}", e.getCode(), e.getMessage());
-        return R.fail(e.getCode(), e.getMessage());
+        return R.build(e.getCode(), e.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -62,6 +73,6 @@ public class GlobalExceptionHandler {
         List<ObjectError> errors =e.getBindingResult().getAllErrors();
         StringBuffer errorMsg=new StringBuffer();
         errors.stream().forEach(x -> errorMsg.append(x.getDefaultMessage()).append(";"));
-        return R.fail(ResultCode.VALIDATE_FAILED, errors);
+        return R.build(ResultCode.VALIDATE_FAILED, errors);
     }
 }

@@ -1,5 +1,6 @@
 package com.x.redis.service;
 
+import com.x.redis.domain.LongTypeTuple;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -11,6 +12,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * spring redis 工具类
@@ -112,7 +114,7 @@ public class RedisService {
 
     public <T> List<T> listCacheObject(final List<String> keys){
         ValueOperations<String, T> operation = redisTemplate.opsForValue();
-        return operation.multiGet(keys);
+        return operation.multiGet(keys).stream().filter(item -> item != null).collect(Collectors.toList());
     }
 
     /**
@@ -325,6 +327,10 @@ public class RedisService {
         return redisTemplate.opsForZSet().add(key, value, score);
     }
 
+    public Long zadd(final String key, Set<LongTypeTuple> values) {
+        return redisTemplate.opsForZSet().add(key, values);
+    }
+
     public <T> Long zremove(final String key, T value) {
         return redisTemplate.opsForZSet().remove(key, value);
     }
@@ -337,8 +343,34 @@ public class RedisService {
         return redisTemplate.opsForZSet().reverseRange(key, (page - 1) * limit, (page - 1) * limit + limit);
     }
 
+    public <T> Set<T> rangeByScore(final String key, long startScore, long count){
+        return redisTemplate.opsForZSet().rangeByScore(key, startScore, Long.MAX_VALUE, 0, count);
+    }
+
+    public Set<Long> rangeByScoreLong(final String key, long startScore, long count){
+        Set<Integer> values = rangeByScore(key, startScore, count);
+        Set<Long> result = new LinkedHashSet<>(values.size());
+        values.stream().forEach(item -> {
+            result.add(item.longValue());
+        });
+        return result;
+    }
+
     public Set<Long> reverseRangeLong(final String key, long page, long limit) {
         Set<Integer> values =  redisTemplate.opsForZSet().reverseRange(key, (page - 1) * limit, (page - 1) * limit + limit);
+        Set<Long> result = new LinkedHashSet<>(values.size());
+        values.stream().forEach(item -> {
+            result.add(item.longValue());
+        });
+        return result;
+    }
+
+    public <T> Set<T> range(final String key){
+        return redisTemplate.opsForZSet().range(key, 0, -1);
+    }
+
+    public Set<Long> rangeLong(final String key){
+        Set<Integer> values = range(key);
         Set<Long> result = new LinkedHashSet<>(values.size());
         values.stream().forEach(item -> {
             result.add(item.longValue());
@@ -368,7 +400,7 @@ public class RedisService {
      */
     public boolean tryLock(String key, String value) {
         ValueOperations<String, String> operation = redisTemplate.opsForValue();
-        if (operation.setIfAbsent(key, value, Duration.ofMinutes(3))) {
+        if (operation.setIfAbsent(key, value, Duration.ofMillis(200))) {
             return true;
         }
         String currentValue = getCacheObject(key);

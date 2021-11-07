@@ -10,10 +10,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ListCommentAO extends PageDomain {
+public class ListCommentAO{
     private long itemId;
     private int itemType;
     private long commentCustomerId;
     long replyCommentId;
     private long replyRootId;
+    private PageDomain pageDomain;
 }

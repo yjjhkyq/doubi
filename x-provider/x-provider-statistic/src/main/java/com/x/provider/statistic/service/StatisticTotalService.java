@@ -13,4 +13,5 @@ public interface StatisticTotalService {
     void incStatTotal(StatisticTotal statisticTotal);
     ListStatisticTotalMapDTO listStatisticTotalMap(ListStatisticTotalBatchAO listStatisticTotalAO);
     List<StatisticTotal> listStatisticTotal(ListStatTotalAO listStatTotalAO);
+    List<StatisticTotal> listStatisticTotalBatch(ListStatisticTotalBatchAO listStatisticTotalBatchAO);
 }

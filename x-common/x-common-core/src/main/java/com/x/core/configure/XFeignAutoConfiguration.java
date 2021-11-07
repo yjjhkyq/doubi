@@ -1,6 +1,5 @@
 package com.x.core.configure;
 
-import com.x.core.cache.event.EntityChangedEventBus;
 import com.x.core.web.api.XResponseEntityDecoder;
 import feign.Feign;
 import feign.codec.Decoder;
@@ -18,19 +17,12 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnClass({Feign.class})
 public class XFeignAutoConfiguration {
 
-    @Autowired
+    @Autowired(required = false)
     private ObjectFactory<HttpMessageConverters> messageConverters;
 
-      @Bean
+     @Bean
      @ConditionalOnMissingBean
      public Decoder feignDecoder() {
           return new OptionalDecoder(new XResponseEntityDecoder(new SpringDecoder(this.messageConverters)));
       }
-
-    @Bean
-    @ConditionalOnMissingBean(EntityChangedEventBus.class)
-    public EntityChangedEventBus eventBus(){
-        return new EntityChangedEventBus();
-    }
-
 }

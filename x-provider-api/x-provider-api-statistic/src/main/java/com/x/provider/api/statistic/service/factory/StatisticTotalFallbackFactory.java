@@ -24,6 +24,11 @@ public class StatisticTotalFallbackFactory implements FallbackFactory<StatisticT
             }
 
             @Override
+            public R<List<ListStatisticTotalDTO>> listStatisticTotalBatch(ListStatisticTotalBatchAO listStatisticTotalBatchAO) {
+                return null;
+            }
+
+            @Override
             public R<List<ListStatisticTotalDTO>> listStatisticTotal(ListStatTotalAO listStatTotalAO) {
                 return null;
             }

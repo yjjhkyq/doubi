@@ -5,7 +5,8 @@ public enum StatTotalItemNameEnum {
     VIDEO_PLAY_COUNT(2),
     VIDEO_COMMENT_COUNT(3),
     VIDEO_COMMENT_STAR_COUNT(4),
-    VIDEO_COMMENT_REPLY_COUNT(5)
+    VIDEO_COMMENT_REPLY_COUNT(5),
+    VIDEO_SCORE(6),
     ;
 
     private final int value;

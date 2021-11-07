@@ -13,7 +13,7 @@
         <module>x-monitor</module>
         <module>x-provider-api</module>
         <module>x-provider</module>
-
+        <module>x-kafka</module>
     </modules>
 
     <name>x</name>
@@ -48,7 +48,7 @@
     <!-- 依赖声明 -->
     <dependencyManagement>
         <dependencies>
-            <!-- SpringCloud 微服务 -->
+            <!-- SpringCloud 微服务  general 9207 x-kafka 9208 statistic 9209 vod 9210-->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
@@ -218,33 +218,48 @@
                 <version>1.0.0</version>
             </dependency>
             <dependency>
-                <groupId>com.x.provider.api</groupId>
+                <groupId>com.x</groupId>
+                <artifactId>x-common-kafka</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.x</groupId>
                 <artifactId>x-provider-api-customer</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>
-                <groupId>com.x.provider.api</groupId>
+                <groupId>com.x</groupId>
                 <artifactId>x-provider-api-oss</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>
-                <groupId>com.x.provider.api</groupId>
+                <groupId>com.x</groupId>
                 <artifactId>x-provider-api-vod</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>
-                <groupId>com.x.provider.api</groupId>
+                <groupId>com.x</groupId>
                 <artifactId>x-provider-api-finance</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>
-                <groupId>com.x.provider.api</groupId>
+                <groupId>com.x</groupId>
                 <artifactId>x-provider-api-video</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>
                 <groupId>com.x</groupId>
                 <artifactId>x-common-xxljob</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.x</groupId>
+                <artifactId>x-provider-api-statistic</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.x</groupId>
+                <artifactId>x-provider-api-general</artifactId>
                 <version>1.0.0</version>
             </dependency>
         </dependencies>

@@ -1,7 +1,5 @@
 package com.x.provider.general.component;
 
-import com.x.provider.api.finance.model.event.FinanceDataChangedEvent;
-import com.x.provider.api.finance.model.event.FinanceDataChangedEventEnum;
 import com.x.provider.api.general.constants.GeneralEventTopic;
 import com.x.provider.api.general.model.event.StarRequestEvent;
 import com.x.provider.general.service.StarService;

@@ -2,10 +2,7 @@ package com.x.provider.customer.service;
 
 import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.customer.enums.SystemCustomerAttributeName;
-import com.x.provider.customer.model.ao.ChangePasswordByOldPasswordAO;
-import com.x.provider.customer.model.ao.ChangeUserNameAO;
-import com.x.provider.customer.model.ao.UserNamePasswordLoginAO;
-import com.x.provider.customer.model.ao.UserNamePasswordRegisterAO;
+import com.x.provider.customer.model.ao.*;
 import com.x.provider.customer.model.domain.Customer;
 import com.x.provider.customer.model.domain.CustomerPassword;
 import com.x.provider.customer.model.domain.Role;
@@ -17,7 +14,8 @@ import java.util.Map;
 public interface CustomerService {
     List<String> MEDIA_CUSTOMER_ATTRIBUTE_NAME = Arrays.asList(SystemCustomerAttributeName.AVATAR_ID.toString(), SystemCustomerAttributeName.PERSONAL_HOMEPAGE_BACKGROUND_ID.toString());
     void register(UserNamePasswordRegisterAO userNamePasswordRegisterAO);
-    String login(UserNamePasswordLoginAO userNamePasswordLoginAO);
+    String loginByPassword(LoginByPasswordAO userNamePasswordLoginAO);
+    String loginOrRegisterBySms(LoginOrRegBySmsAO loginOrRegByPhoneAO);
     void logout(String token);
     long validateToken(String token);
     void changePassword(long customerId, ChangePasswordByOldPasswordAO changePasswordAO);

@@ -32,8 +32,16 @@ public class StatisticTotalRpcController extends BaseRpcController implements St
 
     @Override
     @PostMapping("map")
-    public R<ListStatisticTotalMapDTO> listStatisticTotalMap(ListStatisticTotalBatchAO listStatisticTotalAO) {
+    public R<ListStatisticTotalMapDTO> listStatisticTotalMap(@RequestBody ListStatisticTotalBatchAO listStatisticTotalAO) {
+        List<StatisticTotal> statisticTotals = statisticTotalService.listStatisticTotalBatch(listStatisticTotalAO);
         return null;
+    }
+
+    @PostMapping("list/batch")
+    @Override
+    public R<List<ListStatisticTotalDTO>> listStatisticTotalBatch(@RequestBody ListStatisticTotalBatchAO listStatisticTotalBatchAO) {
+        List<StatisticTotal> statisticTotals = statisticTotalService.listStatisticTotalBatch(listStatisticTotalBatchAO);
+        return R.ok(BeanUtil.prepare(statisticTotals, ListStatisticTotalDTO.class));
     }
 
     @Override
