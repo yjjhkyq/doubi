@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
-@FeignClient(contextId = "generalStarService", value = ServiceNameConstants.SERVICE)
+@FeignClient(contextId = "generalStarService", value = ServiceNameConstants.SERVICE, fallbackFactory = StarFallbackFactory.class)
 public interface StarRpcService {
     @PostMapping(ServiceNameConstants.RPC_URL_PREFIX_STAR + "/is/starred")
     R<Boolean> isStarred(@RequestBody IsStarredAO isStarred);

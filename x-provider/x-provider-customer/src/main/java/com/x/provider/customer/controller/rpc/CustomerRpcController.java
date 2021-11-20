@@ -64,7 +64,7 @@ public class CustomerRpcController extends BaseRpcController implements Customer
     @Override
     public R<Long> authorize(@RequestParam("token") String token, @RequestParam("path") String path){
         logger.info("authorize, token:{} path:{}", token, path);
-        if (applicationConfig.getAuthIgnoreUrls().stream().anyMatch(item -> item.startsWith(path))){
+        if (applicationConfig.getAuthIgnoreUrls().stream().anyMatch(item -> item.startsWith(path) || path.endsWith(item))){
             return R.ok(0L);
         }
         long customerId = StringUtils.hasText(token) ? customerService.validateToken(token) : 0;

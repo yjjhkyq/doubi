@@ -7,12 +7,13 @@ import com.x.core.utils.ApiAssetUtil;
 import com.x.core.utils.IdUtils;
 import com.x.core.web.api.R;
 import com.x.core.web.api.ResultCode;
+import com.x.provider.api.general.model.ao.SendVerificationCodeAO;
 import com.x.provider.api.general.model.ao.ValidateVerificationCodeAO;
 import com.x.provider.api.general.service.SmsRpcService;
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
 import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
-import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
+import com.x.provider.api.oss.model.ao.GreenRpcAO;
 import com.x.provider.api.oss.service.GreenRpcService;
 import com.x.provider.customer.configure.ApplicationConfig;
 import com.x.provider.customer.constant.CustomerConstants;
@@ -43,6 +44,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -156,6 +158,46 @@ public class CustomerServiceImpl implements CustomerService {
         return customerId;
     }
 
+    /**
+     * 验证用户待绑定的手机号是否合法
+     * <li>1. 验证这个用户有没有绑定手机(仅保险起见)</li>
+     * <li>2. 验证有没有其他用户用这个手机号绑定</li>
+     * <li>3. 给这个手机号发验证码</li>
+     * @param customerId 用户id
+     * @param validatePhoneAO 待绑定的手机号
+     */
+    @Override
+    public void checkPhoneBound(long customerId, ValidatePhoneAO validatePhoneAO) {
+        Customer customerExisted = getCustomer(customerId);
+        // 判断用户是不是没绑定手机号
+        ApiAssetUtil.isStringEmpty(customerExisted.getPhone(), UserResultCode.USER_PHONE_BOUND);
+        // 用户未绑定手机号
+        customerExisted = getCustomer(0L, null, validatePhoneAO.getPhone(), null);
+        // 判断是否是未被绑定的
+        ApiAssetUtil.isNull(customerExisted, UserResultCode.USER_PHONE_BOUND);
+        // 发送验证码
+        smsRpcService.sendVerificationCode(SendVerificationCodeAO.builder().phoneNumber(validatePhoneAO.getPhone()).build());
+    }
+
+    /**
+     * 用户绑定手机, 必须调用子接口validate, 验证手机号是否已被绑定
+     * <li>1. 验证验证码正确与否</li>
+     * <li>2. 插入数据库</li>
+     * @param customerId 用户id
+     * @param bindPhoneAO 传入待绑定号码和短信验证码
+     */
+    @Override
+    public void bindPhone(long customerId, BindPhoneAO bindPhoneAO) {
+        // 用户必须是没有绑定手机号的
+        Customer customer = getCustomer(customerId);
+        smsRpcService.validateVerificationCode(ValidateVerificationCodeAO.builder().phoneNumber(bindPhoneAO.getPhone()).sms(bindPhoneAO.getSms()).build());
+        customer.setPhone(bindPhoneAO.getPhone());
+        customerMapper.updateById(customer);
+        entityChangedEventBus.postEntityUpdated(new CustomerChangedEvent(customer));
+    }
+
+
+
     @Override
     public void changePassword(long customerId, ChangePasswordByOldPasswordAO changePasswordAO) {
         CustomerPassword customerPassword = getCustomerPassword(customerId);
@@ -172,6 +214,21 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
+    public void changePhone(long customerId, ChangePhoneAO changePhoneAO) {
+        final Customer customer = getCustomer(customerId, null, changePhoneAO.getOldPhone(), null);
+        ApiAssetUtil.notNull(customer, UserResultCode.USER_PHONE_ERROR);
+        // 验证码校验可以放在if里也可以放在if外, 放在if里效率高, 放在if外不会有未被利用的验证码
+        smsRpcService.validateVerificationCode(ValidateVerificationCodeAO.builder().phoneNumber(changePhoneAO.getPhone()).sms(changePhoneAO.getSms()).build());
+        if (!customer.getPhone().equals(changePhoneAO.getPhone())) {
+            customer.setPhone(changePhoneAO.getPhone());
+            Customer customerExisted = getCustomerByPhone(changePhoneAO.getPhone());
+            ApiAssetUtil.isNull(customerExisted, UserResultCode.USER_PHONE_EXISTED);
+            customerMapper.updateById(customer);
+            entityChangedEventBus.postEntityUpdated(new CustomerChangedEvent(customer));
+        }
+    }
+
+    @Override
     public void changeUserName(long customerId, ChangeUserNameAO changeUserNameAO) {
         final Customer customer = getCustomer(customerId);
         Customer customerExisted = getCustomer(changeUserNameAO.getUserName());
@@ -180,7 +237,6 @@ public class CustomerServiceImpl implements CustomerService {
         customerMapper.updateById(customer);
         entityChangedEventBus.postEntityUpdated(new CustomerChangedEvent(customer));
     }
-
 
     @Override
     public Customer getCustomer(String userName) {
@@ -204,6 +260,9 @@ public class CustomerServiceImpl implements CustomerService {
     public List<Role> listCustomerRole(long customerId) {
         return redisService.getCacheObject(redisKeyService.getCustomerRoleKey(customerId), () -> {
             List<CustomerRole> customerRoles = customerRoleMapper.selectList(new LambdaQueryWrapper<CustomerRole>().eq(CustomerRole::getCustomerId, customerId));
+            if (customerRoles.isEmpty()){
+                return Collections.emptyList();
+            }
             return roleMapper.selectBatchIds(customerRoles.stream().map(CustomerRole::getRoleId).collect(Collectors.toList()));
         });
     }
@@ -213,9 +272,8 @@ public class CustomerServiceImpl implements CustomerService {
         switch (attributeName){
             case NICK_NAME:
             case SIGNATURE:
-                R<AttributeGreenResultDTO> greenResult = greenRpcService.greenAttributeSync(new AttributeGreenRpcAO(redisKeyService.getGlobalAttributeKeyGroup(AttributeKeyGroupEnum.CUSTOMER.toString()),
-                        customerId, attributeName.toString(), value, GreenDataTypeEnum.TEXT));
-                ApiAssetUtil.isTrue(SuggestionTypeEnum.valueOf(greenResult.getData().getSuggestionType()).equals(SuggestionTypeEnum.PASS), ResultCode.GREEN_BLOCKED);
+                R<String> greenResult = greenRpcService.greenSync(GreenRpcAO.builder().value(value).dataType(GreenDataTypeEnum.TEXT.name()).build());
+                ApiAssetUtil.isTrue(greenResult.getData().equals(SuggestionTypeEnum.PASS.name()), ResultCode.GREEN_BLOCKED);
                 genericAttributeService.addOrUpdateAttribute(AttributeKeyGroupEnum.CUSTOMER.toString(), customerId, attributeName.toString(), value);
                 break;
             case AVATAR_ID:

@@ -68,6 +68,26 @@ public class RedisService {
     }
 
     /**
+     * 缓存计数器, 每次调用会刷新过期时间
+     * @param key 键
+     * @param timeout 过期时间
+     */
+    public void setCountObject(final String key, Duration timeout) {
+        redisTemplate.opsForValue().increment(key);
+        expire(key, timeout);
+    }
+
+    /**
+     * 获得key计数器里的值, 不刷新过期时间
+     * @param key 键
+     * @return 值大小
+     */
+    public Integer getCountObject(final String key) {
+        Object res = redisTemplate.opsForValue().get(key);
+        return res == null ? 0 : (Integer) res;
+    }
+
+    /**
      * 设置有效时间
      *
      * @param key     Redis键

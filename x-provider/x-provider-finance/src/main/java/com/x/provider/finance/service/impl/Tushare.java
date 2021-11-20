@@ -37,7 +37,7 @@ public class Tushare {
 		}
 		TushareAjaxResult mapResult = new TushareAjaxResult(JsonUtil.parseObject(result, HashMap.class));
 		if (!mapResult.isSuccess()) {
-			throw new RuntimeException(StrFormatter.format("get stock data ajex result error {}", result)) ;
+			throw new RuntimeException(StrFormatter.format("get stock data ajax result error {}", result)) ;
 		}
 		return mapResult.getData();
 	}

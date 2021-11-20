@@ -69,9 +69,6 @@ public class TencentOssServiceImpl implements TencentOssService {
     }
 
     private COSClient getTempCosClient(TencentOssCredentialVO tencentOssCredential){
-        String tmpSecretId = "COS_SECRETID";
-        String tmpSecretKey = "COS_SECRETKEY";
-        String sessionToken = "COS_TOKEN";
         BasicSessionCredentials cred = new BasicSessionCredentials(tencentOssCredential.getTmpSecretId(),
                 tencentOssCredential.getTmpSecretKey(), tencentOssCredential.getSessionToken());
         Region region = new Region(tencentOssCredential.getRegionName());

@@ -9,7 +9,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(contextId = "generalStarService", value = ServiceNameConstants.SERVICE, fallbackFactory = StarFallbackFactory.class)
+@FeignClient(contextId = "generalStarService", value = ServiceNameConstants.SERVICE)
 public interface SmsRpcService {
     @PostMapping(ServiceNameConstants.RPC_URL_PREFIX_SMS + "/verification/code/send")
     R<Void> sendVerificationCode(@RequestBody SendVerificationCodeAO sendVerificationCodeAO);

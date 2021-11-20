@@ -17,6 +17,8 @@
         <module>x-provider-finance</module>
         <module>x-provider-statistic</module>
         <module>x-provider-general</module>
+        <module>x-provider-mc</module>
+      <module>x-provider-pay</module>
     </modules>
 
     <artifactId>x-provider</artifactId>

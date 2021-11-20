@@ -103,6 +103,7 @@ public class SwaggerAutoConfiguration
              .build());
         securityReferences.add(SecurityReference.builder().reference("Authorization").scopes(new AuthorizationScope[]{new AuthorizationScope("global", "global des")}).build());
         securityReferences.add(SecurityReference.builder().reference("X-Customer-Id").scopes(new AuthorizationScope[]{new AuthorizationScope("global", "global des")}).build());
+        securityReferences.add(SecurityReference.builder().reference("PAY_TOKEN").scopes(new AuthorizationScope[]{new AuthorizationScope("global", "global des")}).build());
          return securityReferences;
 
     }
@@ -112,6 +113,7 @@ public class SwaggerAutoConfiguration
         ArrayList<SecurityScheme> securitySchemes = new ArrayList<>();
         securitySchemes.add(new ApiKey("Authorization", "Authorization", "header"));
         securitySchemes.add(new ApiKey("X-Customer-Id", "X-Customer-Id", "header"));
+        securitySchemes.add(new ApiKey("PAY_TOKEN", "PAY_TOKEN", "header"));
         ArrayList<AuthorizationScope> authorizationScopeList = new ArrayList<>();
         swaggerProperties().getAuthorization().getAuthorizationScopeList().forEach(authorizationScope -> authorizationScopeList.add(new AuthorizationScope(authorizationScope.getScope(), authorizationScope.getDescription())));
         ArrayList<GrantType> grantTypes = new ArrayList<>();

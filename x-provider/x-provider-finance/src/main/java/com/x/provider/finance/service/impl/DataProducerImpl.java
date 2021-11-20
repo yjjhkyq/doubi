@@ -15,7 +15,7 @@ public class DataProducerImpl implements DataProducer {
 
     private final Tushare tushare;
 
-    public DataProducerImpl(Tushare tushare){
+    public DataProducerImpl(Tushare tushare) {
         this.tushare = tushare;
     }
 
@@ -24,10 +24,16 @@ public class DataProducerImpl implements DataProducer {
         List<Map> stocks = tushare.stockBasic();
         List<Security> result = new ArrayList<>(stocks.size());
         stocks.stream().forEach(item -> {
-            result.add(Security.builder().code(String.valueOf(item.get("ts_code"))).symbol(String.valueOf(item.get("symbol")))
-                    .name(String.valueOf(item.get("name"))).cnSpell(String.valueOf(item.get("cnspell"))).fullName(String.valueOf(item.get("fullname")))
-                    .enName(String.valueOf(item.get("enname"))).exchange(String.valueOf(item.get("exchange"))).type(SecurityTypeEnum.STOCK.name())
-                    .build());
+            result.add(Security.builder()
+                .code(String.valueOf(item.get("ts_code")))
+                .symbol(String.valueOf(item.get("symbol")))
+                .name(String.valueOf(item.get("name")))
+                .cnSpell(String.valueOf(item.get("cnspell")))
+                .fullName(String.valueOf(item.get("fullname")))
+                .enName(String.valueOf(item.get("enname")))
+                .exchange(String.valueOf(item.get("exchange")))
+                .type(SecurityTypeEnum.STOCK.name())
+                .build());
         });
         return result;
     }

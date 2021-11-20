@@ -104,6 +104,10 @@ public class Constants {
     public static final String RESOURCE_PREFIX = "/profile";
 
     public static final String HTTP_HEADER_CUSTOMER_ID = "X-Customer-Id";
+    /**
+     * 钱包功能时, 支付密码的PayToken
+     */
+    public static final String HTTP_HEADER_PAY_TOKEN = "PAY_TOKEN";
 
     public static final String BEAR = "Bear ";
 

@@ -43,12 +43,13 @@
         <lombok.version>1.18.16</lombok.version>
         <guava.version>30.1-jre</guava.version>
         <maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
+        <jwt.version>3.15.0</jwt.version>
     </properties>
 
     <!-- 依赖声明 -->
     <dependencyManagement>
         <dependencies>
-            <!-- SpringCloud 微服务  general 9207 x-kafka 9208 statistic 9209 vod 9210-->
+            <!-- SpringCloud 微服务  general 9207 x-kafka 9208 statistic 9209 vod 9210 mc 9211 centrifugo 9212 finance 9213 pay 9214 -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
@@ -198,6 +199,11 @@
                 <version>${guava.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.auth0</groupId>
+                <artifactId>java-jwt</artifactId>
+                <version>${jwt.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.x</groupId>
                 <artifactId>x-common-swagger</artifactId>
                 <version>1.0.0</version>
@@ -225,6 +231,11 @@
             <dependency>
                 <groupId>com.x</groupId>
                 <artifactId>x-provider-api-customer</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.x</groupId>
+                <artifactId>x-provider-api-pay</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>
@@ -260,6 +271,11 @@
             <dependency>
                 <groupId>com.x</groupId>
                 <artifactId>x-provider-api-general</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.x</groupId>
+                <artifactId>x-provider-api-mc</artifactId>
                 <version>1.0.0</version>
             </dependency>
         </dependencies>

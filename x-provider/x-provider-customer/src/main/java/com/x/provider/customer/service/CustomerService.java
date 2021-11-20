@@ -18,7 +18,10 @@ public interface CustomerService {
     String loginOrRegisterBySms(LoginOrRegBySmsAO loginOrRegByPhoneAO);
     void logout(String token);
     long validateToken(String token);
+    void checkPhoneBound(long customerId, ValidatePhoneAO validatePhoneAO);
+    void bindPhone(long customerId, BindPhoneAO bindPhoneAO);
     void changePassword(long customerId, ChangePasswordByOldPasswordAO changePasswordAO);
+    void changePhone(long customerId, ChangePhoneAO changePhoneAO);
     void changeUserName(long customerId, ChangeUserNameAO changeUserNameAO);
     Role getRole(String systemName);
     Customer getCustomer(String userName);
@@ -29,4 +32,5 @@ public interface CustomerService {
     Map<String, String> listCustomerAttribute(long customerId);
     Map<String, String> listCustomerAttribute(long customerId, List<SystemCustomerAttributeName> attributeNames);
     void onCustomerDraftAttributeGreenFinshed(long customerId, SystemCustomerAttributeName attributeName, String value, SuggestionTypeEnum suggestionTypeEnum);
+
 }

@@ -18,14 +18,14 @@ import java.util.Map;
 public class GreenServiceImpl implements GreenService {
 
     private final RestTemplate restTemplate;
-    private final GreenService baiduGreenService;
+    private final GreenService aliGreenService;
     private final GreenService tencentGreenService;
 
     public GreenServiceImpl(RestTemplate restTemplate,
-                            @Qualifier("baiduGreenService") GreenService baiduGreenService,
+                            @Qualifier("aliGreenService") GreenService aliGreenService,
                             @Qualifier("tencentGreenService") GreenService tencentGreenService){
         this.restTemplate = restTemplate;
-        this.baiduGreenService = baiduGreenService;
+        this.aliGreenService = aliGreenService;
         this.tencentGreenService = tencentGreenService;
     }
 
@@ -41,7 +41,7 @@ public class GreenServiceImpl implements GreenService {
 
     @Override
     public void onGreenResultNotify(Map<String, Object> result) {
-        baiduGreenService.onGreenResultNotify(result);
+        aliGreenService.onGreenResultNotify(result);
         tencentGreenService.onGreenResultNotify(result);
     }
 
@@ -52,7 +52,7 @@ public class GreenServiceImpl implements GreenService {
 
     private GreenService getGreenService(GreenDataTypeEnum greenDataType){
         if (GreenDataTypeEnum.TEXT.equals(greenDataType)){
-            return baiduGreenService;
+            return aliGreenService;
         }
         return tencentGreenService;
     }

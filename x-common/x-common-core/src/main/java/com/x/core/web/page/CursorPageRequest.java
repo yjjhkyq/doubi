@@ -29,4 +29,8 @@ public class CursorPageRequest {
         }
         return Long.parseLong(cursor);
     }
+
+    public Long getLongCursor(){
+        return Long.parseLong(cursor);
+    }
 }

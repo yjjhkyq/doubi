@@ -81,10 +81,31 @@ public class CustomerController extends BaseFrontendController {
         return R.ok();
     }
 
+    @ApiOperation("验证手机是否被绑定且发验证码")
+    @PostMapping("/phone/bind/validate")
+    public R<Void> bindPhone(@RequestBody @ApiParam(value = "手机号码", required = true) ValidatePhoneAO validatePhoneAO) {
+        customerService.checkPhoneBound(getCurrentCustomerId(), validatePhoneAO);
+        return R.ok();
+    }
+
+    @ApiOperation("绑定手机")
+    @PostMapping("/phone/bind")
+    public R<Void> bindPhone(@RequestBody @ApiParam(value = "用户id", required = true) BindPhoneAO bindPhoneAO) {
+        customerService.bindPhone(getCurrentCustomerId(), bindPhoneAO);
+        return R.ok();
+    }
+
     @ApiOperation(value = "修改密码")
     @PostMapping("/password/change")
     public R<Void> changePassword(@RequestBody @Validated ChangePasswordByOldPasswordAO changePasswordByOldPasswordAO){
         customerService.changePassword(getCurrentCustomerId(), changePasswordByOldPasswordAO);
+        return R.ok();
+    }
+
+    @ApiOperation(value = "更改手机号码")
+    @PostMapping("/phone/change")
+    public R<Void> changePhone(@RequestBody @Validated ChangePhoneAO changePhoneAO){
+        customerService.changePhone(getCurrentCustomerId(), changePhoneAO);
         return R.ok();
     }
 
@@ -104,7 +125,10 @@ public class CustomerController extends BaseFrontendController {
 
     @ApiOperation(value = "个人主页信息")
     @GetMapping("/homepage/")
-    public R<CustomerHomePageVO> getCustomerHomePage(@RequestParam @ApiParam(value = "用户id") long customerId){
+    public R<CustomerHomePageVO> getCustomerHomePage(@RequestParam(required = false) @ApiParam(value = "用户id") long customerId){
+        if (customerId <= 0){
+            customerId = getCurrentCustomerIdAndNotCheckLogin();
+        }
         Customer customer = customerService.getCustomer(customerId);
         ApiAssetUtil.isTrue(!customer.isSystemAccount(), ResultCode.FORBIDDEN);
         CustomerHomePageVO customerHomePage = new CustomerHomePageVO();
