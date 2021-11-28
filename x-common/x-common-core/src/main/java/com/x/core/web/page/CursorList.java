@@ -91,12 +91,21 @@ public class CursorList<T> implements Serializable
         this.hasMore = hasMore;
     }
 
+    public String getCursor() {
+        return cursor;
+    }
+
+    public void setCursor(String cursor) {
+        this.cursor = cursor;
+    }
+
     public <D> CursorList<D> prepare(List<D> list){
         return new CursorList<>(list, cursor);
     }
     public <D> CursorList<D> prepare(Function<T,D> prepare){
         CursorList<D> tableDataInfo = new CursorList<>();
         tableDataInfo.hasMore = hasMore;
+        tableDataInfo.cursor = cursor;
         List<D> resultList = new ArrayList<>(list.size());
         list.forEach(item -> {
             D apply = prepare.apply(item);

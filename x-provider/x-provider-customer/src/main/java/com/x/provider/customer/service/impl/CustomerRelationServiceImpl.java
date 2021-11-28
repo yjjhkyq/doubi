@@ -2,13 +2,16 @@ package com.x.provider.customer.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.x.core.cache.event.EntityChangedEventBus;
+import com.x.provider.api.customer.constants.CustomerEventTopic;
 import com.x.provider.api.customer.enums.CustomerRelationEnum;
+import com.x.provider.api.customer.model.event.FollowEvent;
 import com.x.provider.customer.mapper.CustomerRelationMapper;
 import com.x.provider.customer.model.domain.CustomerRelation;
 import com.x.provider.customer.service.CustomerRelationService;
 import com.x.provider.customer.service.RedisKeyService;
 import com.x.provider.customer.service.cache.customer.CustomerRelationChangedEvent;
 import com.x.redis.service.RedisService;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,14 +25,17 @@ public class CustomerRelationServiceImpl implements CustomerRelationService {
     private final RedisKeyService redisKeyService;
     private final CustomerRelationMapper customerRelationMapper;
     private final EntityChangedEventBus entityChangedEventBus;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
     public CustomerRelationServiceImpl(RedisService redisService,
                                        RedisKeyService redisKeyService,
                                        CustomerRelationMapper customerRelationMapper,
-                                       EntityChangedEventBus entityChangedEventBus){
+                                       EntityChangedEventBus entityChangedEventBus,
+                                       KafkaTemplate<String, Object> kafkaTemplate){
         this.redisService = redisService;
         this.redisKeyService = redisKeyService;
         this.customerRelationMapper = customerRelationMapper;
         this.entityChangedEventBus = entityChangedEventBus;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     @Override
@@ -44,42 +50,61 @@ public class CustomerRelationServiceImpl implements CustomerRelationService {
     @Override
     @Transactional
     public void following(long fromCustomerId, long toCustomerId) {
-        redisService.zadd(redisKeyService.getCustomerRelationOfFollowKey(fromCustomerId), toCustomerId, System.currentTimeMillis());
-        redisService.zadd(redisKeyService.getCustomerRelationOfFansKey(toCustomerId),fromCustomerId, System.currentTimeMillis());
-        CustomerRelation customerRelationFollow = getCustomerRelation(fromCustomerId, toCustomerId);
-        if (customerRelationFollow != null){
-            entityChangedEventBus.postEntityUpdated(new CustomerRelationChangedEvent(customerRelationFollow));
-            return;
-        }
-        customerRelationFollow = CustomerRelation.builder().fromCustomerId(fromCustomerId).toCustomerId(toCustomerId).relation(CustomerRelationEnum.FOLLOW.getValue()).build();
-        CustomerRelation customerRelationFan = getCustomerRelation(toCustomerId, fromCustomerId);
-        if (customerRelationFan != null){
-            customerRelationFollow.setRelation(CustomerRelationEnum.FRIEND.getValue());
-            customerRelationFan.setRelation(CustomerRelationEnum.FRIEND.getValue());
-            customerRelationMapper.updateById(customerRelationFan);
-            entityChangedEventBus.postEntityUpdated(new CustomerRelationChangedEvent(customerRelationFan));
-        }
-        customerRelationMapper.insert(customerRelationFollow);
-        entityChangedEventBus.postEntityInserted(new CustomerRelationChangedEvent(customerRelationFollow));
+        changeCustomerRelation(fromCustomerId, toCustomerId, true);
+
     }
 
     @Override
     @Transactional
     public void unFollowing(long fromCustomerId, long toCustomerId) {
-        redisService.zremove(redisKeyService.getCustomerRelationOfFollowKey(fromCustomerId), toCustomerId);
-        redisService.zremove(redisKeyService.getCustomerRelationOfFansKey(toCustomerId), fromCustomerId);
-        CustomerRelation customerRelationFollow = getCustomerRelation(fromCustomerId, toCustomerId);
-        if (customerRelationFollow == null){
-            return;
+        changeCustomerRelation(fromCustomerId, toCustomerId, false);
+    }
+
+    private void changeCustomerRelation(long fromCustomerId, long toCustomerId, boolean follow){
+        CustomerRelation customerRelationFrom = getCustomerRelation(fromCustomerId, toCustomerId);
+        CustomerRelation customerRelationTo = getCustomerRelation(toCustomerId, fromCustomerId);
+        CustomerRelationEnum newRelationFrom = null;
+        CustomerRelationEnum newRelationTo = null;
+        if (follow){
+            newRelationFrom =  customerRelationTo != null && customerRelationTo.getRelation() == CustomerRelationEnum.FOLLOW.getValue() ? CustomerRelationEnum.FRIEND : CustomerRelationEnum.FOLLOW;
+            newRelationTo = newRelationFrom.getValue() == CustomerRelationEnum.FRIEND.getValue() ? CustomerRelationEnum.FRIEND : null;
         }
-        customerRelationFollow.setRelation(CustomerRelationEnum.NO_RELATION.getValue());
-        customerRelationMapper.updateById(customerRelationFollow);
-        entityChangedEventBus.postEntityUpdated(new CustomerRelationChangedEvent(customerRelationFollow));
-        CustomerRelation customerRelationFan = getCustomerRelation(toCustomerId, fromCustomerId);
-        if (customerRelationFan != null && CustomerRelationEnum.FRIEND.getValue() == customerRelationFan.getRelation()){
-            customerRelationFan.setRelation(CustomerRelationEnum.FOLLOW.getValue());
-            customerRelationMapper.updateById(customerRelationFan);
-            entityChangedEventBus.postEntityUpdated(new CustomerRelationChangedEvent(customerRelationFan));
+        else{
+            newRelationFrom = customerRelationFrom != null && customerRelationFrom.getRelation() == CustomerRelationEnum.NO_RELATION.getValue() ? null : CustomerRelationEnum.NO_RELATION;
+            newRelationTo = customerRelationTo != null && customerRelationTo.getRelation() == CustomerRelationEnum.FRIEND.getValue() ? CustomerRelationEnum.FOLLOW : null;
+        }
+        if (newRelationFrom != null){
+            if (newRelationFrom.getValue() != CustomerRelationEnum.NO_RELATION.getValue()) {
+                redisService.zadd(redisKeyService.getCustomerRelationOfFollowKey(fromCustomerId), toCustomerId, System.currentTimeMillis());
+                redisService.zadd(redisKeyService.getCustomerRelationOfFansKey(toCustomerId), fromCustomerId, System.currentTimeMillis());
+            } else {
+                redisService.zremove(redisKeyService.getCustomerRelationOfFollowKey(fromCustomerId), toCustomerId);
+                redisService.zremove(redisKeyService.getCustomerRelationOfFansKey(toCustomerId), fromCustomerId);
+            }
+            changeCustomerRelation(customerRelationFrom, CustomerRelation.builder().fromCustomerId(fromCustomerId).toCustomerId(toCustomerId).relation(newRelationFrom.getValue()).build());
+            if (follow){
+                kafkaTemplate.send(CustomerEventTopic.TOPIC_NAME_FOLLOW, String.valueOf(fromCustomerId),
+                        FollowEvent.builder()
+                                .firstFollow(customerRelationFrom == null)
+                                .fromCustomerId(fromCustomerId)
+                                .toCustomerId(toCustomerId)
+                                .build());
+            }
+        }
+        if (newRelationTo != null){
+            changeCustomerRelation(customerRelationTo, CustomerRelation.builder().fromCustomerId(toCustomerId).toCustomerId(fromCustomerId).relation(newRelationTo.getValue()).build());
+        }
+    }
+
+    void changeCustomerRelation(CustomerRelation customerRelationOld, CustomerRelation customerRelationNew){
+        if (customerRelationOld == null){
+            customerRelationMapper.insert(customerRelationNew);
+            entityChangedEventBus.postEntityInserted(new CustomerRelationChangedEvent(customerRelationNew));
+        }
+        else {
+            customerRelationNew.setId(customerRelationOld.getId());
+            customerRelationMapper.updateById(customerRelationNew);
+            entityChangedEventBus.postEntityUpdated(new CustomerRelationChangedEvent(customerRelationNew));
         }
     }
 

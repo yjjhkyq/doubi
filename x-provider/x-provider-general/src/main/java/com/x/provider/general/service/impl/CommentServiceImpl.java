@@ -4,14 +4,17 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.x.core.utils.ApiAssetUtil;
+import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.page.TableSupport;
 import com.x.provider.api.customer.enums.CustomerOptions;
 import com.x.provider.api.customer.model.ao.ListCustomerAO;
 import com.x.provider.api.customer.model.dto.CustomerDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
+import com.x.provider.api.general.constants.GeneralEventTopic;
 import com.x.provider.api.general.enums.CommentItemTypeEnum;
 import com.x.provider.api.general.model.ao.ListCommentAO;
+import com.x.provider.api.general.model.event.CommentEvent;
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
 import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.ao.GreenRpcAO;
@@ -62,7 +65,7 @@ public class CommentServiceImpl implements CommentService {
             kafkaTemplate.send(StatisticEventTopic.TOPIC_NAME_STAT_TOTAL_EVENT, StrUtil.format("{}:{}", itemType, itemId), StatisticTotalEvent.builder().statTotalItemNameEnum(item.getStatTotalItemName().getValue())
                     .statisticPeriodEnum(item.getStatisticPeriod().getValue()).statisticObjectId(String.valueOf(itemId)).longValue(1L).statisticObjectClassEnum(item.getStatisticObjectClass().getValue()).build());
         });
-
+        publishCommentEvent(comment);
     }
 
     @Override
@@ -87,6 +90,7 @@ public class CommentServiceImpl implements CommentService {
             kafkaTemplate.send(StatisticEventTopic.TOPIC_NAME_STAT_TOTAL_EVENT, StrUtil.format("{}:{}", comment.getItemType(), comment.getItemId()), StatisticTotalEvent.builder().statTotalItemNameEnum(item.getStatTotalItemName().getValue())
                     .statisticPeriodEnum(item.getStatisticPeriod().getValue()).statisticObjectId(String.valueOf(commentReply.getReplyRootId())).longValue(1L).statisticObjectClassEnum(item.getStatisticObjectClass().getValue()).build());
         });
+        publishCommentEvent(commentReply);
     }
 
     @Override
@@ -139,5 +143,9 @@ public class CommentServiceImpl implements CommentService {
         return commentMapper.selectById(id);
     }
 
+    private void publishCommentEvent(Comment comment){
+        CommentEvent commentEvent = BeanUtil.prepare(comment, CommentEvent.class);
+        kafkaTemplate.send(GeneralEventTopic.TOPIC_NAME_COMMENT, StrUtil.format("{}:{}", comment.getItemId(), comment.getItemType()), commentEvent);
+    }
 
 }

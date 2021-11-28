@@ -4,9 +4,13 @@ import com.x.swagger.annotation.EnableCustomSwagger2;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.cloud.client.SpringCloudApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.kafka.annotation.EnableKafka;
 
+@EnableKafka
 @EnableCustomSwagger2
 @SpringCloudApplication
+@EnableFeignClients(basePackages="com.x.provider.api")
 @MapperScan("com.x.provider.mc.mapper")
 public class McApplication {
     public static void main(String[] args)

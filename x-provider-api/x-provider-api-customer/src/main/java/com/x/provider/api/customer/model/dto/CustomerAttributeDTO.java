@@ -13,5 +13,6 @@ public class CustomerAttributeDTO {
     private String nickName;
     private String signature;
     private String avatarId;
+    private String avatarUrl;
     private String personalHomePageBackgroundId;
 }

@@ -10,12 +10,18 @@ import com.x.provider.api.customer.enums.CustomerOptions;
 import com.x.provider.api.customer.model.dto.CustomerDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
 import com.x.provider.api.pay.model.ao.CreateWalletAO;
+import com.x.provider.pay.annotation.GenerateBill;
 import com.x.provider.pay.enums.PayResultCode;
+import com.x.provider.pay.enums.bill.BillStatus;
+import com.x.provider.pay.enums.bill.BillType;
+import com.x.provider.pay.mapper.BillMapper;
 import com.x.provider.pay.mapper.WalletMapper;
 import com.x.provider.pay.mapper.WalletPasswordMapper;
 import com.x.provider.pay.model.ao.ValidateWalletPasswordAO;
+import com.x.provider.pay.model.domain.Bill;
 import com.x.provider.pay.model.domain.Wallet;
 import com.x.provider.pay.model.domain.WalletPassword;
+import com.x.provider.pay.service.BillService;
 import com.x.provider.pay.service.PasswordEncoderService;
 import com.x.provider.pay.service.RedisKeyService;
 import com.x.provider.pay.service.WalletService;
@@ -49,6 +55,10 @@ public class WalletServiceImpl implements WalletService {
     private RedisKeyService redisKeyService;
     @Autowired
     private RedisService redisService;
+    @Autowired
+    private BillMapper billMapper;
+    @Autowired
+    private BillService billService;
 
     /**
      * 创建钱包简单逻辑
@@ -100,6 +110,15 @@ public class WalletServiceImpl implements WalletService {
     }
 
     /**
+     * 清理钱包缓存
+     * @param customerId 用户id
+     */
+    @Override
+    public void clearWalletCache(long customerId) {
+        redisService.deleteObject(redisKeyService.getWalletKey(customerId));
+    }
+
+    /**
      * interceptor判断用户支付token
      * <p>流程:</p>
      * <li>1. 先拿到用户id</li>
@@ -112,6 +131,7 @@ public class WalletServiceImpl implements WalletService {
     @Override
     public boolean validateWalletToken(String token, long customerId) {
         Long cacheCustomerId = redisService.getLongCacheObject(redisKeyService.getWalletPasswordInfoKey(token));
+        ApiAssetUtil.notNull(cacheCustomerId, PayResultCode.USER_PAY_TOKEN_NOT_FOUND);
         return customerId == cacheCustomerId;
     }
 
@@ -153,6 +173,98 @@ public class WalletServiceImpl implements WalletService {
     }
 
     /**
+     * 充值
+     * @param amount 金额
+     */
+    @Override
+    @Transactional
+    @GenerateBill(billType = BillType.RECHARGE, billStatus = BillStatus.FINISHED)
+    public Bill rechargeWallet(BigDecimal amount, long customerId) {
+        // 判断是不是小于0
+        ApiAssetUtil.isTrue(amount.compareTo(BigDecimal.valueOf(0)) > 0, PayResultCode.AMOUNT_INVALID);
+        // 拿到当前钱包
+        Wallet wallet = getWallet(customerId);
+        ApiAssetUtil.isTrue(wallet.isActive(), PayResultCode.USER_WALLET_NON_ACTIVE);
+        ApiAssetUtil.notTrue(wallet.isLocked(), PayResultCode.USER_WALLET_LOCKED);
+        // 更新实体类
+        wallet.setBalance(wallet.getBalance().add(amount));  // 增加余额
+        walletMapper.updateById(wallet);
+        //  redisService.setCacheObject(redisKeyService.getWalletKey(customerId), wallet);  // 更新缓存内容, 保证缓存一致, 这里必须是强一致
+        redisService.deleteObject(redisKeyService.getWalletKey(customerId));  // 这里要删除缓存而不是更新, 为了保证事务. 抛出异常后redis不会回滚
+        return null;
+    }
+
+    /**
+     * 发起转账
+     * @param amount 转账金额
+     * @param toCustomerId 目标用户id
+     * @param customerId 自身id
+     * @param comment 备注
+     * @return AOP返回订单
+     */
+    @Override
+    @GenerateBill(billType = BillType.TRANSFER, billStatus = BillStatus.OPENING)
+    public Bill launchTransfer(BigDecimal amount, Long toCustomerId, long customerId, String comment) {
+        // 判断是不是小于0
+        ApiAssetUtil.isTrue(amount.compareTo(BigDecimal.valueOf(0)) > 0, PayResultCode.AMOUNT_INVALID);
+        // 拿到当前钱包
+        Wallet wallet = getWallet(customerId);
+        ApiAssetUtil.isTrue(wallet.isActive(), PayResultCode.USER_WALLET_NON_ACTIVE);
+        ApiAssetUtil.notTrue(wallet.isLocked(), PayResultCode.USER_WALLET_LOCKED);
+        // 判断余额
+        ApiAssetUtil.isTrue(wallet.getBalance().compareTo(amount) >= 0, PayResultCode.WALLET_BALANCE_INSUFFICIENT);
+        // 更新实体类
+        wallet.setBalance(wallet.getBalance().subtract(amount));
+        walletMapper.updateById(wallet);
+        redisService.deleteObject(redisKeyService.getWalletKey(customerId));  // 这里要删除缓存而不是更新, 为了保证事务. 抛出异常后redis不会回滚
+        return null;
+    }
+
+    /**
+     * 接受转账, 接受订单参数
+     * @param billSN 订单号
+     * @param customerId 当前用户id
+     */
+    @Override
+    @Transactional
+    public void receiveTransfer(String billSN, long customerId) {
+        Bill bill = billService.getBill(billSN);
+        // 验证一下订单的id和当前登录用户是不是一样的
+        ApiAssetUtil.isTrue(bill.getToCustomerId() == customerId, PayResultCode.RECEIVE_USER_ID_INVALID);
+        // 接收这个bill
+        billService.receiveBill(bill);
+    }
+
+    /**
+     * 更新钱包及缓存
+     * @param wallet updateById的实体类
+     */
+    @Override
+    public void updateWallet(Wallet wallet) {
+        walletMapper.updateById(wallet);
+        redisService.setCacheObject(redisKeyService.getWalletKey(wallet.getCustomerId()), wallet);
+    }
+
+    /**
+     * 更改余额, 规则是balance + amount, 如果要减请传负数
+     * @param customerId 待更新的用户id
+     * @param amount 待更新金额
+     */
+    @Override
+    public void changeBalance(long customerId, BigDecimal amount) {
+        // 拿到钱包 更新钱
+        Wallet wallet = getWallet(customerId);
+        ApiAssetUtil.notNull(wallet, PayResultCode.USER_WALLET_NOT_EXISTED);
+        ApiAssetUtil.isTrue(wallet.isActive(), PayResultCode.USER_WALLET_NON_ACTIVE);
+        ApiAssetUtil.notTrue(wallet.isLocked(), PayResultCode.USER_WALLET_LOCKED);
+        // 更新实体类
+        ApiAssetUtil.isTrue(wallet.getBalance().add(amount).compareTo(BigDecimal.valueOf(0)) >= 0, PayResultCode.WALLET_BALANCE_INSUFFICIENT);
+        wallet.setBalance(wallet.getBalance().add(amount));
+        updateWallet(wallet);
+    }
+
+
+    /**
      * 根据条件筛选钱包情况, 不需要的条件传null
      *
      * @param id         钱包id
@@ -178,6 +290,7 @@ public class WalletServiceImpl implements WalletService {
         return walletMapper.selectOne(queryWrapper);
     }
 
+
     private WalletPassword getWalletPassword(Long id, Long walletId, Long customerId) {
         LambdaQueryWrapper<WalletPassword> queryWrapper = new LambdaQueryWrapper<>();
         if (id != null && id > 0) {
@@ -196,4 +309,6 @@ public class WalletServiceImpl implements WalletService {
         return redisService.getCacheObject(redisKeyService.getWalletPasswordKey(customerId), () ->
                 getWalletPassword(null, null, customerId));
     }
+
+
 }

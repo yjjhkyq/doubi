@@ -22,4 +22,6 @@ public class ApplicationConfig {
     @Value("${centrifugo.api.key:null}")
     private String centrifugoApiKey;
 
+    @Value("${message.expire.day:100}")
+    private Integer messageExpireDays;
 }

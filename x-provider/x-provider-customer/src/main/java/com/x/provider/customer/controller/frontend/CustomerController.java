@@ -124,8 +124,8 @@ public class CustomerController extends BaseFrontendController {
     }
 
     @ApiOperation(value = "个人主页信息")
-    @GetMapping("/homepage/")
-    public R<CustomerHomePageVO> getCustomerHomePage(@RequestParam(required = false) @ApiParam(value = "用户id") long customerId){
+    @GetMapping("/homepage")
+    public R<CustomerHomePageVO> getCustomerHomePage(@RequestParam(required = false) @ApiParam(value = "用户id") Long customerId){
         if (customerId <= 0){
             customerId = getCurrentCustomerIdAndNotCheckLogin();
         }

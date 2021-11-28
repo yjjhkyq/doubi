@@ -9,4 +9,8 @@ public interface RedisKeyService {
     String getWalletPasswordInfoKey(String token);
 
     String getWalletPasswordValidateTimesKey(long customerId);
+
+    String getBillKey(String billSN);
+
+    String getBillKey(Long billId);
 }

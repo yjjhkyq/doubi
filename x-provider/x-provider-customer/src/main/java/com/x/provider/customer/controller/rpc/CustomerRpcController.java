@@ -12,6 +12,7 @@ import com.x.provider.api.customer.model.dto.RoleDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
 import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
+import com.x.provider.api.oss.service.OssRpcService;
 import com.x.provider.customer.configure.ApplicationConfig;
 import com.x.provider.customer.enums.SystemCustomerAttributeName;
 import com.x.provider.customer.enums.SystemRoleNameEnum;
@@ -31,13 +32,16 @@ public class CustomerRpcController extends BaseRpcController implements Customer
     private final CustomerService customerService;
     private final ApplicationConfig applicationConfig;
     private final CustomerRelationService customerRelationService;
+    private final OssRpcService ossRpcService;
 
     public CustomerRpcController(CustomerService customerService,
                                  ApplicationConfig applicationConfig,
-                                 CustomerRelationService customerRelationService){
+                                 CustomerRelationService customerRelationService,
+                                 OssRpcService ossRpcService){
         this.customerService = customerService;
         this.applicationConfig = applicationConfig;
         this.customerRelationService = customerRelationService;
+        this.ossRpcService = ossRpcService;
     }
 
     @GetMapping("/data")
@@ -121,6 +125,7 @@ public class CustomerRpcController extends BaseRpcController implements Customer
                 case CUSTOMER_ATTRIBUTE:
                     Map<String, String> customerAttribute = customerService.listCustomerAttribute(customerId);
                     customerDTO.setCustomerAttribute(CustomerAttributeDTO.builder().avatarId(customerAttribute.get(SystemCustomerAttributeName.AVATAR_ID.name()))
+                            .avatarUrl(ossRpcService.getObjectBrowseUrl(customerAttribute.get(SystemCustomerAttributeName.AVATAR_ID.name())).getData())
                             .nickName(customerAttribute.get(SystemCustomerAttributeName.NICK_NAME.name())).personalHomePageBackgroundId(customerAttribute.get(SystemCustomerAttributeName.PERSONAL_HOMEPAGE_BACKGROUND_ID.name()))
                             .signature(customerAttribute.get(SystemCustomerAttributeName.SIGNATURE.name())).build());
             }

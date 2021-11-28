@@ -17,4 +17,5 @@ public class StarEvent{
   private boolean isStar;
   private Integer itemType;
   private boolean firstStar;
+  private Long associationItemId;
 }

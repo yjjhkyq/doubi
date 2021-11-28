@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -21,11 +23,13 @@ public class VideoChangedEvent {
     private Boolean top;
     private Long topValue;
     private double duration;
+    private Date updatedOnUtc;
+    private Date createdOnUtc;
 
     public enum EventTypeEnum implements IntegerEnum {
         VIDEO_PUBLISHED(1),
         VIDEO_DELETED(2),
-
+        VIDEO_GREEN_BLOCKED(3)
         ;
 
         private Integer value;

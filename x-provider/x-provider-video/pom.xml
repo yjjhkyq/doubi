@@ -106,7 +106,10 @@
             <groupId>com.x</groupId>
             <artifactId>x-provider-api-customer</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.x</groupId>
+            <artifactId>x-provider-api-mc</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

@@ -115,6 +115,7 @@ public class VideoServiceImpl implements VideoService {
         sendVideoChangedEvent(video.get(), VideoChangedEvent.EventTypeEnum.VIDEO_DELETED);
     }
 
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void onVodContentReview(ContentReviewResultDTO contentReviewResultDTO){
         var videoOpt = getVideo(contentReviewResultDTO.getFileId());
@@ -122,7 +123,7 @@ public class VideoServiceImpl implements VideoService {
             log.error("no video find, file id:{}", contentReviewResultDTO.getFileId());
             return;
         }
-        VideoStatusEnum videoStatus = ReviewResultEnum.BLOCK.equals(contentReviewResultDTO.getReviewResult()) ? VideoStatusEnum.UNPUBLISH : VideoStatusEnum.PUBLISH;
+        VideoStatusEnum videoStatus = ReviewResultEnum.BLOCK.name().equals(contentReviewResultDTO.getReviewResult()) ? VideoStatusEnum.UNPUBLISH : VideoStatusEnum.PUBLISH;
         Video video = videoOpt.get();
         video.setReviewed(true);
         var videoTopics = videoTopicMapper.selectList(new LambdaQueryWrapper<VideoTopic>().eq(VideoTopic::getVideoId, video.getId()));
@@ -141,6 +142,7 @@ public class VideoServiceImpl implements VideoService {
             sendVideoChangedEvent(video, VideoChangedEvent.EventTypeEnum.VIDEO_PUBLISHED);
         }
         else{
+            sendVideoChangedEvent(video, VideoChangedEvent.EventTypeEnum.VIDEO_GREEN_BLOCKED);
             videoMapper.deleteById(video.getId());
             videoTopics.forEach(item -> {
                 videoTopicMapper.deleteBatchIds(videoTopics.stream().map(VideoTopic::getId).collect(Collectors.toList()));
@@ -245,7 +247,8 @@ public class VideoServiceImpl implements VideoService {
         if (id > 0){
             query.eq(Video::getId, id);
         }
-        return Optional.ofNullable(videoMapper.selectOne(query));
+        query = query.orderByDesc(Video::getId);
+        return Optional.ofNullable(videoMapper.selectOne(query.last(" limit 1 ")));
     }
 
     private List<String> parseVideoTopicTitle(String text){

@@ -7,6 +7,8 @@ import com.x.core.utils.ApiAssetUtil;
 import com.x.core.utils.IdUtils;
 import com.x.core.web.api.R;
 import com.x.core.web.api.ResultCode;
+import com.x.provider.api.customer.constants.CustomerEventTopic;
+import com.x.provider.api.customer.model.event.CustomerInfoGreenEvent;
 import com.x.provider.api.general.model.ao.SendVerificationCodeAO;
 import com.x.provider.api.general.model.ao.ValidateVerificationCodeAO;
 import com.x.provider.api.general.service.SmsRpcService;
@@ -39,6 +41,7 @@ import com.x.provider.customer.service.cache.customer.CustomerPasswordChangedEve
 import com.x.provider.customer.service.cache.customer.CustomerRoleChangedEvent;
 import com.x.redis.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -68,6 +71,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final GreenRpcService greenRpcService;
     private final ApplicationConfig applicationConfig;
     private final SmsRpcService smsRpcService;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public CustomerServiceImpl(RedisKeyService redisKeyService,
                                RedisService redisService,
@@ -80,7 +84,8 @@ public class CustomerServiceImpl implements CustomerService {
                                GenericAttributeService genericAttributeService,
                                GreenRpcService greenRpcService,
                                ApplicationConfig applicationConfig,
-                               SmsRpcService smsRpcService){
+                               SmsRpcService smsRpcService,
+                               KafkaTemplate<String, Object> kafkaTemplate){
         this.redisKeyService = redisKeyService;
         this.redisService = redisService;
         this.customerMapper =customerMapper;
@@ -93,6 +98,7 @@ public class CustomerServiceImpl implements CustomerService {
         this.greenRpcService = greenRpcService;
         this.applicationConfig = applicationConfig;
         this.smsRpcService = smsRpcService;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     @Override
@@ -319,6 +325,8 @@ public class CustomerServiceImpl implements CustomerService {
             genericAttributeService.addOrUpdateAttribute(AttributeKeyGroupEnum.CUSTOMER.toString(), customerId, attributeName.toString(), value);
         }
         genericAttributeService.deleteDraftAttribute(AttributeKeyGroupEnum.CUSTOMER.toString(), customerId, attributeName.toString());
+        kafkaTemplate.send(CustomerEventTopic.TOPIC_NAME_CUSTOMER_INFO_GREEN, String.valueOf(customerId), CustomerInfoGreenEvent.builder().customerId(customerId)
+                .pass(suggestionTypeEnum.equals(SuggestionTypeEnum.PASS)).build());
     }
 
     public Customer getCustomer(long id, String userName, String phone, String email){

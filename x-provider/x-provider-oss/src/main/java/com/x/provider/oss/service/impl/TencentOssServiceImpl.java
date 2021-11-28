@@ -31,7 +31,7 @@ import java.util.*;
 @Service
 public class TencentOssServiceImpl implements TencentOssService {
 
-
+    private final int OSS_TEMP_SECRET_EXP_TIME = 1800;
     private final TencentOssConfig tencentOssConfig;
     private final RedisService redisService;
     private final RedisKeyService redisKeyService;
@@ -94,7 +94,7 @@ public class TencentOssServiceImpl implements TencentOssService {
             config.put("SecretKey", tencentOssConfig.getSecretKey());
 
             // 临时密钥有效时长，单位是秒，默认1800秒，目前主账号最长2小时（即7200秒），子账号最长36小时（即129600秒）
-            config.put("durationSeconds", 1800);
+            config.put("durationSeconds", OSS_TEMP_SECRET_EXP_TIME);
 
             // 换成您的 bucket
             config.put("bucket", bucket);
@@ -129,6 +129,7 @@ public class TencentOssServiceImpl implements TencentOssService {
             tencentOssCredentialVO.setBucketName(bucket);
             tencentOssCredentialVO.setAllowPrefix(allowPrefix);
             tencentOssCredentialVO.setRegionName(region);
+            tencentOssCredentialVO.setExpiredTime(System.currentTimeMillis() / 1000 + OSS_TEMP_SECRET_EXP_TIME);
             return tencentOssCredentialVO;
         } catch (Exception e) {
             throw new IllegalArgumentException("no valid secret !");
