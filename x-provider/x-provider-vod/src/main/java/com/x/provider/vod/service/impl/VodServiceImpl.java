@@ -1,5 +1,6 @@
 package com.x.provider.vod.service.impl;
 
+import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.tencentcloudapi.common.Credential;
@@ -75,7 +76,7 @@ public class VodServiceImpl implements VodService {
     }
 
     @Override
-    public VodUploadParamVO getVodUploadParam(long customerId) {
+    public VodUploadParamVO getVodUploadParam(long customerId, String extName) {
         VodUploadParamVO result = new VodUploadParamVO();
         TencentSignatureServiceImpl sign = new TencentSignatureServiceImpl();
         sign.setCurrentTime(System.currentTimeMillis());
@@ -88,6 +89,7 @@ public class VodServiceImpl implements VodService {
             result.setSignature(signature);
             result.setCoverPath(StrUtil.format(OBJECT_PATH, customerId));
             result.setVideoPath(StrUtil.format(OBJECT_PATH, customerId));
+            result.setFileName(StrUtil.format("{}.{}", IdUtil.simpleUUID(), extName));
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             throw new ApiException("get upload signature error");

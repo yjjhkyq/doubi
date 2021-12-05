@@ -128,6 +128,11 @@ public class CustomerRpcController extends BaseRpcController implements Customer
                             .avatarUrl(ossRpcService.getObjectBrowseUrl(customerAttribute.get(SystemCustomerAttributeName.AVATAR_ID.name())).getData())
                             .nickName(customerAttribute.get(SystemCustomerAttributeName.NICK_NAME.name())).personalHomePageBackgroundId(customerAttribute.get(SystemCustomerAttributeName.PERSONAL_HOMEPAGE_BACKGROUND_ID.name()))
                             .signature(customerAttribute.get(SystemCustomerAttributeName.SIGNATURE.name())).build());
+                    break;
+                case FOLLOW_FAN_COUNT:
+                    customerDTO.setFollowCount(customerRelationService.getFollowCount(customerId));
+                    customerDTO.setFansCount(customerRelationService.getFansCount(customerId));
+                    break;
             }
         });
         return customerDTO;

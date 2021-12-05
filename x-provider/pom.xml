@@ -18,7 +18,8 @@
         <module>x-provider-statistic</module>
         <module>x-provider-general</module>
         <module>x-provider-mc</module>
-      <module>x-provider-pay</module>
+        <module>x-provider-pay</module>
+        <module>x-provider-cms</module>
     </modules>
 
     <artifactId>x-provider</artifactId>

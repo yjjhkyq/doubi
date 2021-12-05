@@ -62,7 +62,6 @@
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
-
         <dependency>
             <groupId>com.x</groupId>
             <artifactId>x-common-swagger</artifactId>
@@ -94,10 +93,6 @@
         <dependency>
             <groupId>com.x</groupId>
             <artifactId>x-provider-api-customer</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.x</groupId>
-            <artifactId>x-provider-api-video</artifactId>
         </dependency>
     </dependencies>
 

@@ -27,6 +27,7 @@ import com.x.provider.video.mapper.VideoAttributeMapper;
 import com.x.provider.video.mapper.VideoMapper;
 import com.x.provider.video.mapper.VideoTopicMapper;
 import com.x.provider.video.model.ao.homepage.CreateVideoAO;
+import com.x.provider.video.model.domain.Topic;
 import com.x.provider.video.model.domain.Video;
 import com.x.provider.video.model.domain.VideoAttribute;
 import com.x.provider.video.model.domain.VideoTopic;
@@ -204,6 +205,7 @@ public class VideoServiceImpl implements VideoService {
         return videos;
     }
 
+    @Override
     public List<VideoTopic> listVideoTopic(Long videoId){
         LambdaQueryWrapper<VideoTopic> query = new LambdaQueryWrapper<>();
         if (videoId != null){
@@ -260,6 +262,7 @@ public class VideoServiceImpl implements VideoService {
         return result;
     }
 
+    @Override
     public List<Video> listVideo(List<Long> customerIds, Date afterUpdateDate){
         return videoMapper.selectList(new LambdaQueryWrapper<Video>().in(Video::getCustomerId, customerIds).eq(Video::getVideoStatus, VideoStatusEnum.PUBLISH.ordinal()).ge(Video::getUpdatedOnUtc, afterUpdateDate));
     }

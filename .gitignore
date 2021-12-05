@@ -291,3 +291,4 @@ x-provider/x-provider-general/target/classes/com/x/provider/general/service/impl
 x-provider/x-provider-oss/src/main/resources/application.yml
 x-provider/x-provider-vod/src/main/resources/bootstrap.yml
 *.yml
+x-provider/x-provider-oss/src/main/resources/application.yml

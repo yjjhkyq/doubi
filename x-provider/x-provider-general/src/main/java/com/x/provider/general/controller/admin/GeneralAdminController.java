@@ -12,7 +12,7 @@ public class GeneralAdminController {
 
     private final SmsService smsService;
 
-    public GeneralAdminController(SmsService smsService){
+    public GeneralAdminController(SmsService smsService) {
         this.smsService = smsService;
     }
 }

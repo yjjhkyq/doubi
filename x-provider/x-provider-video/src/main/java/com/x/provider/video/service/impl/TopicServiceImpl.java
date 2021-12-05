@@ -2,6 +2,7 @@ package com.x.provider.video.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.x.core.utils.BeanUtil;
 import com.x.core.utils.DateUtils;
 import com.x.core.utils.SpringUtils;
 import com.x.provider.api.finance.enums.FinanceDataTypeEnum;
@@ -9,7 +10,11 @@ import com.x.provider.api.finance.model.ao.ListIndustryAO;
 import com.x.provider.api.finance.model.ao.ListSecurityAO;
 import com.x.provider.api.finance.model.event.FinanceDataChangedEvent;
 import com.x.provider.api.finance.service.FinanceRpcService;
+import com.x.provider.api.video.constants.VideoEventTopic;
 import com.x.provider.api.video.enums.TopicSourceTypeEnum;
+import com.x.provider.api.video.model.ao.ListTopicAO;
+import com.x.provider.api.video.model.event.TopicBatchEvent;
+import com.x.provider.api.video.model.event.TopicEvent;
 import com.x.provider.video.configure.ApplicationConfig;
 import com.x.provider.video.mapper.TopicCustomerFavoriteMapper;
 import com.x.provider.video.mapper.TopicMapper;
@@ -19,7 +24,10 @@ import com.x.provider.video.service.TopicFillBaseService;
 import com.x.provider.video.service.TopicService;
 import com.x.util.ChineseCharToEn;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.io.UnsupportedEncodingException;
@@ -40,15 +48,18 @@ public class TopicServiceImpl implements TopicService {
     private final FinanceRpcService financeRpcService;
     private final ApplicationConfig applicationConfig;
     private final TopicCustomerFavoriteMapper topicCustomerFavoriteMapper;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public TopicServiceImpl(TopicMapper topicMapper,
                             FinanceRpcService financeRpcService,
                             ApplicationConfig applicationConfig,
-                            TopicCustomerFavoriteMapper topicCustomerFavoriteMapper){
+                            TopicCustomerFavoriteMapper topicCustomerFavoriteMapper,
+                            KafkaTemplate<String, Object> kafkaTemplate){
         this.topicMapper = topicMapper;
         this.financeRpcService = financeRpcService;
         this.applicationConfig = applicationConfig;
         this.topicCustomerFavoriteMapper = topicCustomerFavoriteMapper;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     @Override
@@ -75,6 +86,7 @@ public class TopicServiceImpl implements TopicService {
         initTopic(topicSourceTypeEnum, topicSourceList);
     }
 
+    @Override
     public List<Topic> searchTopic(String keyword){
         var query = new LambdaQueryWrapper<Topic>();
         if (StringUtils.hasText(keyword)) {
@@ -103,6 +115,8 @@ public class TopicServiceImpl implements TopicService {
         return topicMapper.selectList(query);
     }
 
+    @Override
+    @Transactional
     public List<Topic> listOrCreateTopics(List<String> topicTitles){
         List<Topic> result = listTopic(topicTitles);
         List<String> existedTopicTitles = result.stream().map(Topic::getTitle).collect(Collectors.toList());
@@ -112,7 +126,18 @@ public class TopicServiceImpl implements TopicService {
                     .sourceType(TopicSourceTypeEnum.CUSTOMER_CUSTOMIZE.ordinal()).systemTopic(false).title(item).sourceId("0").build();
             topicMapper.insert(topic);
             result.add(topic);
+            needCreateTopics.add(topic);
         });
+        if (!needCreateTopics.isEmpty()){
+            List<TopicEvent> topicChangedEventList = new ArrayList<>(needCreateTopics.size());
+            needCreateTopics.forEach(item -> {
+                TopicEvent topicChangedEvent = BeanUtil.prepare(item, TopicEvent.class);
+                topicChangedEvent.setEventType(TopicEvent.EventTypeEnum.ADD.getValue());
+                topicChangedEventList.add(topicChangedEvent);
+            });
+            kafkaTemplate.send(VideoEventTopic.TOPIC_NAME_TOPIC_CHANGED_BATCH, TopicEvent.EventTypeEnum.ADD.getValue().toString(), TopicBatchEvent.builder()
+                    .topicEventList(topicChangedEventList).build());
+        }
         return result;
     }
 
@@ -147,6 +172,12 @@ public class TopicServiceImpl implements TopicService {
     @Override
     public List<TopicCustomerFavorite> listTopicCustomerFavorite(Long customerId, TopicSourceTypeEnum topicSourceTypeEnum) {
         return topicCustomerFavoriteMapper.selectList(buildQuery(customerId, 0L, topicSourceTypeEnum == null ? -1 : topicSourceTypeEnum.ordinal()));
+    }
+
+    @Override
+    public List<Topic> listTopic(ListTopicAO listTopicAO) {
+        LambdaQueryWrapper query = buildQuery(listTopicAO.getIdList());
+        return topicMapper.selectList(query);
     }
 
     private Optional<TopicCustomerFavorite> getTopicCustomerFavorite(Long customerId, Long topicId){
@@ -214,5 +245,13 @@ public class TopicServiceImpl implements TopicService {
             log.error(e.getMessage(), e);
             return source;
         }
+    }
+
+    private LambdaQueryWrapper buildQuery(List<Long> idList){
+        LambdaQueryWrapper<Topic> query = new LambdaQueryWrapper<>();
+        if (!CollectionUtils.isEmpty(idList)){
+            query = query.in(Topic::getId, idList);
+        }
+        return query;
     }
 }

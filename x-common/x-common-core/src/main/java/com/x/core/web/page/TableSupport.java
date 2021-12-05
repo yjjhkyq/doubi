@@ -4,6 +4,7 @@ package com.x.core.web.page;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.x.core.utils.ServletUtils;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -90,5 +91,10 @@ public class TableSupport
             result.add(funcation.apply(s));
         });
         return new TableDataInfo<R>(result, 0, pageDomain.getPageSize());
+    }
+
+    public static PageRequest getPageRequest(){
+        final PageDomain pageDomain = getPageDomain();
+        return PageRequest.of(pageDomain.getPageNum() - 1, pageDomain.getPageSize());
     }
 }

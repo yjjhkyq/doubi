@@ -4,10 +4,13 @@ import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.x.core.cache.event.EntityChangedEventBus;
 import com.x.core.utils.ApiAssetUtil;
+import com.x.core.utils.BeanUtil;
 import com.x.core.utils.IdUtils;
 import com.x.core.web.api.R;
 import com.x.core.web.api.ResultCode;
 import com.x.provider.api.customer.constants.CustomerEventTopic;
+import com.x.provider.api.customer.model.event.CustomerAttributeEvent;
+import com.x.provider.api.customer.model.event.CustomerEvent;
 import com.x.provider.api.customer.model.event.CustomerInfoGreenEvent;
 import com.x.provider.api.general.model.ao.SendVerificationCodeAO;
 import com.x.provider.api.general.model.ao.ValidateVerificationCodeAO;
@@ -17,6 +20,7 @@ import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
 import com.x.provider.api.oss.model.ao.GreenRpcAO;
 import com.x.provider.api.oss.service.GreenRpcService;
+import com.x.provider.api.oss.service.OssRpcService;
 import com.x.provider.customer.configure.ApplicationConfig;
 import com.x.provider.customer.constant.CustomerConstants;
 import com.x.provider.customer.enums.AttributeKeyGroupEnum;
@@ -72,6 +76,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final ApplicationConfig applicationConfig;
     private final SmsRpcService smsRpcService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final OssRpcService ossRpcService;
 
     public CustomerServiceImpl(RedisKeyService redisKeyService,
                                RedisService redisService,
@@ -85,7 +90,8 @@ public class CustomerServiceImpl implements CustomerService {
                                GreenRpcService greenRpcService,
                                ApplicationConfig applicationConfig,
                                SmsRpcService smsRpcService,
-                               KafkaTemplate<String, Object> kafkaTemplate){
+                               KafkaTemplate<String, Object> kafkaTemplate,
+                               OssRpcService ossRpcService){
         this.redisKeyService = redisKeyService;
         this.redisService = redisService;
         this.customerMapper =customerMapper;
@@ -99,6 +105,7 @@ public class CustomerServiceImpl implements CustomerService {
         this.applicationConfig = applicationConfig;
         this.smsRpcService = smsRpcService;
         this.kafkaTemplate = kafkaTemplate;
+        this.ossRpcService = ossRpcService;
     }
 
     @Override
@@ -117,6 +124,7 @@ public class CustomerServiceImpl implements CustomerService {
         entityChangedEventBus.postEntityInserted(new CustomerChangedEvent(customer));
         entityChangedEventBus.postEntityInserted(new CustomerPasswordChangedEvent(customerPassword));
         entityChangedEventBus.postEntityInserted(new CustomerRoleChangedEvent(customerRole));
+        sendCustomerInfoChanged(customer, null, CustomerEvent.EventTypeEnum.ADD);
     }
 
     @Override
@@ -143,6 +151,7 @@ public class CustomerServiceImpl implements CustomerService {
             customerRoleMapper.insert(customerRole);
             entityChangedEventBus.postEntityInserted(new CustomerChangedEvent(customer));
             entityChangedEventBus.postEntityInserted(new CustomerRoleChangedEvent(customerRole));
+            sendCustomerInfoChanged(customer, null, CustomerEvent.EventTypeEnum.ADD);
         }
         String token = IdUtils.fastSimpleUUID();
         redisService.setCacheObject(redisKeyService.getCustomerLoginInfoKey(token), Long.valueOf(customer.getId()), TOKEN_EXPIRED_DURATION);
@@ -200,6 +209,7 @@ public class CustomerServiceImpl implements CustomerService {
         customer.setPhone(bindPhoneAO.getPhone());
         customerMapper.updateById(customer);
         entityChangedEventBus.postEntityUpdated(new CustomerChangedEvent(customer));
+        sendCustomerInfoChanged(customer, null, CustomerEvent.EventTypeEnum.ADD);
     }
 
 
@@ -231,6 +241,7 @@ public class CustomerServiceImpl implements CustomerService {
             ApiAssetUtil.isNull(customerExisted, UserResultCode.USER_PHONE_EXISTED);
             customerMapper.updateById(customer);
             entityChangedEventBus.postEntityUpdated(new CustomerChangedEvent(customer));
+            sendCustomerInfoChanged(customer, null, CustomerEvent.EventTypeEnum.ADD);
         }
     }
 
@@ -242,6 +253,7 @@ public class CustomerServiceImpl implements CustomerService {
         customer.setUserName(changeUserNameAO.getUserName());
         customerMapper.updateById(customer);
         entityChangedEventBus.postEntityUpdated(new CustomerChangedEvent(customer));
+        sendCustomerInfoChanged(customer, null, CustomerEvent.EventTypeEnum.ADD);
     }
 
     @Override
@@ -281,6 +293,7 @@ public class CustomerServiceImpl implements CustomerService {
                 R<String> greenResult = greenRpcService.greenSync(GreenRpcAO.builder().value(value).dataType(GreenDataTypeEnum.TEXT.name()).build());
                 ApiAssetUtil.isTrue(greenResult.getData().equals(SuggestionTypeEnum.PASS.name()), ResultCode.GREEN_BLOCKED);
                 genericAttributeService.addOrUpdateAttribute(AttributeKeyGroupEnum.CUSTOMER.toString(), customerId, attributeName.toString(), value);
+                sendCustomerInfoChanged(Customer.builder().id(customerId).build(), Map.of(attributeName.name(), value), CustomerEvent.EventTypeEnum.UPDATE);
                 break;
             case AVATAR_ID:
             case PERSONAL_HOMEPAGE_BACKGROUND_ID:
@@ -323,6 +336,7 @@ public class CustomerServiceImpl implements CustomerService {
     public void onCustomerDraftAttributeGreenFinshed(long customerId, SystemCustomerAttributeName attributeName, String value, SuggestionTypeEnum suggestionTypeEnum) {
         if (suggestionTypeEnum.equals(SuggestionTypeEnum.PASS)){
             genericAttributeService.addOrUpdateAttribute(AttributeKeyGroupEnum.CUSTOMER.toString(), customerId, attributeName.toString(), value);
+            sendCustomerInfoChanged(Customer.builder().id(customerId).build(), Map.of(attributeName.name(), value), CustomerEvent.EventTypeEnum.UPDATE);
         }
         genericAttributeService.deleteDraftAttribute(AttributeKeyGroupEnum.CUSTOMER.toString(), customerId, attributeName.toString());
         kafkaTemplate.send(CustomerEventTopic.TOPIC_NAME_CUSTOMER_INFO_GREEN, String.valueOf(customerId), CustomerInfoGreenEvent.builder().customerId(customerId)
@@ -379,5 +393,23 @@ public class CustomerServiceImpl implements CustomerService {
         attribute.putIfAbsent(SystemCustomerAttributeName.NICK_NAME.name(), applicationConfig.getDefaultNickName());
         attribute.putIfAbsent(SystemCustomerAttributeName.AVATAR_ID.name(), applicationConfig.getDefaultAvatarId());
         attribute.putIfAbsent(SystemCustomerAttributeName.PERSONAL_HOMEPAGE_BACKGROUND_ID.name(), applicationConfig.getDefaultPersonalHomePageBackgroundId());
+    }
+
+    private void sendCustomerInfoChanged(Customer customer, Map<String, String> customerAttribute, CustomerEvent.EventTypeEnum eventType){
+        CustomerEvent customerEvent = BeanUtil.prepare(customer, CustomerEvent.class);
+        Map<String, String> customerAttributeMap = listCustomerAttribute(customer.getId());
+        CustomerAttributeEvent customerAttributeEvent = CustomerAttributeEvent.builder()
+                .avatarId(customerAttributeMap.getOrDefault(SystemCustomerAttributeName.AVATAR_ID.name(), applicationConfig.getDefaultAvatarId()))
+                .nickName(customerAttributeMap.getOrDefault(SystemCustomerAttributeName.NICK_NAME.name(), applicationConfig.getDefaultNickName()))
+                .signature(customerAttributeMap.get(SystemCustomerAttributeName.SIGNATURE.name()))
+                .personalHomePageBackgroundId(customerAttributeMap.getOrDefault(SystemCustomerAttributeName.PERSONAL_HOMEPAGE_BACKGROUND_ID.name(), applicationConfig.getDefaultPersonalHomePageBackgroundId()))
+                .build();
+        if (StringUtils.hasText(customerAttributeEvent.getAvatarId())){
+            customerAttributeEvent.setAvatarUrl(ossRpcService.getObjectBrowseUrl(customerAttributeEvent.getAvatarId()).getData());
+        }
+        customerEvent.setEventType(eventType.getValue());
+        customerEvent.setRegisterRole(true);
+        customerEvent.setCustomerAttributeEvent(customerAttributeEvent);
+        kafkaTemplate.send(CustomerEventTopic.TOPIC_NAME_CUSTOMER_INFO_CHANGED, String.valueOf(customer.getId()), customerEvent);
     }
 }

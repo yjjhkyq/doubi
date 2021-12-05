@@ -1,5 +1,7 @@
 package com.x.core.web.page;
 
+import org.springframework.data.domain.Page;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -105,6 +107,19 @@ public class TableDataInfo<T> implements Serializable
         List<D> resultList = new ArrayList<>(list.size());
         list.forEach(item -> {
             resultList.add(prepare.apply(item));
+        });
+        tableDataInfo.setList(resultList);
+        return tableDataInfo;
+    }
+
+    public static  <D,T> TableDataInfo<D> prepare(Page<T> page, Function<T, D> map){
+        TableDataInfo<D> tableDataInfo = new TableDataInfo<>();
+        tableDataInfo.setTotal(page.getTotalElements());
+        tableDataInfo.setHasMore(page.getContent().size() > 0);
+        tableDataInfo.setPageSize(page.getSize());
+        List<D> resultList = new ArrayList<>(page.getContent().size());
+        page.getContent().forEach(item -> {
+            resultList.add(map.apply(item));
         });
         tableDataInfo.setList(resultList);
         return tableDataInfo;

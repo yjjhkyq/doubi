@@ -9,7 +9,7 @@ import com.tencentcloudapi.vod.v20180717.models.EventContent;
 import java.util.Map;
 
 public interface VodService {
-    VodUploadParamVO getVodUploadParam(long customerId);
+    VodUploadParamVO getVodUploadParam(long customerId, String extName);
     void onEvent(EventContent eventContent);
     void contentReview(GetContentReviewResultAO getContentReviewResultAO);
     Map<String, String> listMediaUrl(ListMediaUrlAO getMediaUrlAO);

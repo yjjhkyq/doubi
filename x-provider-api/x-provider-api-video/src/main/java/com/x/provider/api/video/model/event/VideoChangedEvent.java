@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
+import java.util.List;
 
 @Data
 @Builder
@@ -25,6 +26,8 @@ public class VideoChangedEvent {
     private double duration;
     private Date updatedOnUtc;
     private Date createdOnUtc;
+
+    private List<Long> topicIdList;
 
     public enum EventTypeEnum implements IntegerEnum {
         VIDEO_PUBLISHED(1),

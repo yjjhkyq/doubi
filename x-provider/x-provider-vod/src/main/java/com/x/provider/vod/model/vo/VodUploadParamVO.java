@@ -13,4 +13,6 @@ public class VodUploadParamVO {
     private String videoPath;
     @ApiModelProperty(value = "视频封面路径")
     private String coverPath;
+    @ApiModelProperty(value = "文件名")
+    private String fileName;
 }

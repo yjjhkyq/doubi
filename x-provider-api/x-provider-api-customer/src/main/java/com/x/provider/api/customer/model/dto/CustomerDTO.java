@@ -15,6 +15,8 @@ public class CustomerDTO {
     private String phone;
 
     private CustomerAttributeDTO customerAttribute;
+    private Long followCount;
+    private Long fansCount;
 
     private List<RoleDTO> roles = new ArrayList<>();
 
@@ -99,5 +101,21 @@ public class CustomerDTO {
 
     public void setCustomerAttribute(CustomerAttributeDTO customerAttribute) {
         this.customerAttribute = customerAttribute;
+    }
+
+    public Long getFollowCount() {
+        return followCount;
+    }
+
+    public void setFollowCount(Long followCount) {
+        this.followCount = followCount;
+    }
+
+    public Long getFansCount() {
+        return fansCount;
+    }
+
+    public void setFansCount(Long fansCount) {
+        this.fansCount = fansCount;
     }
 }

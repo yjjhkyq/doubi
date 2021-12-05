@@ -50,7 +50,7 @@
     <!-- 依赖声明 -->
     <dependencyManagement>
         <dependencies>
-            <!-- SpringCloud 微服务  general 9207 x-kafka 9208 statistic 9209 vod 9210 mc 9211 centrifugo 9212 finance 9213 pay 9214 -->
+            <!-- SpringCloud 微服务  general 9207 x-kafka 9208 statistic 9209 vod 9210 mc 9211 centrifugo 9212 finance 9213 pay 9214 cms 9215 -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
