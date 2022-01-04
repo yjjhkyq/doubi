@@ -3,12 +3,11 @@ package com.x.provider.statistic.service.impl;
 import cn.hutool.core.util.StrUtil;
 import com.x.core.utils.BeanUtil;
 import com.x.provider.api.statistic.constants.StatisticEventTopic;
-import com.x.provider.api.statistic.model.ao.ListStatisticTotalBatchAO;
-import com.x.provider.api.statistic.model.ao.ListStatTotalAO;
-import com.x.provider.api.statistic.model.dto.ListStatisticTotalDTO;
-import com.x.provider.api.statistic.model.dto.ListStatisticTotalMapDTO;
-import com.x.provider.api.statistic.model.event.StatisticTotalChangedEvent;
-import com.x.provider.api.statistic.model.event.StatisticTotalEvent;
+import com.x.provider.api.statistic.model.ao.ListMetricValueBatchAO;
+import com.x.provider.api.statistic.model.ao.ListMetricValueAO;
+import com.x.provider.api.statistic.model.dto.ListMetricValueMapDTO;
+import com.x.provider.api.statistic.model.event.MetricValueChangedEvent;
+import com.x.provider.api.statistic.model.event.IncMetricValueEvent;
 import com.x.provider.statistic.enums.StatisticTotalChangedNotifyItemEnum;
 import com.x.provider.statistic.model.domain.StatisticTotal;
 import com.x.provider.statistic.service.RedisKeyService;
@@ -48,10 +47,11 @@ public class StatisticTotalServiceImpl implements StatisticTotalService {
     }
 
     @Override
-    public void onStatTotal(StatisticTotalEvent statisticTotalEvent) {
+    public void onStatTotal(IncMetricValueEvent statisticTotalEvent) {
         incStatTotal(BeanUtil.prepare(statisticTotalEvent, StatisticTotal.class));
     }
 
+    @Override
     public void incStatTotal(StatisticTotal statisticTotal){
         Pair<String, String> keyFieldPair = statisticTotalKeyService.packageKey(statisticTotal);
         String redisKey = redisKeyService.getStatisticTotalKey(keyFieldPair.getFirst());
@@ -66,41 +66,48 @@ public class StatisticTotalServiceImpl implements StatisticTotalService {
             newDoubleValue = redisService.incr(redisKey, keyFieldPair.getSecond(), statisticTotal.getDoubleValue());
         }
         else {
-            log.error("no any value find for stat total, stat total item name:{}, statistic period:{}", statisticTotal.getStatTotalItemNameEnum(), statisticTotal.getStatisticPeriodEnum());
-            throw new IllegalStateException(StrUtil.format("no any value find for stat total, stat total item name:{}, statistic period:{}", statisticTotal.getStatTotalItemNameEnum(), statisticTotal.getStatisticPeriodEnum()));
+            log.error("no any value find for stat total, stat total item name:{}, statistic period:{}", statisticTotal.getMetricEnum(), statisticTotal.getPeriodEnum());
+            throw new IllegalStateException(StrUtil.format("no any value find for stat total, stat total item name:{}, statistic period:{}", statisticTotal.getMetricEnum(), statisticTotal.getPeriodEnum()));
         }
-        if (StatisticTotalChangedNotifyItemEnum.valeOf(statisticTotal.getStatTotalItemNameEnum(), statisticTotal.getStatisticPeriodEnum(), statisticTotal.getStatisticObjectClassEnum()) != null){
-            kafkaTemplate.send(StatisticEventTopic.TOPIC_NAME_STAT_TOTAL_CHANGED_EVENT, StrUtil.format("{}:{}:{}", statisticTotal.getStatisticPeriodEnum(),
-                    statisticTotal.getStatTotalItemNameEnum(), statisticTotal.getStatisticObjectClassEnum()), new StatisticTotalChangedEvent(
-                            statisticTotal.getStatTotalItemNameEnum(), statisticTotal.getStatisticPeriodEnum(), statisticTotal.getStatisticObjectClassEnum(), statisticTotal.getStatisticObjectId(),
+        if (StatisticTotalChangedNotifyItemEnum.valeOf(statisticTotal.getMetricEnum(), statisticTotal.getPeriodEnum(), statisticTotal.getItemTypeEnum()) != null){
+            kafkaTemplate.send(StatisticEventTopic.TOPIC_NAME_STAT_METRIC_CHANGED_EVENT, StrUtil.format("{}:{}:{}", statisticTotal.getPeriodEnum(),
+                    statisticTotal.getMetricEnum(), statisticTotal.getItemTypeEnum()), new MetricValueChangedEvent(
+                            statisticTotal.getMetricEnum(), statisticTotal.getPeriodEnum(), statisticTotal.getItemTypeEnum(), statisticTotal.getItemId(),
                     newDoubleValue, newValue));
         }
     }
 
     @Override
-    public ListStatisticTotalMapDTO listStatisticTotalMap(ListStatisticTotalBatchAO listStatisticTotalAO) {
+    public void incStatTotals(List<StatisticTotal> statisticTotals) {
+        statisticTotals.forEach(item ->{
+            incStatTotal(item);
+        });
+    }
+
+    @Override
+    public ListMetricValueMapDTO listStatisticTotalMap(ListMetricValueBatchAO listStatisticTotalAO) {
         return null;
     }
 
     @Override
-    public List<StatisticTotal> listStatisticTotal(ListStatTotalAO listStatTotalAO) {
+    public List<StatisticTotal> listStatisticTotal(ListMetricValueAO listStatTotalAO) {
         return listStatisticTotal(Arrays.asList(listStatTotalAO));
     }
 
     @Override
-    public List<StatisticTotal> listStatisticTotalBatch(ListStatisticTotalBatchAO listStatisticTotalBatchAO) {
+    public List<StatisticTotal> listStatisticTotalBatch(ListMetricValueBatchAO listStatisticTotalBatchAO) {
         return listStatisticTotal(listStatisticTotalBatchAO.getConditions());
     }
 
-    private List<StatisticTotal> listStatisticTotal(List<ListStatTotalAO> listStatTotalAOS) {
+    private List<StatisticTotal> listStatisticTotal(List<ListMetricValueAO> listStatTotalAOS) {
         List<StatisticTotal> result = new ArrayList<>();
         List<Object> cacheResult = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
             //StringRedisConnection conn = (StringRedisConnection) connection;
             listStatTotalAOS.forEach(listStatTotalAO -> {
-                listStatTotalAO.getStatisticObjectIds().forEach(item -> {
+                listStatTotalAO.getItemIds().forEach(item -> {
                     StatisticTotal statisticTotal = StatisticTotal.builder().startDate(listStatTotalAO.getDate())
-                            .statisticObjectClassEnum(listStatTotalAO.getStatisticObjectClassEnum()).statisticObjectId(item)
-                            .statisticPeriodEnum(listStatTotalAO.getStatisticPeriod()).statTotalItemNameEnum(listStatTotalAO.getStatTotalItemNameEnum()).startDate(listStatTotalAO.getDate()).build();
+                            .itemTypeEnum(listStatTotalAO.getItemTypeEnum()).itemId(item)
+                            .periodEnum(listStatTotalAO.getPeriodEnum()).metricEnum(listStatTotalAO.getMetricEnum()).startDate(listStatTotalAO.getDate()).build();
                     result.add(statisticTotal);
                     Pair<String, String> keyField = statisticTotalKeyService.packageKey(statisticTotal);
                     connection.hMGet(redisKeyService.getStatisticTotalKey(keyField.getFirst()).getBytes(), keyField.getSecond().getBytes());

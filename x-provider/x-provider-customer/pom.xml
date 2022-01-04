@@ -73,6 +73,10 @@
         </dependency>
         <dependency>
             <groupId>com.x</groupId>
+            <artifactId>x-common-util</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.x</groupId>
             <artifactId>x-common-redis</artifactId>
         </dependency>
         <dependency>

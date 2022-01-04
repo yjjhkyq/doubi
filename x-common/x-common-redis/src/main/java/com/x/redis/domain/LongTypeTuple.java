@@ -15,6 +15,15 @@ public class LongTypeTuple implements ZSetOperations.TypedTuple<Long> {
         return score;
     }
 
+    public LongTypeTuple(){
+
+    }
+
+    public LongTypeTuple(Long value, Double score){
+        this.value = value;
+        this.score = score;
+    }
+
     @Override
     public int compareTo(ZSetOperations.TypedTuple<Long> o) {
         LongTypeTuple orgin = (LongTypeTuple)o;

@@ -1,10 +1,13 @@
 package com.x.provider.customer.controller.frontend;
 
 import com.x.core.utils.ApiAssetUtil;
+import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.api.ResultCode;
 import com.x.core.web.controller.BaseFrontendController;
-import com.x.core.web.page.TableDataInfo;
+import com.x.core.web.page.PageList;
+import com.x.provider.api.customer.enums.CustomerRelationEnum;
+import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.general.model.ao.SendVerificationCodeAO;
 import com.x.provider.api.general.service.SmsRpcService;
 import com.x.provider.api.oss.service.OssRpcService;
@@ -13,7 +16,7 @@ import com.x.provider.customer.model.ao.*;
 import com.x.provider.customer.model.domain.Customer;
 import com.x.provider.customer.model.domain.CustomerRelation;
 import com.x.provider.customer.model.vo.CustomerHomePageVO;
-import com.x.provider.customer.model.vo.FlowFansListItemVO;
+import com.x.provider.customer.model.vo.SimpleCustomerVO;
 import com.x.provider.customer.service.CustomerRelationService;
 import com.x.provider.customer.service.CustomerService;
 import io.swagger.annotations.Api;
@@ -175,49 +178,44 @@ public class CustomerController extends BaseFrontendController {
 
     @ApiOperation(value = "查询关注列表")
     @GetMapping("/relation/follows")
-    public R<TableDataInfo<FlowFansListItemVO>> listFollow(@RequestParam int page, @RequestParam @Validated @Min(1)  @ApiParam(value = "用户id") long customerId){
-        List<CustomerRelation> follows = customerRelationService.listFollow(customerId, getPage(), getDefaultFrontendPageSize());
-        List<FlowFansListItemVO> result = prepareFollowFansListIem(true, follows);
-        return R.ok(new TableDataInfo<>(result, 0, getDefaultFrontendPageSize()));
+    public R<PageList<SimpleCustomerVO>> listFollow(@RequestParam Long cursor,
+                                                    @RequestParam Integer pageSize,
+                                                    @RequestParam @Validated @Min(0)  @ApiParam(value = "用户id") long customerId){
+        PageList<CustomerRelation> follows = customerRelationService.listFollow(customerId, getPageDomain());
+        if (follows.getList().isEmpty()){
+            return R.ok(new PageList<>());
+        }
+        List<SimpleCustomerVO> followsCustomer = prepareRelation(customerId, CustomerRelationEnum.FOLLOW, follows.getList());
+        return R.ok(PageList.map(follows, followsCustomer));
     }
 
     @ApiOperation(value = "查询粉丝列表")
     @GetMapping("/relation/fans")
-    public R<TableDataInfo<FlowFansListItemVO>> listFans(@RequestParam int page, @RequestParam @Validated @Min(1)  @ApiParam(value = "用户id") long customerId){
-        List<CustomerRelation> fans = customerRelationService.listFans(customerId, getPage(), getDefaultFrontendPageSize());
-        List<FlowFansListItemVO> result = prepareFollowFansListIem(false, fans);
-        return R.ok(new TableDataInfo<>(result, 0, getDefaultFrontendPageSize()));
+    public R<PageList<SimpleCustomerVO>> listFans(@RequestParam Long cursor, @RequestParam Integer pageSize, @RequestParam @Validated @Min(1)  @ApiParam(value = "用户id") long customerId){
+        PageList<CustomerRelation> fans = customerRelationService.listFans(customerId, getPageDomain());
+        if (fans.getList().isEmpty()){
+            return R.ok(new PageList<>());
+        }
+        List<SimpleCustomerVO> followsCustomer = prepareRelation(customerId, CustomerRelationEnum.FOLLOW, fans.getList());
+        return R.ok(PageList.map(fans, followsCustomer));
     }
 
-    private List<FlowFansListItemVO> prepareFollowFansListIem(boolean follow,  List<CustomerRelation> customers) {
-        List<FlowFansListItemVO> result = new ArrayList<>(customers.size());
-        customers.forEach(item -> {
-            long customerId = follow ? item.getToCustomerId() : item.getFromCustomerId();
-            FlowFansListItemVO flowFansListItem = new FlowFansListItemVO();
-            flowFansListItem.setCustomerId(customerId);
-            flowFansListItem.setCustomerAttributes(customerService.listCustomerAttribute(customerId, Arrays.asList(SystemCustomerAttributeName.AVATAR_ID, SystemCustomerAttributeName.NICK_NAME)));
-            result.add(flowFansListItem);
+    private List<SimpleCustomerVO> prepareRelation(long customerId, CustomerRelationEnum relation, List<CustomerRelation> customerRelations) {
+        Map<Long, CustomerRelation> customerRelationMap = CustomerRelationEnum.FOLLOW.getValue() == relation.getValue() ? customerRelations.stream().collect(Collectors.toMap(CustomerRelation::getToCustomerId, item -> item)) :
+                customerRelations.stream().collect(Collectors.toMap(CustomerRelation::getFromCustomerId, item -> item));
+        List<Long> customerIdList = CustomerRelationEnum.FOLLOW.getValue() == relation.getValue() ? customerRelations.stream().map(CustomerRelation::getToCustomerId).collect(Collectors.toList()) :
+                customerRelations.stream().map(CustomerRelation::getFromCustomerId).collect(Collectors.toList());
+        Map<Long, SimpleCustomerDTO> customers = customerService.listCustomer(customerId, CustomerRelationEnum.NO_RELATION, new ArrayList<>(customerRelationMap.keySet()));
+        customers.entrySet().forEach(item ->{
+            if (customerRelationMap.containsKey(item.getKey())) {
+                item.getValue().setRelation(customerRelationMap.get(item.getKey()).getRelation());
+            }
         });
-        List<String> objectKeys = new ArrayList<>();
-        result.stream().forEach(item -> {
-            item.getCustomerAttributes().entrySet().stream().forEach(attribute -> {
-                if(CustomerService.MEDIA_CUSTOMER_ATTRIBUTE_NAME.contains(attribute.getKey())){
-                    objectKeys.add(attribute.getValue());
-                }
-            });
+        List<SimpleCustomerVO> result = new ArrayList<>(customerIdList.size());
+        customerIdList.forEach(item ->{
+            result.add(BeanUtil.prepare(customers.get(item), SimpleCustomerVO.class));
         });
-        if (objectKeys.size() > 0) {
-            final R<Map<String, String>> attributeUrls = ossRpcService.listObjectBrowseUrl(objectKeys);
-            result.stream().forEach(item -> {
-                item.getCustomerAttributes().entrySet().stream().forEach(attribute -> {
-                    if (CustomerService.MEDIA_CUSTOMER_ATTRIBUTE_NAME.contains(attribute.getKey())) {
-                        attribute.setValue(attributeUrls.getData().getOrDefault(attribute.getValue(), Strings.EMPTY));
-                    }
-                });
-            });
-        }
         return result;
-
     }
 
     private void prepareCustomerAttribute(Map<String, String> attributes){

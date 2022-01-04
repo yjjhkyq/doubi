@@ -1,11 +1,10 @@
 package com.x.provider.video.service.impl.recmmend;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.x.core.utils.DateUtils;
-import com.x.core.web.page.CursorPageRequest;
-import com.x.core.web.page.TableSupport;
+import com.x.core.web.page.PageDomain;
+import com.x.core.web.page.PageList;
 import com.x.provider.video.enums.VideoRecommendPoolEnum;
 import com.x.provider.video.mapper.VideoRecommendPoolMapper;
 import com.x.provider.video.model.domain.Video;
@@ -13,6 +12,7 @@ import com.x.provider.video.model.domain.VideoRecommendPool;
 import com.x.provider.video.service.VideoRecommendPoolReadService;
 import com.x.provider.video.service.VideoService;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -68,15 +68,32 @@ public class VideoRecommendPoolServiceImpl extends BaseVideoRecommendPoolService
     }
 
     @Override
-    public IPage<VideoRecommendPool> listScreen(CursorPageRequest cursorPageRequest) {
-        return videoRecommendPoolMapper.selectPage(TableSupport.buildIPageRequest(cursorPageRequest), new LambdaQueryWrapper<VideoRecommendPool>()
-                .lt(VideoRecommendPool::getId, cursorPageRequest.getDescOrderCursor()).eq(VideoRecommendPool::getPoolLevel, VideoRecommendPoolEnum.SCREEN.getPoolLevel()).orderByDesc(VideoRecommendPool::getCreateOnDate).orderByDesc(VideoRecommendPool::getId));
+    public PageList<VideoRecommendPool> listScreen(PageDomain pageDomain) {
+        LambdaQueryWrapper<VideoRecommendPool> query = new LambdaQueryWrapper<VideoRecommendPool>().eq(VideoRecommendPool::getPoolLevel, VideoRecommendPoolEnum.SCREEN.getPoolLevel())
+                .orderByDesc(VideoRecommendPool::getCreateOnDate).orderByDesc(VideoRecommendPool::getId).last(StrUtil.format(" limit {} ", pageDomain.getPageSize()));
+        if (pageDomain.getCursor() > 0){
+            query.lt(VideoRecommendPool::getId, pageDomain.getCursor());
+        }
+        List<VideoRecommendPool> videoRecommendPools = videoRecommendPoolMapper.selectList(query);
+        if (videoRecommendPools.isEmpty()){
+            return new PageList<>();
+        }
+        return new PageList<>(videoRecommendPools, pageDomain.getPageSize(), CollectionUtils.lastElement(videoRecommendPools).getId());
     }
 
     @Override
-    public IPage<VideoRecommendPool> listHot(IPage page) {
-        return videoRecommendPoolMapper.selectPage(page, new LambdaQueryWrapper<VideoRecommendPool>().eq(VideoRecommendPool::getPoolLevel, VideoRecommendPoolEnum.HOT.getPoolLevel())
-                        .orderByDesc(VideoRecommendPool::getCreateOnDate)
-                .orderByDesc(VideoRecommendPool::getScore).orderByDesc(VideoRecommendPool::getVideoId));
+    public PageList<VideoRecommendPool> listHot(PageDomain pageDomain) {
+        LambdaQueryWrapper<VideoRecommendPool> query = new LambdaQueryWrapper<VideoRecommendPool>().eq(VideoRecommendPool::getPoolLevel, VideoRecommendPoolEnum.SCREEN.getPoolLevel())
+                .orderByDesc(VideoRecommendPool::getCreateOnDate).orderByDesc(VideoRecommendPool::getId).orderByDesc(VideoRecommendPool::getScore).orderByDesc(VideoRecommendPool::getVideoId)
+                .last(StrUtil.format(" limit {} ", pageDomain.getPageSize()));
+        if (pageDomain.getCursor() > 0){
+            query.lt(VideoRecommendPool::getId, pageDomain.getCursor());
+        }
+        List<VideoRecommendPool> videoRecommendPools = videoRecommendPoolMapper.selectList(query);
+        if (videoRecommendPools.isEmpty()){
+            return new PageList<>();
+        }
+        return new PageList<>(videoRecommendPools, pageDomain.getPageSize(), CollectionUtils.lastElement(videoRecommendPools).getId());
+
     }
 }

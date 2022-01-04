@@ -1,7 +1,7 @@
 package com.x.provider.pay.controller.frontend;
 
 
-import com.x.core.web.page.TableDataInfo;
+import com.x.core.web.page.PageList;
 import com.x.provider.pay.annotation.PayToken;
 import com.x.provider.pay.model.domain.Bill;
 import io.swagger.annotations.Api;
@@ -18,7 +18,7 @@ public class BillController {
     @ApiOperation("获得订单")
     @GetMapping("/")
     @PayToken
-    public TableDataInfo<Bill> getBill() {
+    public PageList<Bill> getBill() {
         return null;
     }
 }

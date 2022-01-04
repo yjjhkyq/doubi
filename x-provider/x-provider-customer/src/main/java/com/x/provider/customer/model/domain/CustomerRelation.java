@@ -25,4 +25,8 @@ public class CustomerRelation extends BaseEntity {
 
   @TableField("relation")
   private int relation;
+
+  @TableField("is_delete")
+  private Boolean deleted;
+
 }

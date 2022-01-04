@@ -284,6 +284,11 @@
                 <artifactId>x-provider-api-mc</artifactId>
                 <version>1.0.0</version>
             </dependency>
+            <dependency>
+                <groupId>com.x</groupId>
+                <artifactId>x-provider-api-common</artifactId>
+                <version>1.0.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

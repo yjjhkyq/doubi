@@ -4,11 +4,13 @@ import com.x.core.web.api.R;
 import com.x.provider.api.customer.enums.CustomerRelationEnum;
 import com.x.provider.api.customer.model.ao.ListCustomerAO;
 import com.x.provider.api.customer.model.dto.CustomerDTO;
+import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
 import feign.hystrix.FallbackFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +43,11 @@ public class CustomerFallbackFactory implements FallbackFactory<CustomerRpcServi
             @Override
             public R<List<Long>> listFollow(long customerId) {
                 return R.ok(new ArrayList<>());
+            }
+
+            @Override
+            public R<Map<Long, SimpleCustomerDTO>> listSimpleCustomer(long loginCustomerId, int customerRelation, String customerIdList) {
+                return R.ok(new HashMap<>());
             }
         };
     }

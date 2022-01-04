@@ -2,6 +2,7 @@ package com.x.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -12,7 +13,7 @@ public class StringUtil {
         return parse(source, DEFAULT_SPLITTER);
     }
 
-    public static String toString(List<Long> source){
+    public static String toString(Collection<Long> source){
         return toString(source, DEFAULT_SPLITTER);
     }
 
@@ -31,7 +32,10 @@ public class StringUtil {
         return result;
     }
 
-    public static String toString(List<Long> source, String splitter){
+    public static String toString(Collection<Long> source, String splitter){
+        if (source.isEmpty()){
+            return "";
+        }
         return String.join(splitter, source.stream().map(String::valueOf).collect(Collectors.toList()));
     }
 }

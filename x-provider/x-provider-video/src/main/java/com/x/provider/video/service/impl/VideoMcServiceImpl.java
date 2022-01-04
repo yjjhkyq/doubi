@@ -1,5 +1,6 @@
 package com.x.provider.video.service.impl;
 
+import com.x.provider.api.common.enums.ItemTypeEnum;
 import com.x.provider.api.customer.enums.CustomerOptions;
 import com.x.provider.api.customer.model.dto.CustomerDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
@@ -56,7 +57,12 @@ public class VideoMcServiceImpl implements VideoMcService {
         if (!starEvent.isFirstStar() || !Arrays.asList(StarItemTypeEnum.VIDEO.getValue(), StarItemTypeEnum.COMMENT.getValue()).contains(starEvent.getItemType())){
             return;
         }
-        Long videoId = starEvent.getItemType().equals(StarItemTypeEnum.VIDEO.getValue()) ? Long.parseLong(starEvent.getItemId()) : starEvent.getAssociationItemId();
+        Long videoId = starEvent.getItemType().equals(StarItemTypeEnum.VIDEO.getValue()) ? Long.parseLong(starEvent.getItemId())
+                : (StarItemTypeEnum.COMMENT.getValue().equals(starEvent.getItemType()) && starEvent.getComment() != null && starEvent.getComment().getItemType() == ItemTypeEnum.VIDEO.getValue()
+                ? Long.valueOf(starEvent.getComment().getItemId()) : 0L);
+        if (videoId == 0){
+            return;
+        }
         Optional<Video> video = videoService.getVideo(videoId);
         if (video.isEmpty() || video.get().getCustomerId().equals(starEvent.getStarCustomerId())){
             return;
@@ -89,7 +95,7 @@ public class VideoMcServiceImpl implements VideoMcService {
         if (!commentEvent.getItemType().equals(CommentItemTypeEnum.VIDEO.getValue())){
             return;
         }
-        Optional<Video> video = videoService.getVideo(commentEvent.getReplyRootId() != null && commentEvent.getReplyRootId() > 0 ? commentEvent.getReplyRootId() : commentEvent.getItemId());
+        Optional<Video> video = videoService.getVideo(commentEvent.getItemId());
         if (!video.isPresent() || video.get().getCustomerId().equals(commentEvent.getCommentCustomerId())){
             return;
         }
@@ -102,7 +108,7 @@ public class VideoMcServiceImpl implements VideoMcService {
         interactMsgBody.setInteractiveIcon(vodRpcService.getMediaInfo(video.get().getFileId()).getData().getCoverUrl());
         interactMsgBody.setCommentContent(commentEvent.getContent());
         interactMsgBody.setCommentId(commentEvent.getId());
-        interactMsgBody.setReply(commentEvent.getReplyCommentId() != null && commentEvent.getReplyCommentId() > 0);
+        interactMsgBody.setReply(commentEvent.getParentCommentId() > 0);
         notifyRpcService.sendMessage(McHelper.buildVideoCommentInteractMsg(video.get().getCustomerId(), interactMsgBody));
     }
 }

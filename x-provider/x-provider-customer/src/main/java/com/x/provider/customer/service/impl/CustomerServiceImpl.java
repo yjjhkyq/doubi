@@ -9,6 +9,9 @@ import com.x.core.utils.IdUtils;
 import com.x.core.web.api.R;
 import com.x.core.web.api.ResultCode;
 import com.x.provider.api.customer.constants.CustomerEventTopic;
+import com.x.provider.api.customer.enums.CustomerRelationEnum;
+import com.x.provider.api.customer.model.dto.CustomerAttributeDTO;
+import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.customer.model.event.CustomerAttributeEvent;
 import com.x.provider.api.customer.model.event.CustomerEvent;
 import com.x.provider.api.customer.model.event.CustomerInfoGreenEvent;
@@ -32,14 +35,8 @@ import com.x.provider.customer.mapper.CustomerPasswordMapper;
 import com.x.provider.customer.mapper.CustomerRoleMapper;
 import com.x.provider.customer.mapper.RoleMapper;
 import com.x.provider.customer.model.ao.*;
-import com.x.provider.customer.model.domain.Customer;
-import com.x.provider.customer.model.domain.CustomerPassword;
-import com.x.provider.customer.model.domain.CustomerRole;
-import com.x.provider.customer.model.domain.Role;
-import com.x.provider.customer.service.CustomerService;
-import com.x.provider.customer.service.GenericAttributeService;
-import com.x.provider.customer.service.PasswordEncoderService;
-import com.x.provider.customer.service.RedisKeyService;
+import com.x.provider.customer.model.domain.*;
+import com.x.provider.customer.service.*;
 import com.x.provider.customer.service.cache.customer.CustomerChangedEvent;
 import com.x.provider.customer.service.cache.customer.CustomerPasswordChangedEvent;
 import com.x.provider.customer.service.cache.customer.CustomerRoleChangedEvent;
@@ -48,13 +45,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.time.Duration;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -77,6 +72,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final SmsRpcService smsRpcService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final OssRpcService ossRpcService;
+    private final CustomerRelationService customerRelationService;
 
     public CustomerServiceImpl(RedisKeyService redisKeyService,
                                RedisService redisService,
@@ -91,7 +87,8 @@ public class CustomerServiceImpl implements CustomerService {
                                ApplicationConfig applicationConfig,
                                SmsRpcService smsRpcService,
                                KafkaTemplate<String, Object> kafkaTemplate,
-                               OssRpcService ossRpcService){
+                               OssRpcService ossRpcService,
+                               CustomerRelationService customerRelationService){
         this.redisKeyService = redisKeyService;
         this.redisService = redisService;
         this.customerMapper =customerMapper;
@@ -106,6 +103,7 @@ public class CustomerServiceImpl implements CustomerService {
         this.smsRpcService = smsRpcService;
         this.kafkaTemplate = kafkaTemplate;
         this.ossRpcService = ossRpcService;
+        this.customerRelationService = customerRelationService;
     }
 
     @Override
@@ -333,7 +331,7 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public void onCustomerDraftAttributeGreenFinshed(long customerId, SystemCustomerAttributeName attributeName, String value, SuggestionTypeEnum suggestionTypeEnum) {
+    public void onCustomerDraftAttributeGreenFinished(long customerId, SystemCustomerAttributeName attributeName, String value, SuggestionTypeEnum suggestionTypeEnum) {
         if (suggestionTypeEnum.equals(SuggestionTypeEnum.PASS)){
             genericAttributeService.addOrUpdateAttribute(AttributeKeyGroupEnum.CUSTOMER.toString(), customerId, attributeName.toString(), value);
             sendCustomerInfoChanged(Customer.builder().id(customerId).build(), Map.of(attributeName.name(), value), CustomerEvent.EventTypeEnum.UPDATE);
@@ -343,7 +341,18 @@ public class CustomerServiceImpl implements CustomerService {
                 .pass(suggestionTypeEnum.equals(SuggestionTypeEnum.PASS)).build());
     }
 
+    @Override
+    public Map<Long, SimpleCustomerDTO> listCustomer(long loginCustomerId, CustomerRelationEnum customerRelationEnum, List<Long> customerIdList) {
+        List<Customer> customers = customerMapper.selectList(buildQuery(0, customerIdList, null, null, null));
+        return prepare(loginCustomerId, customerRelationEnum, customers);
+    }
+
     public Customer getCustomer(long id, String userName, String phone, String email){
+        LambdaQueryWrapper<Customer> customerLambdaQueryWrapper = buildQuery(id, null, userName, phone, email);
+        return customerMapper.selectOne(customerLambdaQueryWrapper);
+    }
+
+    private LambdaQueryWrapper<Customer> buildQuery(long id, List<Long> idList, String userName, String phone, String email) {
         LambdaQueryWrapper<Customer> customerLambdaQueryWrapper = new LambdaQueryWrapper<>();
         if (id > 0){
             customerLambdaQueryWrapper.eq(Customer::getId, id);
@@ -357,7 +366,10 @@ public class CustomerServiceImpl implements CustomerService {
         if (!StringUtils.isEmpty(email)){
             customerLambdaQueryWrapper.eq(Customer::getEmail, email);
         }
-        return customerMapper.selectOne(customerLambdaQueryWrapper);
+        if (!CollectionUtils.isEmpty(idList)){
+            customerLambdaQueryWrapper.in(Customer::getId, idList);
+        }
+        return customerLambdaQueryWrapper;
     }
 
     public CustomerPassword getCustomerPassword(long id, long customerId){
@@ -411,5 +423,89 @@ public class CustomerServiceImpl implements CustomerService {
         customerEvent.setRegisterRole(true);
         customerEvent.setCustomerAttributeEvent(customerAttributeEvent);
         kafkaTemplate.send(CustomerEventTopic.TOPIC_NAME_CUSTOMER_INFO_CHANGED, String.valueOf(customer.getId()), customerEvent);
+    }
+
+    private Map<Long, SimpleCustomerDTO> prepare(long loginCustomerId, CustomerRelationEnum customerRelationEnum,  List<Customer> source){
+        if (source.isEmpty()){
+            return Collections.emptyMap();
+        }
+        List<SimpleCustomerDTO> result = BeanUtil.prepare(source, SimpleCustomerDTO.class);
+        prepareAttribute(result);
+        if (loginCustomerId > 0) {
+            prepareRelation(loginCustomerId, customerRelationEnum, result);
+        }
+        return result.stream().collect(Collectors.toMap(SimpleCustomerDTO::getId, item -> item));
+    }
+
+    private Map<Long, CustomerAttributeDTO> listCustomerAttributeMap(List<Long> customerIdList){
+        Map<Long, Map<String, String>> customerAttribute = genericAttributeService.listAttributeMap(AttributeKeyGroupEnum.CUSTOMER.toString(), customerIdList);
+        Map<Long, CustomerAttributeDTO> result = new HashMap<>(customerIdList.size());
+        customerIdList.forEach(item ->{
+            if (!customerAttribute.containsKey(item)){
+                customerAttribute.put(item, new HashMap<>());
+            }
+            fillDefaultAttribute(customerAttribute.get(item));
+            result.put(item, prepare(customerAttribute.get(item)));
+        });
+        fillUrl(result.values());
+        return result;
+    }
+
+    private void prepareAttribute(List<SimpleCustomerDTO> source){
+        List<Long> customerIdList = source.stream().map(SimpleCustomerDTO::getId).collect(Collectors.toList());
+        Map<Long, CustomerAttributeDTO> customerAttributeMap = listCustomerAttributeMap(customerIdList);
+        source.forEach(item -> {
+            item.setAvatarUrl(customerAttributeMap.get(item.getId()).getAvatarUrl());
+            item.setNickName(customerAttributeMap.get(item.getId()).getNickName());
+        });
+    }
+
+    private void prepareRelation(long loginCustomerId, CustomerRelationEnum customerRelationEnum, List<SimpleCustomerDTO> source){
+        if (loginCustomerId <= 0 || CustomerRelationEnum.NO_RELATION.getValue() == customerRelationEnum.getValue()){
+            return;
+        }
+        List<Long> customerIdList = source.stream().map(SimpleCustomerDTO::getId).collect(Collectors.toList());
+        Map<Long, CustomerRelation> customerRelations = customerRelationService.listRelationMap(loginCustomerId, customerRelationEnum, customerIdList);
+        prepareRelation(loginCustomerId, source, customerRelations);
+    }
+
+    @Override
+    public void prepareRelation(long loginCustomerId, List<SimpleCustomerDTO> source, Map<Long, CustomerRelation> customerRelations){
+        if (loginCustomerId <= 0 || customerRelations.isEmpty()){
+            return;
+        }
+        source.forEach(item ->{
+            if (customerRelations.containsKey(item.getId())){
+                item.setRelation(customerRelations.get(item.getId()).getRelation());
+            }
+            item.setCanFollow(loginCustomerId != item.getId() && CustomerRelationEnum.NO_RELATION.getValue() == item.getRelation());
+        });
+    }
+
+    private CustomerAttributeDTO prepare(Map<String, String> attribute){
+        attribute.putIfAbsent(SystemCustomerAttributeName.NICK_NAME.name(), applicationConfig.getDefaultNickName());
+        attribute.putIfAbsent(SystemCustomerAttributeName.AVATAR_ID.name(), applicationConfig.getDefaultAvatarId());
+        attribute.putIfAbsent(SystemCustomerAttributeName.PERSONAL_HOMEPAGE_BACKGROUND_ID.name(), applicationConfig.getDefaultPersonalHomePageBackgroundId());
+        CustomerAttributeDTO result = CustomerAttributeDTO.builder()
+                .nickName(attribute.getOrDefault(SystemCustomerAttributeName.NICK_NAME.name(), applicationConfig.getDefaultNickName()))
+                .avatarId(attribute.getOrDefault(SystemCustomerAttributeName.AVATAR_ID.name(), applicationConfig.getDefaultAvatarId()))
+                .personalHomePageBackgroundId(attribute.getOrDefault(SystemCustomerAttributeName.PERSONAL_HOMEPAGE_BACKGROUND_ID, applicationConfig.getDefaultPersonalHomePageBackgroundId()))
+                .signature(attribute.getOrDefault(SystemCustomerAttributeName.SIGNATURE, ""))
+                .build();
+        return result;
+    }
+
+    private void fillUrl(Collection<CustomerAttributeDTO> source){
+        if (source.isEmpty()){
+            return;
+        }
+        Set<String> fileIds = new HashSet<>(source.size());
+        fileIds.addAll(source.stream().filter(item -> !StringUtils.isEmpty(item.getAvatarId())).map(CustomerAttributeDTO::getAvatarId).collect(Collectors.toSet()));
+        fileIds.addAll(source.stream().filter(item -> !StringUtils.isEmpty(item.getPersonalHomePageBackgroundId())).map(CustomerAttributeDTO::getPersonalHomePageBackgroundId).collect(Collectors.toSet()));
+        Map<String, String> urls = ossRpcService.listObjectBrowseUrl(new ArrayList<>(fileIds)).getData();
+        source.forEach(item ->{
+            item.setAvatarUrl(urls.get(item.getAvatarId()));
+            item.setPersonalHomePageBackgroundUrl(urls.get(item.getPersonalHomePageBackgroundId()));
+        });
     }
 }

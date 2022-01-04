@@ -2,6 +2,7 @@ package com.x.provider.video.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.x.core.web.page.PageDomain;
+import com.x.core.web.page.PageList;
 import com.x.provider.api.general.model.event.StarEvent;
 import com.x.provider.api.vod.model.dto.ContentReviewResultDTO;
 import com.x.provider.video.model.ao.homepage.CreateVideoAO;
@@ -19,10 +20,10 @@ public interface VideoService {
     void onVodContentReview(ContentReviewResultDTO contentReviewResultDTO);
     void topMyVideo(long videoId, boolean top, long customerId);
     Optional<Video> getVideo(long videoId);
-    IPage<Video> listVideo(long customerId, IPage page);
+    PageList<Video> listVideo(long customerId, PageDomain pageDomain);
     List<Video> listVideo(List<Long> ids);
     void onStar(StarEvent starEvent);
-    List<Video> listCustomerStarVideo(PageDomain pageDomain, long starCustomerId);
+    PageList<Video> listCustomerStarVideo(PageDomain pageDomain, long starCustomerId);
     List<Video> listVideo(List<Long> customerIds, Date afterUpdateDate);
     List<VideoTopic> listVideoTopic(Long videoId);
 }

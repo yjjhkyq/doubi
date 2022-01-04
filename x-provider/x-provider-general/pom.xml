@@ -94,6 +94,10 @@
             <groupId>com.x</groupId>
             <artifactId>x-provider-api-customer</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.x</groupId>
+            <artifactId>x-provider-api-common</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

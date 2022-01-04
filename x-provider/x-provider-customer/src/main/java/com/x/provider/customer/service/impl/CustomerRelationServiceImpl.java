@@ -1,7 +1,10 @@
 package com.x.provider.customer.service.impl;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.x.core.cache.event.EntityChangedEventBus;
+import com.x.core.web.page.PageDomain;
+import com.x.core.web.page.PageList;
 import com.x.provider.api.customer.constants.CustomerEventTopic;
 import com.x.provider.api.customer.enums.CustomerRelationEnum;
 import com.x.provider.api.customer.model.event.FollowEvent;
@@ -14,6 +17,7 @@ import com.x.redis.service.RedisService;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -73,15 +77,18 @@ public class CustomerRelationServiceImpl implements CustomerRelationService {
             newRelationFrom = customerRelationFrom != null && customerRelationFrom.getRelation() == CustomerRelationEnum.NO_RELATION.getValue() ? null : CustomerRelationEnum.NO_RELATION;
             newRelationTo = customerRelationTo != null && customerRelationTo.getRelation() == CustomerRelationEnum.FRIEND.getValue() ? CustomerRelationEnum.FOLLOW : null;
         }
+        if (newRelationTo != null){
+            changeCustomerRelation(customerRelationTo, CustomerRelation.builder().fromCustomerId(toCustomerId).toCustomerId(fromCustomerId).relation(newRelationTo.getValue()).build());
+        }
         if (newRelationFrom != null){
+            long customerRelationId = changeCustomerRelation(customerRelationFrom, CustomerRelation.builder().fromCustomerId(fromCustomerId).toCustomerId(toCustomerId).relation(newRelationFrom.getValue()).build());
             if (newRelationFrom.getValue() != CustomerRelationEnum.NO_RELATION.getValue()) {
-                redisService.zadd(redisKeyService.getCustomerRelationOfFollowKey(fromCustomerId), toCustomerId, System.currentTimeMillis());
-                redisService.zadd(redisKeyService.getCustomerRelationOfFansKey(toCustomerId), fromCustomerId, System.currentTimeMillis());
+                redisService.zadd(redisKeyService.getCustomerRelationOfFollowKey(fromCustomerId), toCustomerId, customerRelationId);
+                redisService.zadd(redisKeyService.getCustomerRelationOfFansKey(toCustomerId), fromCustomerId, customerRelationId);
             } else {
                 redisService.zremove(redisKeyService.getCustomerRelationOfFollowKey(fromCustomerId), toCustomerId);
                 redisService.zremove(redisKeyService.getCustomerRelationOfFansKey(toCustomerId), fromCustomerId);
             }
-            changeCustomerRelation(customerRelationFrom, CustomerRelation.builder().fromCustomerId(fromCustomerId).toCustomerId(toCustomerId).relation(newRelationFrom.getValue()).build());
             if (follow){
                 kafkaTemplate.send(CustomerEventTopic.TOPIC_NAME_FOLLOW, String.valueOf(fromCustomerId),
                         FollowEvent.builder()
@@ -91,34 +98,26 @@ public class CustomerRelationServiceImpl implements CustomerRelationService {
                                 .build());
             }
         }
-        if (newRelationTo != null){
-            changeCustomerRelation(customerRelationTo, CustomerRelation.builder().fromCustomerId(toCustomerId).toCustomerId(fromCustomerId).relation(newRelationTo.getValue()).build());
-        }
     }
 
-    void changeCustomerRelation(CustomerRelation customerRelationOld, CustomerRelation customerRelationNew){
+    private long changeCustomerRelation(CustomerRelation customerRelationOld, CustomerRelation customerRelationNew){
+        prepare(customerRelationNew);
         if (customerRelationOld == null){
             customerRelationMapper.insert(customerRelationNew);
             entityChangedEventBus.postEntityInserted(new CustomerRelationChangedEvent(customerRelationNew));
+            return customerRelationNew.getId();
         }
         else {
             customerRelationNew.setId(customerRelationOld.getId());
             customerRelationMapper.updateById(customerRelationNew);
             entityChangedEventBus.postEntityUpdated(new CustomerRelationChangedEvent(customerRelationNew));
+            return customerRelationNew.getId();
         }
     }
 
     @Override
-    public List<CustomerRelation> listFollow(long customerId, long page, long limit) {
-        Set<Long> follows = redisService.reverseRangeLong(redisKeyService.getCustomerRelationOfFollowKey(customerId), page, limit);
-        if (follows.size() <= 0){
-            return Collections.emptyList();
-        }
-        List<String> keys = new ArrayList<>(follows.size());
-        follows.forEach(item -> {
-            keys.add(redisKeyService.getCustomerRelationKey(customerId, item));
-        });
-        return redisService.listCacheObject(keys);
+    public PageList<CustomerRelation> listFollow(long customerId, PageDomain page) {
+        return listFollowFans(customerId, 0L, page);
     }
 
     @Override
@@ -127,13 +126,9 @@ public class CustomerRelationServiceImpl implements CustomerRelationService {
     }
 
     @Override
-    public List<CustomerRelation> listFans(long customerId, long page, long limit) {
-        Set<Long> fans = redisService.reverseRangeLong(redisKeyService.getCustomerRelationOfFansKey(customerId), page, limit);
-        List<String> keys = new ArrayList<>(fans.size());
-        fans.forEach(item -> {
-            keys.add(redisKeyService.getCustomerRelationKey(item, customerId));
-        });
-        return redisService.listCacheObject(keys);
+    public PageList<CustomerRelation> listFans(long customerId, PageDomain page) {
+        LambdaQueryWrapper<CustomerRelation> query = buildQuery(0, customerId, page);
+        return listFollowFans(0L, customerId, page);
     }
 
     @Override
@@ -146,12 +141,61 @@ public class CustomerRelationServiceImpl implements CustomerRelationService {
         return redisService.zsize(redisKeyService.getCustomerRelationOfFollowKey(customerId));
     }
 
+    @Override
+    public Map<Long, CustomerRelation> listRelationMap(long customerId, CustomerRelationEnum customerRelation, List<Long> toCustomerIdList) {
+        List<CustomerRelation> customerRelations = listCustomerRelation(customerId, customerRelation, toCustomerIdList);
+        switch (customerRelation){
+            case FOLLOW:
+                return customerRelations.stream().collect(Collectors.toMap(CustomerRelation::getToCustomerId, item -> item));
+            case FANS:
+                return customerRelations.stream().collect(Collectors.toMap(CustomerRelation::getFromCustomerId, item -> item));
+            default:
+                return Collections.emptyMap();
+        }
+    }
+
+    private PageList<CustomerRelation> listFollowFans(long fromCustomerId, long toCustomerId, PageDomain page) {
+        LambdaQueryWrapper<CustomerRelation> query = buildQuery(fromCustomerId, toCustomerId, page);
+        List<CustomerRelation> customerRelations = customerRelationMapper.selectList(query);
+        if (customerRelations.isEmpty()){
+            return new PageList<>();
+        }
+        return new PageList<>(customerRelations, page.getPageSize(), CollectionUtils.lastElement(customerRelations).getId());
+    }
+
+    private List<CustomerRelation> listCustomerRelation(long customerId, CustomerRelationEnum customerRelation, List<Long> toCustomerIdList) {
+        long fromCustomerId = customerRelation.getValue() == CustomerRelationEnum.FOLLOW.getValue() ? customerId : 0L;
+        long toCustomerId = customerRelation.getValue() == CustomerRelationEnum.FANS.getValue() ? customerId : 0L;
+        LambdaQueryWrapper<CustomerRelation> query = buildQuery(fromCustomerId, toCustomerId, toCustomerIdList, false);
+        return customerRelationMapper.selectList(query);
+    }
+
+
+    @Override
+    public Set<Long> listFollowCustomer(long fromCustomerId, List<Long> toCustomerIdList){
+        return listCustomerRelation(fromCustomerId, CustomerRelationEnum.FOLLOW, toCustomerIdList).stream().map(CustomerRelation::getToCustomerId).collect(Collectors.toSet());
+    }
+
     public Optional<CustomerRelation> getCacheCustomerRelation(long fromCustomerId, long toCustomerId){
-        CustomerRelation customerRelation = redisService.getCacheObject(redisKeyService.getCustomerRelationKey(fromCustomerId, toCustomerId), () -> getCustomerRelation(fromCustomerId, toCustomerId));
+        CustomerRelation customerRelation = getCustomerRelation(fromCustomerId, toCustomerId);
         return Optional.ofNullable(customerRelation);
     }
 
     public CustomerRelation getCustomerRelation(long fromCustomerId, long toCustomerId){
+        LambdaQueryWrapper<CustomerRelation> query = buildQuery(fromCustomerId, toCustomerId, null, null);
+        return customerRelationMapper.selectOne(query);
+    }
+
+    private LambdaQueryWrapper<CustomerRelation> buildQuery(long fromCustomerId, long toCustomerId, PageDomain page){
+        LambdaQueryWrapper<CustomerRelation> result = buildQuery(fromCustomerId, toCustomerId, null, false)
+                .orderByDesc(CustomerRelation::getId).last(StrUtil.format(" limit {}", page.getPageSize()));
+        if (page.getCursor() != 0){
+            result.lt(CustomerRelation::getId, page.getCursor());
+        }
+        return result;
+    }
+
+    private LambdaQueryWrapper<CustomerRelation> buildQuery(long fromCustomerId, long toCustomerId, List<Long> toCustomerIdList, Boolean delete) {
         LambdaQueryWrapper<CustomerRelation> query = new LambdaQueryWrapper<>();
         if (fromCustomerId > 0){
             query.eq(CustomerRelation::getFromCustomerId, fromCustomerId);
@@ -159,6 +203,16 @@ public class CustomerRelationServiceImpl implements CustomerRelationService {
         if (toCustomerId > 0){
             query.eq(CustomerRelation::getToCustomerId, toCustomerId);
         }
-        return customerRelationMapper.selectOne(query);
+        if (!CollectionUtils.isEmpty(toCustomerIdList)){
+            query.in(CustomerRelation::getToCustomerId, toCustomerIdList);
+        }
+        if (delete != null){
+            query.eq(CustomerRelation::getDeleted, delete);
+        }
+        return query;
+    }
+
+    private void prepare(CustomerRelation customerRelation){
+        customerRelation.setDeleted(CustomerRelationEnum.NO_RELATION.getValue() == customerRelation.getRelation());
     }
 }

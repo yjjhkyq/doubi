@@ -1,22 +1,21 @@
 package com.x.provider.video.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.x.core.web.page.CursorList;
-import com.x.core.web.page.CursorPageRequest;
-import com.x.core.web.page.TableSupport;
+import com.x.core.web.page.PageDomain;
+import com.x.core.web.page.PageList;
 import com.x.provider.api.customer.service.CustomerRpcService;
 import com.x.provider.video.configure.ApplicationConfig;
 import com.x.provider.video.enums.FollowVideoTypeEnum;
-import com.x.provider.video.mapper.VideoRecommendPoolMapper;
-import com.x.provider.video.model.domain.*;
+import com.x.provider.video.model.domain.TopicCustomerFavorite;
+import com.x.provider.video.model.domain.Video;
+import com.x.provider.video.model.domain.VideoRecommendPool;
+import com.x.provider.video.model.domain.VideoRecommendPoolHotTopic;
 import com.x.provider.video.service.*;
 import com.x.redis.service.RedisService;
 import com.x.util.ListUtil;
 import org.apache.commons.lang.time.DateUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -101,19 +100,15 @@ public class VideoReadServiceImpl implements VideoReadService {
     }
 
     @Override
-    public CursorList<Long> listScreenVideo(CursorPageRequest cursorPageRequest) {
-        IPage<VideoRecommendPool> page = videoRecommendPoolReadService.listScreen(cursorPageRequest);
-        if (page.getRecords().size() == 0){
-            return new CursorList<>();
-        }
-        List<Long> screenVideos = page.getRecords().stream().map(VideoRecommendPool::getVideoId).collect(Collectors.toList());
-        return new CursorList<Long>(screenVideos, CollectionUtils.lastElement(screenVideos));
+    public PageList<VideoRecommendPool> listScreenVideo(PageDomain pageDomain) {
+        return videoRecommendPoolReadService.listScreen(pageDomain);
     }
 
     @Override
     public List<VideoRecommendPool> listHotVideo() {
-        IPage<VideoRecommendPool> result = videoRecommendPoolReadService.listHot(new Page<>(0, applicationConfig.getHotVideoShowSize(), false));
-        return result.getRecords();
+        PageDomain pageDomain = new PageDomain();
+        pageDomain.setPageSize(applicationConfig.getHotVideoShowSize());
+        return videoRecommendPoolReadService.listHot(pageDomain).getList();
     }
 
     private Date getFollowVideoInitTime(FollowVideoTypeEnum followVideoTypeEnum, long customerId){

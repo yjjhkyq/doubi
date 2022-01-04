@@ -15,8 +15,8 @@ public class StatisticTotal {
     private Long longValue;
     private Double doubleValue;
     private Date startDate;
-    private Integer statisticPeriodEnum;
-    private Integer statTotalItemNameEnum;
-    private String statisticObjectId;
-    private Integer statisticObjectClassEnum;
+    private Integer periodEnum;
+    private Integer metricEnum;
+    private String itemId;
+    private Integer itemTypeEnum;
 }

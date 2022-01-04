@@ -1,21 +1,15 @@
 package com.x.provider.mc.service.impl;
 
-import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.x.core.exception.ApiException;
-import com.x.core.utils.ApiAssetUtil;
 import com.x.core.utils.BeanUtil;
-import com.x.core.web.api.ResultCode;
-import com.x.core.web.page.CursorList;
-import com.x.core.web.page.TableSupport;
+import com.x.core.web.page.PageDomain;
+import com.x.core.web.page.PageList;
 import com.x.provider.api.mc.enums.MessageTargetType;
+import com.x.provider.api.mc.model.ao.SendMessageAO;
 import com.x.provider.mc.configure.ApplicationConfig;
 import com.x.provider.mc.mapper.MessageMapper;
 import com.x.provider.mc.mapper.MessageReadBadgeMapper;
 import com.x.provider.mc.mapper.MessageSenderSystemMapper;
-import com.x.provider.api.mc.model.ao.SendMessageAO;
-import com.x.provider.mc.model.ao.ReadMessageAO;
 import com.x.provider.mc.model.domain.Message;
 import com.x.provider.mc.model.domain.MessageReadBadge;
 import com.x.provider.mc.model.domain.MessageSenderSystem;
@@ -27,11 +21,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.concurrent.Executor;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -64,22 +56,24 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public CursorList<Message> readMessage(ReadMessageAO readMessageAO, Long customerId) {
-        Optional<MessageSenderSystem> messageSenderSystem = getMessageSenderSystem(readMessageAO.getSenderUid());
+    public PageList<Message> readMessage(Long customerId, Long senderUid, PageDomain pageDomain) {
+        Optional<MessageSenderSystem> messageSenderSystem = getMessageSenderSystem(senderUid);
         Integer targetType = messageSenderSystem.isPresent() ? messageSenderSystem.get().getTargetType() : MessageTargetType.PERSONAL.getValue();
         Long targetId = getTargetId(customerId, messageSenderSystem.isPresent() ? messageSenderSystem.get().getTargetId() : customerId, targetType);
-        IPage page = TableSupport.buildIPageRequest(readMessageAO);
-        LambdaQueryWrapper<Message> query = new LambdaQueryWrapper<Message>().eq(Message::getSenderUid, readMessageAO.getSenderUid()).eq(Message::getTargetId, targetId)
-                .gt(Message::getExpireDate, new Date()).lt(Message::getId, readMessageAO.getDescOrderCursor())
+        LambdaQueryWrapper<Message> query = new LambdaQueryWrapper<Message>().eq(Message::getSenderUid, senderUid).eq(Message::getTargetId, targetId)
+                .gt(Message::getExpireDate, new Date())
                 .orderByDesc(Message::getId);
-        List<Message> records = messageMapper.selectPage(page, query).getRecords();
+        if (pageDomain.getCursor() > 0){
+            query.lt(Message::getId, pageDomain.getCursor());
+        }
+        List<Message> records = messageMapper.selectList(query);
         if (CollectionUtils.isEmpty(records)){
-            return new CursorList<>();
+            return new PageList<>();
         }
         executor.execute(() -> {
-            updateMessageBadge(readMessageAO.getSenderUid(), targetId, customerId, true);
+            updateMessageBadge(senderUid, targetId, customerId, true);
         });
-        return new CursorList<>(records, CollectionUtils.lastElement(records).getId());
+        return new PageList<>(records, pageDomain.getPageSize(), CollectionUtils.lastElement(records).getId());
     }
 
     public void updateMessageBadge(Long senderUid, Long targetUid, Long currentCustomerId, boolean messageRead) {

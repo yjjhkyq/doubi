@@ -1,5 +1,6 @@
 package com.x.provider.api.general.model.event;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,11 +14,11 @@ public class CommentEvent {
     private long id;
     private Long itemId;
     private Integer itemType;
+    private Long itemCustomerId;
+    private Long rootCommentId;
+    private Long parentCommentId;
+    private Long parentCommentCustomerId;
     private Long commentCustomerId;
-    private String commentCustomerNickName;
     private String content;
-    private Long replyCommentId;
-    private Long replyRootId;
-    private Long replyCustomerId;
-    private String replyCustomerNickName;
+    private Boolean authorComment;
 }

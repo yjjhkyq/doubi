@@ -3,15 +3,13 @@ package com.x.provider.mc.controller.frontend;
 import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.controller.BaseFrontendController;
-import com.x.core.web.page.CursorList;
-import com.x.core.web.page.TableSupport;
+import com.x.core.web.page.PageList;
 import com.x.provider.api.customer.enums.CustomerOptions;
 import com.x.provider.api.customer.model.ao.ListCustomerAO;
 import com.x.provider.api.customer.model.dto.CustomerDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
 import com.x.provider.api.mc.enums.MessageTargetType;
 import com.x.provider.api.mc.model.ao.SendMessageAO;
-import com.x.provider.mc.model.ao.ReadMessageAO;
 import com.x.provider.mc.model.ao.SendImAO;
 import com.x.provider.mc.model.domain.Message;
 import com.x.provider.mc.model.domain.MessageReadBadge;
@@ -24,6 +22,7 @@ import com.x.provider.mc.service.MessageService;
 import com.x.util.StringUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -62,10 +61,14 @@ public class McController extends BaseFrontendController {
     }
 
     @ApiOperation(value = "读取站内信")
-    @PostMapping("/read")
-    public R<CursorList<MessageVO>> readMessage(@Validated @RequestBody ReadMessageAO readMessageAO){
-        CursorList<Message> messageCursorList = messageService.readMessage(readMessageAO, getCurrentCustomerId());
-        return R.ok(messageCursorList.prepare((s) -> BeanUtil.prepare(s, MessageVO.class)));
+    @GetMapping("/read")
+    public R<PageList<MessageVO>> readMessage(@RequestParam(required = false, defaultValue = "0") long cursor,
+                                                @RequestParam int pageSize,
+                                                @ApiParam(value = "发送人用户id") Long senderCustomerId
+                                                ){
+
+        PageList<Message> messageCursorList = messageService.readMessage(senderCustomerId, getCurrentCustomerId(), getPageDomain());
+        return R.ok(messageCursorList.map((s) -> BeanUtil.prepare(s, MessageVO.class)));
     }
 
     @ApiOperation(value = "发送私信")

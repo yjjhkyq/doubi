@@ -7,7 +7,7 @@ import com.x.core.utils.DateUtils;
 import com.x.core.utils.SecurityUtils;
 import com.x.core.web.api.ResultCode;
 import com.x.core.web.page.PageDomain;
-import com.x.core.web.page.TableSupport;
+import com.x.core.web.page.PageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.WebDataBinder;
@@ -52,23 +52,9 @@ public class BaseController
         long currentCustomerId = SecurityUtils.getCurrentCustomerId();
         return currentCustomerId;
     }
-//    /**
-//     * 设置请求分页数据
-//     */
-//    protected void startPage()
-//    {
-//        PageDomain pageDomain = TableSupport.buildPageRequest();
-//        Integer pageNum = pageDomain.getPageNum();
-//        Integer pageSize = pageDomain.getPageSize();
-//        if (pageNum != null && pageSize != null)
-//        {
-//            String orderBy = SqlUtil.escapeOrderBySql(pageDomain.getOrderBy());
-//            PageHelper.startPage(pageNum, pageSize, orderBy);
-//        }
-//    }
 
     protected long getPage(){
-        PageDomain pageDomain = TableSupport.buildPageRequest();
+        PageDomain pageDomain = PageHelper.buildPageRequest();
         return pageDomain.getPageNum();
     }
 
@@ -76,19 +62,11 @@ public class BaseController
         return Constants.DEFAULT_FRONTEND_PAGE_SIZE;
     }
 
-//    /**
-//     * 响应请求分页数据
-//     */
-//    @SuppressWarnings({ "rawtypes", "unchecked" })
-//    protected TableDataInfo getDataTable(List<?> list)
-//    {
-//        TableDataInfo rspData = new TableDataInfo();
-//        rspData.setRows(list);
-//        rspData.setTotal(new PageInfo(list).getTotal());
-//        return rspData;
-//    }
+    protected PageDomain getPageDomain(){
+        return PageHelper.buildPageRequest();
+    }
 
     protected IPage buildIPageRequest(){
-        return TableSupport.buildIPageRequest();
+        return PageHelper.buildIPageRequest();
     }
 }

@@ -5,10 +5,12 @@ import com.x.core.utils.ApiAssetUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.controller.BaseRpcController;
 import com.x.provider.api.customer.enums.CustomerOptions;
+import com.x.provider.api.customer.enums.CustomerRelationEnum;
 import com.x.provider.api.customer.model.ao.ListCustomerAO;
 import com.x.provider.api.customer.model.dto.CustomerAttributeDTO;
 import com.x.provider.api.customer.model.dto.CustomerDTO;
 import com.x.provider.api.customer.model.dto.RoleDTO;
+import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
 import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
@@ -20,6 +22,7 @@ import com.x.provider.customer.model.domain.Customer;
 import com.x.provider.customer.model.domain.Role;
 import com.x.provider.customer.service.CustomerRelationService;
 import com.x.provider.customer.service.CustomerService;
+import com.x.util.StringUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -95,9 +98,16 @@ public class CustomerRpcController extends BaseRpcController implements Customer
         return R.ok(customerRelationService.listFollow(customerId));
     }
 
+    @PostMapping("/simple/list")
+    @Override
+    public R<Map<Long, SimpleCustomerDTO>> listSimpleCustomer(long loginCustomerId, int customerRelation, String customerIdList) {
+        return R.ok(customerService.listCustomer(loginCustomerId, CustomerRelationEnum.valueOf(customerRelation), StringUtil.parse(customerIdList)));
+    }
+
+
     @PostMapping("/notifyCustomerGreenResult")
     public R<Void> notifyCustomerGreenResult(@RequestBody AttributeGreenResultDTO greenResult){
-        customerService.onCustomerDraftAttributeGreenFinshed(Long.parseLong(greenResult.getEntityId())
+        customerService.onCustomerDraftAttributeGreenFinished(Long.parseLong(greenResult.getEntityId())
                 , SystemCustomerAttributeName.valueOf(greenResult.getKey()), greenResult.getValue()
                 , SuggestionTypeEnum.valueOf(greenResult.getSuggestionType()));
         return R.ok();

@@ -6,7 +6,7 @@ import com.x.provider.api.general.constants.GeneralEventTopic;
 import com.x.provider.api.general.model.event.CommentEvent;
 import com.x.provider.api.general.model.event.StarEvent;
 import com.x.provider.api.statistic.constants.StatisticEventTopic;
-import com.x.provider.api.statistic.model.event.StatisticTotalChangedEvent;
+import com.x.provider.api.statistic.model.event.MetricValueChangedEvent;
 import com.x.provider.api.video.constants.VideoEventTopic;
 import com.x.provider.api.video.model.event.VideoChangedEvent;
 import com.x.provider.api.video.model.event.VideoPlayEvent;
@@ -62,8 +62,8 @@ public class KafkaConsumer {
         videoMcService.onVideoChanged(event);
     }
 
-    @KafkaListener(topics = StatisticEventTopic.TOPIC_NAME_STAT_TOTAL_CHANGED_EVENT)
-    public void onStatisticTotalChangedEvent(StatisticTotalChangedEvent event) {
+    @KafkaListener(topics = StatisticEventTopic.TOPIC_NAME_STAT_METRIC_CHANGED_EVENT)
+    public void onStatisticTotalChangedEvent(MetricValueChangedEvent event) {
         videoRecommendService.onStatisticTotalChanged(event);
     }
 

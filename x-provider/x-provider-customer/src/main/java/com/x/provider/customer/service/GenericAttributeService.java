@@ -13,4 +13,5 @@ public interface GenericAttributeService {
     void addOrUpdateAttribute(String keyGroup, long entityId, String key, String value);
     void addOrUpdateDraftAttribute(String keyGroup, long entityId, String key, String value);
     void deleteDraftAttribute(String keyGroup, long entityId, String key);
+    Map<Long, Map<String, String>> listAttributeMap(String keyGroup, List<Long> entityIdList);
 }

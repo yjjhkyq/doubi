@@ -53,6 +53,13 @@ public class ServletUtils
     /**
      * 获取Integer参数
      */
+    public static Long getParameterToLong(String name, Long defaultValue)
+    {
+        return Convert.toLong(getRequest().getParameter(name), defaultValue);
+    }
+    /**
+     * 获取Integer参数
+     */
     public static Integer getParameterToInt(String name, Integer defaultValue)
     {
         return Convert.toInt(getRequest().getParameter(name), defaultValue);

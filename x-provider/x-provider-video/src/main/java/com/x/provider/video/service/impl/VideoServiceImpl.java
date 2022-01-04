@@ -1,14 +1,16 @@
 package com.x.provider.video.service.impl;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.x.core.utils.ApiAssetUtil;
 import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.page.PageDomain;
+import com.x.core.web.page.PageHelper;
+import com.x.core.web.page.PageList;
 import com.x.provider.api.general.enums.StarItemTypeEnum;
 import com.x.provider.api.general.model.event.StarEvent;
-import com.x.provider.api.general.model.event.StarRequestEvent;
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
 import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.ao.GreenRpcAO;
@@ -27,18 +29,20 @@ import com.x.provider.video.mapper.VideoAttributeMapper;
 import com.x.provider.video.mapper.VideoMapper;
 import com.x.provider.video.mapper.VideoTopicMapper;
 import com.x.provider.video.model.ao.homepage.CreateVideoAO;
-import com.x.provider.video.model.domain.Topic;
 import com.x.provider.video.model.domain.Video;
 import com.x.provider.video.model.domain.VideoAttribute;
 import com.x.provider.video.model.domain.VideoTopic;
 import com.x.provider.video.service.RedisKeyService;
 import com.x.provider.video.service.TopicService;
 import com.x.provider.video.service.VideoService;
+import com.x.redis.domain.LongTypeTuple;
 import com.x.redis.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
@@ -168,8 +172,17 @@ public class VideoServiceImpl implements VideoService {
     }
 
     @Override
-    public IPage<Video> listVideo(long customerId, IPage page){
-        return videoMapper.selectPage(page, new LambdaQueryWrapper<Video>().eq(Video::getCustomerId, customerId).eq(Video::getVideoStatus, VideoStatusEnum.PUBLISH.ordinal()).orderByDesc(Video::getTopValue).orderByDesc(Video::getCreatedOnUtc));
+    public PageList<Video> listVideo(long customerId, PageDomain pageDomain){
+        LambdaQueryWrapper<Video> query = buildQuery(customerId, VideoStatusEnum.PUBLISH.ordinal()).orderByDesc(Video::getTopValue).orderByDesc(Video::getId)
+                .last(StrUtil.format(" limit {} ", pageDomain.getPageSize()));
+        if (pageDomain.getCursor() > 0){
+            query.lt(Video::getId, pageDomain.getCursor());
+        }
+        List<Video> videos = videoMapper.selectList(query);
+        if (videos.isEmpty()){
+            return new PageList<>();
+        }
+        return new PageList<>(videos, pageDomain.getPageSize(), CollectionUtils.lastElement(videos).getId());
     }
 
     @Override
@@ -189,11 +202,12 @@ public class VideoServiceImpl implements VideoService {
     }
 
     @Override
-    public List<Video> listCustomerStarVideo(PageDomain pageDomain, long starCustomerId) {
-        Set<Long> starVideoIds = redisService.reverseRangeLong(redisKeyService.getCustomerStarVideoKey(starCustomerId), pageDomain.getPageNum(), pageDomain.getPageSize());
-        if (starVideoIds.size() == 0){
-            return Collections.emptyList();
+    public PageList<Video> listCustomerStarVideo(PageDomain pageDomain, long starCustomerId) {
+        Set<LongTypeTuple> videoWithScore = redisService.reverseRangeByScoreLong(redisKeyService.getCustomerStarVideoKey(starCustomerId), pageDomain.getCursor(), pageDomain.getPageSize());
+        if (videoWithScore.isEmpty()){
+            return new PageList<>();
         }
+        List<Long> starVideoIds = videoWithScore.stream().map(ZSetOperations.TypedTuple::getValue).collect(Collectors.toList());
         List<Video> videos = listVideo(starVideoIds);
         if (starVideoIds.size() != videos.size()){
             starVideoIds.removeAll(videos.stream().map(Video::getId).collect(Collectors.toSet()));
@@ -202,7 +216,12 @@ public class VideoServiceImpl implements VideoService {
             });
             return listCustomerStarVideo(pageDomain, starCustomerId);
         }
-        return videos;
+        List<Video> result = new ArrayList<>(videos.size());
+        Map<Long, Video> videoMap = videos.stream().collect(Collectors.toMap(Video::getId, item -> item));
+        videoWithScore.forEach(item -> {
+            result.add(videoMap.get(item.getValue()));
+        });
+        return new PageList<>(result, pageDomain.getPageSize(), CollectionUtils.lastElement(videoWithScore).getScore().longValue());
     }
 
     @Override
@@ -271,5 +290,16 @@ public class VideoServiceImpl implements VideoService {
         VideoChangedEvent changedEvent = BeanUtil.prepare(video, VideoChangedEvent.class);
         changedEvent.setEventType(eventTypeEnum.getValue());
         kafkaTemplate.send(VideoEventTopic.TOPIC_NAME_VIDEO_CHANGED, String.valueOf(video.getId()), changedEvent);
+    }
+
+    private LambdaQueryWrapper<Video> buildQuery(long customerId, Integer videoStatus){
+        LambdaQueryWrapper<Video> query = new LambdaQueryWrapper<>();
+        if (customerId > 0){
+            query.eq(Video::getCustomerId, customerId);
+        }
+        if (videoStatus != null){
+            query.eq(Video::getVideoStatus, videoStatus);
+        }
+        return query;
     }
 }

@@ -4,6 +4,7 @@ import com.x.core.web.api.R;
 import com.x.provider.api.customer.constants.ServiceNameConstants;
 import com.x.provider.api.customer.model.ao.ListCustomerAO;
 import com.x.provider.api.customer.model.dto.CustomerDTO;
+import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.customer.service.factory.CustomerFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,4 +31,9 @@ public interface CustomerRpcService {
 
     @PostMapping(ServiceNameConstants.CUSTOMER_URL_PREFIX + "/follow/list")
     R<List<Long>> listFollow(@RequestParam("customerId") long customerId);
+
+    @PostMapping(ServiceNameConstants.CUSTOMER_URL_PREFIX + "/simple/list")
+    R<Map<Long, SimpleCustomerDTO>> listSimpleCustomer(@RequestParam("loginCustomerId") long loginCustomerId,
+                                                       @RequestParam("customerRelation") int customerRelation,
+                                                       @RequestParam("customerIdList")String customerIdList);
 }

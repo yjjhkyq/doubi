@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class StarAO {
-    private long associationItemId;
     private long itemId;
     private long starCustomerId;
     private int itemType;

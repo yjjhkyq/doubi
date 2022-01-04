@@ -36,13 +36,6 @@ public class TopicController extends BaseFrontendController {
         this.financeRpcService = financeRpcService;
     }
 
-    @ApiOperation(value = "搜索视频主题")
-    @PostMapping("/search")
-    public R<List<TopicSearchItemVO>> search(@RequestBody TopicSearchAO topicSearchAO){
-        var topics = topicService.searchTopic(topicSearchAO.getKeyWords());
-        return R.ok(BeanUtil.prepare(topics, TopicSearchItemVO.class));
-    }
-
     @ApiOperation(value = "自选取消自选主题")
     @PostMapping("/favorite/toggle")
     public R<Void> favoriteTopicToggle(@RequestBody FavoriteToggleTopicAO favoriteToggleTopicAO){

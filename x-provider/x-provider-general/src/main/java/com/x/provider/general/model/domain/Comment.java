@@ -1,5 +1,6 @@
 package com.x.provider.general.model.domain;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.x.core.domain.BaseEntity;
@@ -16,11 +17,12 @@ public class Comment extends BaseEntity {
   private long id;
   private Long itemId;
   private Integer itemType;
+  private Long itemCustomerId;
+  private Long rootCommentId;
+  private Long parentCommentId;
+  private Long parentCommentCustomerId;
   private Long commentCustomerId;
-  private String commentCustomerNickName;
   private String content;
-  private Long replyCommentId;
-  private Long replyRootId;
-  private Long replyCustomerId;
-  private String replyCustomerNickName;
+  @TableField("is_author_comment")
+  private Boolean authorComment;
 }

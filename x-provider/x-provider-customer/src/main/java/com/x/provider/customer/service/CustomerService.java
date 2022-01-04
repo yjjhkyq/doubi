@@ -1,10 +1,13 @@
 package com.x.provider.customer.service;
 
+import com.x.provider.api.customer.enums.CustomerRelationEnum;
+import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.customer.enums.SystemCustomerAttributeName;
 import com.x.provider.customer.model.ao.*;
 import com.x.provider.customer.model.domain.Customer;
 import com.x.provider.customer.model.domain.CustomerPassword;
+import com.x.provider.customer.model.domain.CustomerRelation;
 import com.x.provider.customer.model.domain.Role;
 
 import java.util.Arrays;
@@ -31,6 +34,8 @@ public interface CustomerService {
     void setCustomerDraftAttribute(long customerId, SystemCustomerAttributeName systemCustomerAttributeName, String value);
     Map<String, String> listCustomerAttribute(long customerId);
     Map<String, String> listCustomerAttribute(long customerId, List<SystemCustomerAttributeName> attributeNames);
-    void onCustomerDraftAttributeGreenFinshed(long customerId, SystemCustomerAttributeName attributeName, String value, SuggestionTypeEnum suggestionTypeEnum);
+    void onCustomerDraftAttributeGreenFinished(long customerId, SystemCustomerAttributeName attributeName, String value, SuggestionTypeEnum suggestionTypeEnum);
+    Map<Long, SimpleCustomerDTO> listCustomer(long loginCustomerId, CustomerRelationEnum customerRelationEnum, List<Long> customerIdList);
+    void prepareRelation(long loginCustomerId, List<SimpleCustomerDTO> source, Map<Long, CustomerRelation> customerRelations);
 
 }

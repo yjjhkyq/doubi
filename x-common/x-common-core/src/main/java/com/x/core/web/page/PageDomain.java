@@ -10,10 +10,10 @@ import org.springframework.util.StringUtils;
 public class PageDomain
 {
     /** 当前记录起始索引 */
-    private Integer pageNum;
+    private int pageNum;
 
     /** 每页显示记录数 */
-    private Integer pageSize;
+    private int pageSize;
 
     /** 排序列 */
     private String orderByColumn;
@@ -21,7 +21,7 @@ public class PageDomain
 
     private String isAsc;
 
-    private String cursor;
+    private long cursor;
 
     public String getOrderBy()
     {
@@ -32,22 +32,22 @@ public class PageDomain
         return orderByColumn + " " + isAsc;
     }
 
-    public Integer getPageNum()
+    public int getPageNum()
     {
         return pageNum;
     }
 
-    public void setPageNum(Integer pageNum)
+    public void setPageNum(int pageNum)
     {
         this.pageNum = pageNum;
     }
 
-    public Integer getPageSize()
+    public int getPageSize()
     {
         return pageSize;
     }
 
-    public void setPageSize(Integer pageSize)
+    public void setPageSize(int pageSize)
     {
         this.pageSize = pageSize;
     }
@@ -72,11 +72,11 @@ public class PageDomain
         this.isAsc = isAsc;
     }
 
-    public String getCursor() {
+    public long getCursor() {
         return cursor;
     }
 
-    public void setCursor(String cursor) {
+    public void setCursor(long cursor) {
         this.cursor = cursor;
     }
 }

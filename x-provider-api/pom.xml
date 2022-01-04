@@ -20,5 +20,6 @@
         <module>x-provider-api-general</module>
         <module>x-provider-api-mc</module>
         <module>x-provider-api-pay</module>
+        <module>x-provider-api-common</module>
     </modules>
 </project>

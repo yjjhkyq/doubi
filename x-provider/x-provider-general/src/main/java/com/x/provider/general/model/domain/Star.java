@@ -1,5 +1,6 @@
 package com.x.provider.general.model.domain;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.x.core.domain.BaseEntity;
@@ -15,9 +16,9 @@ import lombok.*;
 public class Star extends BaseEntity {
   @TableId
   private Long id;
-  private Long associationItemId;
+  private Integer itemType;
   private Long itemId;
   private Long starCustomerId;
-  private boolean isStar;
-  private Integer itemType;
+  @TableField(value = "is_star")
+  private boolean star;
 }

@@ -11,7 +11,7 @@ import com.x.redis.service.RedisService;
 import org.springframework.stereotype.Component;
 
 @Component
-public class EventListener {
+public class  EventListener {
 
     public final RedisKeyService redisKeyService;
     private final RedisService redisService;
@@ -61,19 +61,6 @@ public class EventListener {
                 },
                 t ->{
                     redisService.deleteObject(redisKeyService.getCustomerRoleKey(t.getCustomerId()));
-                });
-    }
-
-    @Subscribe
-    public void onCustomerRelationChangedEvent(CustomerRelationChangedEvent event){
-        CacheEventConsumerHelper.onEntityChangedEvent(event,
-                t ->{
-                    redisService.setCacheObject(redisKeyService.getCustomerRelationKey(t.getFromCustomerId(), t.getToCustomerId()), t);
-                },
-                t -> {
-                    redisService.setCacheObject(redisKeyService.getCustomerRelationKey(t.getFromCustomerId(), t.getToCustomerId()), t);
-                },
-                t ->{
                 });
     }
 }

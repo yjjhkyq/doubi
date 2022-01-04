@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -365,6 +366,29 @@ public class RedisService {
 
     public <T> Set<T> rangeByScore(final String key, long startScore, long count){
         return redisTemplate.opsForZSet().rangeByScore(key, startScore, Long.MAX_VALUE, 0, count);
+    }
+
+    public <T> Set<ZSetOperations.TypedTuple<T>> reverseRangeByScore(final String key, double startScore, double endScore, long start, long count){
+        return redisTemplate.opsForZSet().reverseRangeByScoreWithScores(key, startScore, endScore, start, count);
+    }
+
+    public <T> Set<ZSetOperations.TypedTuple<T>> reverseRangeByScore(final String key, double cursor, long count){
+        if (cursor == 0){
+            cursor = Long.MAX_VALUE;
+        }
+        return redisTemplate.opsForZSet().reverseRangeByScoreWithScores(key, 0, cursor, 0, count);
+    }
+
+    public  Set<LongTypeTuple> reverseRangeByScoreLong(final String key, double cursor, long count){
+        if (cursor == 0){
+            cursor = Long.MAX_VALUE;
+        }
+        Set<ZSetOperations.TypedTuple<Integer>> values = reverseRangeByScore(key, cursor, count);
+        Set<LongTypeTuple> result = new LinkedHashSet<>(values.size());
+        values.forEach(item -> {
+            result.add(new LongTypeTuple(Long.valueOf(item.getValue().toString()), item.getScore()));
+        });
+        return result;
     }
 
     public Set<Long> rangeByScoreLong(final String key, long startScore, long count){
