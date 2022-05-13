@@ -18,6 +18,8 @@ public class CustomerDTO {
     private Long followCount;
     private Long fansCount;
 
+    private CustomerStatDTO statistic;
+
     private List<RoleDTO> roles = new ArrayList<>();
 
     public long getId() {
@@ -117,5 +119,13 @@ public class CustomerDTO {
 
     public void setFansCount(Long fansCount) {
         this.fansCount = fansCount;
+    }
+
+    public CustomerStatDTO getStatistic() {
+        return statistic;
+    }
+
+    public void setStatistic(CustomerStatDTO statistic) {
+        this.statistic = statistic;
     }
 }

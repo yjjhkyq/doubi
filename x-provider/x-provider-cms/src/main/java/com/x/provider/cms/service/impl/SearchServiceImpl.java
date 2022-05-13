@@ -103,6 +103,7 @@ public class SearchServiceImpl implements SearchService {
         boolQueryBuilder.should(QueryBuilders.matchQuery("topicDescription", keyword));
         NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
                 .withQuery(boolQueryBuilder)
+                .withSort(SortBuilders.fieldSort("effectValue").order(SortOrder.DESC))
                 .build();
         esRestTemplate.queryForPage(searchQuery, TopicDocument.class);
         return topicDocumentRepository.search(boolQueryBuilder, pageable);

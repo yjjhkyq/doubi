@@ -3,6 +3,7 @@ package com.x.provider.video.service.impl;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.x.core.web.page.PageDomain;
+import com.x.core.web.page.PageHelper;
 import com.x.core.web.page.PageList;
 import com.x.provider.api.customer.service.CustomerRpcService;
 import com.x.provider.video.configure.ApplicationConfig;
@@ -12,12 +13,15 @@ import com.x.provider.video.model.domain.Video;
 import com.x.provider.video.model.domain.VideoRecommendPool;
 import com.x.provider.video.model.domain.VideoRecommendPoolHotTopic;
 import com.x.provider.video.service.*;
+import com.x.redis.domain.LongTypeTuple;
 import com.x.redis.service.RedisService;
 import com.x.util.ListUtil;
 import org.apache.commons.lang.time.DateUtils;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -51,72 +55,97 @@ public class VideoReadServiceImpl implements VideoReadService {
     }
 
     @Override
-    public List<Video> listMyFollowPersonVideo(Long customerId) {
-        Date followVideoEndTime = new Date();
-        Date followVideoInitTime = getFollowVideoInitTime(FollowVideoTypeEnum.PERSON, customerId);
-        boolean canInit = DateUtils.addMinutes(new Date(), - applicationConfig.getFollowVideoInitMinIntervalMinute()).after(followVideoInitTime);
-        if (!canInit){
-            return Collections.emptyList();
-        }
-        List<Long> follows = customerRpcService.listFollow(customerId).getData();
-        if (follows.isEmpty()){
-            return Collections.emptyList();
-        }
-        List<Video> result = new ArrayList<>(1000);
-        ListUtil.pageConsume(follows, applicationConfig.getSqlInMaxElement(), (t) -> {
-            result.addAll(videoService.listVideo(t, followVideoInitTime));
-        });
-        setFollowVideoInitTime(FollowVideoTypeEnum.PERSON, customerId, followVideoEndTime);
-        return result;
-    }
-
-    @Override
-    public List<Long> listMyFollowTopicHotVideo(Long customerId) {
-        List<TopicCustomerFavorite> topicCustomerFavorites = topicService.listTopicCustomerFavorite(customerId, null);
-        if (topicCustomerFavorites.isEmpty()){
-            return Collections.emptyList();
-        }
-        Set<Long> videos = new HashSet<>(applicationConfig.getFollowTopicHotVideoShowSize());
-        IPage page = new Page(1, applicationConfig.getFollowTopicHotVideoShowSize(), false);
-        List<Long> followTopics = topicCustomerFavorites.stream().map(TopicCustomerFavorite::getTopicId).collect(Collectors.toList());
-        while (videos.size() < applicationConfig.getFollowTopicHotVideoShowSize()){
-            IPage<VideoRecommendPoolHotTopic> videoHotTopicList = hotTopicVideoReadService.selectPage(page, followTopics);
-            if (videoHotTopicList.getRecords().size() == 0){
-                break;
+    public PageList<Video> listMyFollowPersonVideo(PageDomain pageDomain, Long customerId) {
+        Set<Long> videoIdList = redisService.dynamicPage(redisKeyService.getMyFollowVideoKey(FollowVideoTypeEnum.PERSON, customerId), 1, TimeUnit.DAYS, pageDomain.getPageNum(), pageDomain.getPageSize(), () -> {
+            Date followVideoEndTime = new Date();
+            Date followVideoInitTime = getFollowVideoInitTime(FollowVideoTypeEnum.PERSON, customerId);
+            boolean canInit = DateUtils.addMinutes(new Date(), - applicationConfig.getFollowVideoInitMinIntervalMinute()).after(followVideoInitTime);
+            if (!canInit){
+                return Collections.emptySet();
             }
-            videos.addAll(videoHotTopicList.getRecords().stream().map(VideoRecommendPoolHotTopic::getVideoId).collect(Collectors.toList()));
+            setFollowVideoInitTime(FollowVideoTypeEnum.PERSON, customerId, followVideoEndTime);
+            List<Long> follows = customerRpcService.listFollow(customerId).getData();
+            if (follows.isEmpty()){
+                return Collections.emptySet();
+            }
+            Set<ZSetOperations.TypedTuple> initData = new HashSet<ZSetOperations.TypedTuple>(1000);
+            ListUtil.pageConsume(follows, applicationConfig.getSqlInMaxElement(), (t) -> {
+                videoService.listVideo(t, followVideoInitTime).stream().forEach(item -> {
+                    initData.add(new LongTypeTuple(item.getId(), item.getId().doubleValue()));
+                });
+            });
+            return initData;
+
+        });
+        return PageHelper.buildPageList(pageDomain, videoService.listVideo(new ArrayList<>(videoIdList)), !videoIdList.isEmpty());
+    }
+
+    @Override
+    public PageList<Video> listMyFollowTopicHotVideo(PageDomain pageDomain, Long customerId) {
+        Set<Long> videoIdList = redisService.dynamicPage(redisKeyService.getMyFollowVideoKey(FollowVideoTypeEnum.SECURITY, customerId), 1, TimeUnit.DAYS, pageDomain.getPageNum(), pageDomain.getPageSize(), () -> {
+            List<TopicCustomerFavorite> topicCustomerFavorites = topicService.listTopicCustomerFavorite(customerId, null);
+            if (topicCustomerFavorites.isEmpty()){
+                return Collections.emptySet();
+            }
+            Set<Long> videos = new HashSet<>(applicationConfig.getFollowTopicHotVideoShowSize());
+            IPage page = new Page(1, applicationConfig.getFollowTopicHotVideoShowSize(), false);
+            List<Long> followTopics = topicCustomerFavorites.stream().map(TopicCustomerFavorite::getTopicId).collect(Collectors.toList());
+            Set<ZSetOperations.TypedTuple> initData = new HashSet<ZSetOperations.TypedTuple>(1000);
+            while (videos.size() < applicationConfig.getFollowTopicHotVideoShowSize()){
+                IPage<VideoRecommendPoolHotTopic> videoHotTopicList = hotTopicVideoReadService.selectPage(page, followTopics);
+                if (videoHotTopicList.getRecords().size() == 0){
+                    break;
+                }
+                videoHotTopicList.getRecords().stream().forEach(item -> {
+                    initData.add(new LongTypeTuple(item.getId(), item.getId().doubleValue()));
+                });
+            }
+            return initData;
+        });
+        return PageHelper.buildPageList(pageDomain, videoService.listVideo(new ArrayList<>(videoIdList)), !videoIdList.isEmpty());
+    }
+
+    @Override
+    public PageList<Video> listHotVideoTopic(PageDomain pageDomain, Long topicId){
+        List<VideoRecommendPoolHotTopic> result = hotTopicVideoReadService.selectPage(new Page<>(0, applicationConfig.getTopicHotVideoShowSize(), false),
+                Arrays.asList(topicId)).getRecords().stream().filter(item -> item.getVideoId() >= pageDomain.getCursor()).collect(Collectors.toList());
+        if (result.isEmpty()){
+            return new PageList<>();
         }
-        List<Long> result = new ArrayList<>(videos);
-        if (result.size() >= applicationConfig.getFollowTopicHotVideoShowSize()){
-            return result.subList(0, applicationConfig.getFollowTopicHotVideoShowSize());
+        List<VideoRecommendPoolHotTopic> videoRecommendPoolHotTopics = result.subList(0, pageDomain.getPageNum() > result.size() ? result.size() : pageDomain.getPageNum());
+        if (videoRecommendPoolHotTopics.isEmpty()){
+            return new PageList<>();
         }
-        return result;
+        List<Video> videoList = videoService.listVideo(videoRecommendPoolHotTopics.stream().map(item -> item.getVideoId()).collect(Collectors.toList()));
+        return PageHelper.buildPageList(pageDomain, videoList, !videoRecommendPoolHotTopics.isEmpty());
     }
 
     @Override
-    public List<VideoRecommendPoolHotTopic> listHotVideoTopic(Long topicId){
-        IPage<VideoRecommendPoolHotTopic> result = hotTopicVideoReadService.selectPage(new Page<>(0, applicationConfig.getTopicHotVideoShowSize(), false), Arrays.asList(topicId));
-        return result.getRecords();
+    public PageList<Video> listScreenVideo(PageDomain pageDomain) {
+        PageList<VideoRecommendPool> result = videoRecommendPoolReadService.listScreen(pageDomain);
+        if (result.isEmptyList()){
+            return new PageList<>();
+        }
+        List<Video> videos = videoService.listVideo(result.getList().stream().map(item -> item.getVideoId()).collect(Collectors.toList()));
+        return result.map(videos);
     }
 
     @Override
-    public PageList<VideoRecommendPool> listScreenVideo(PageDomain pageDomain) {
-        return videoRecommendPoolReadService.listScreen(pageDomain);
-    }
-
-    @Override
-    public List<VideoRecommendPool> listHotVideo() {
-        PageDomain pageDomain = new PageDomain();
-        pageDomain.setPageSize(applicationConfig.getHotVideoShowSize());
-        return videoRecommendPoolReadService.listHot(pageDomain).getList();
+    public PageList<Video> listHotVideo(PageDomain pageDomain) {
+        PageList<VideoRecommendPool> result = videoRecommendPoolReadService.listHot(pageDomain);
+        if (result.isEmptyList()){
+            return new PageList<>();
+        }
+        List<Video> videoList = videoService.listVideo(result.getList().stream().map(item -> item.getVideoId()).collect(Collectors.toList()));
+        return result.map(videoList);
     }
 
     private Date getFollowVideoInitTime(FollowVideoTypeEnum followVideoTypeEnum, long customerId){
         Date defaultInitTime = DateUtils.addDays(new Date(), - applicationConfig.getFollowVideoDefaultInitIntervalDay());
-        Optional<Long> initTimeOptional = redisService.getCacheMapValueOptional(redisKeyService.getMyFollowVideoInitTimeKey(), redisKeyService.getMyFollowVideoInitTimeHashKey(followVideoTypeEnum, customerId));
-        if (initTimeOptional.isPresent() && defaultInitTime.getTime() <= initTimeOptional.get()){
-            return new Date(initTimeOptional.get());
-        }
+//        Optional<Long> initTimeOptional = redisService.getCacheMapValueOptional(redisKeyService.getMyFollowVideoInitTimeKey(), redisKeyService.getMyFollowVideoInitTimeHashKey(followVideoTypeEnum, customerId));
+//        if (initTimeOptional.isPresent() && defaultInitTime.getTime() <= initTimeOptional.get()){
+//            return new Date(initTimeOptional.get());
+//        }
         return defaultInitTime;
     }
 

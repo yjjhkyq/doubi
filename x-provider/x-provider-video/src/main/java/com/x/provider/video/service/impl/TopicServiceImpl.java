@@ -5,6 +5,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.x.core.utils.BeanUtil;
 import com.x.core.utils.DateUtils;
 import com.x.core.utils.SpringUtils;
+import com.x.core.web.page.PageDomain;
+import com.x.core.web.page.PageHelper;
+import com.x.core.web.page.PageList;
 import com.x.provider.api.finance.enums.FinanceDataTypeEnum;
 import com.x.provider.api.finance.model.ao.ListIndustryAO;
 import com.x.provider.api.finance.model.ao.ListSecurityAO;
@@ -118,7 +121,7 @@ public class TopicServiceImpl implements TopicService {
     @Override
     @Transactional
     public List<Topic> listOrCreateTopics(List<String> topicTitles){
-        List<Topic> result = listTopic(topicTitles);
+        List<Topic> result = listTopic(new ArrayList<>(topicTitles));
         List<String> existedTopicTitles = result.stream().map(Topic::getTitle).collect(Collectors.toList());
         List<Topic> needCreateTopics = new ArrayList<>();
         topicTitles.stream().filter(item -> !existedTopicTitles.contains(item)).forEach(item -> {
@@ -138,6 +141,11 @@ public class TopicServiceImpl implements TopicService {
             kafkaTemplate.send(VideoEventTopic.TOPIC_NAME_TOPIC_CHANGED_BATCH, TopicEvent.EventTypeEnum.ADD.getValue().toString(), TopicBatchEvent.builder()
                     .topicEventList(topicChangedEventList).build());
         }
+        final Map<String, Topic> topicResultMap = result.stream().collect(Collectors.toMap(item -> item.getTitle(), item -> item));
+        List<Topic> orderedTopicResult = new ArrayList<>();
+        topicTitles.forEach(item -> {
+            orderedTopicResult.add(topicResultMap.get(item));
+        });
         return result;
     }
 
@@ -154,7 +162,12 @@ public class TopicServiceImpl implements TopicService {
             }
             return;
         }
-        topicCustomerFavoriteMapper.insert(TopicCustomerFavorite.builder().favorite(favorite).customerId(customerId).topicSourceType(topic.get().getSourceType()).build());
+        topicCustomerFavoriteMapper.insert(TopicCustomerFavorite.builder()
+                .favorite(favorite)
+                .customerId(customerId)
+                .topicSourceType(topic.get().getSourceType())
+                .topicId(topicId)
+                .build());
     }
 
     @Override
@@ -171,7 +184,7 @@ public class TopicServiceImpl implements TopicService {
 
     @Override
     public List<TopicCustomerFavorite> listTopicCustomerFavorite(Long customerId, TopicSourceTypeEnum topicSourceTypeEnum) {
-        return topicCustomerFavoriteMapper.selectList(buildQuery(customerId, 0L, topicSourceTypeEnum == null ? -1 : topicSourceTypeEnum.ordinal()));
+        return topicCustomerFavoriteMapper.selectList(buildQuery(customerId, 0L, topicSourceTypeEnum == null ? null : topicSourceTypeEnum.ordinal(), true));
     }
 
     @Override
@@ -180,11 +193,27 @@ public class TopicServiceImpl implements TopicService {
         return topicMapper.selectList(query);
     }
 
-    private Optional<TopicCustomerFavorite> getTopicCustomerFavorite(Long customerId, Long topicId){
-        return Optional.ofNullable(topicCustomerFavoriteMapper.selectOne(buildQuery(customerId, topicId, -1)));
+    @Override
+    public PageList<Topic> listTopic(long customerId, PageDomain pageDomain) {
+        LambdaQueryWrapper<TopicCustomerFavorite> query = buildQuery(customerId, 0L, null, true).orderByDesc(TopicCustomerFavorite::getId)
+                .last(StrUtil.format(" limit {} ", pageDomain.getPageSize()));
+        if (pageDomain.getCursor() > 0){
+            query.lt(TopicCustomerFavorite::getId, pageDomain.getCursor());
+        }
+        List<TopicCustomerFavorite> topicCustomerFavorites = topicCustomerFavoriteMapper.selectList(query);
+        if (topicCustomerFavorites.isEmpty()){
+            return new PageList<>();
+        }
+        ListTopicAO listTopicAO = ListTopicAO.builder().idList(topicCustomerFavorites.stream().map(TopicCustomerFavorite::getTopicId).collect(Collectors.toList())).build();
+        Map<Long, Topic> topics = listTopic(listTopicAO).stream().collect(Collectors.toMap(Topic::getId, item -> item));
+        return PageHelper.buildPageList(pageDomain.getPageSize(), CollectionUtils.lastElement(topicCustomerFavorites).getId(), topicCustomerFavorites, (t) -> topics.get(t.getTopicId()));
     }
 
-    private LambdaQueryWrapper<TopicCustomerFavorite> buildQuery(Long customerId, Long topicId, int topicSourceType){
+    private Optional<TopicCustomerFavorite> getTopicCustomerFavorite(Long customerId, Long topicId){
+        return Optional.ofNullable(topicCustomerFavoriteMapper.selectOne(buildQuery(customerId, topicId, null, null)));
+    }
+
+    private LambdaQueryWrapper<TopicCustomerFavorite> buildQuery(long customerId, long topicId, Integer topicSourceType, Boolean favorite){
         LambdaQueryWrapper<TopicCustomerFavorite> query = new LambdaQueryWrapper<>();
         if (customerId >0){
             query = query.eq(TopicCustomerFavorite::getCustomerId, customerId);
@@ -192,8 +221,11 @@ public class TopicServiceImpl implements TopicService {
         if (topicId > 0){
             query = query.eq(TopicCustomerFavorite::getTopicId, topicId);
         }
-        if (topicSourceType >= 0){
+        if (topicSourceType != null){
             query = query.eq(TopicCustomerFavorite::getTopicSourceType, topicSourceType);
+        }
+        if (favorite != null){
+            query = query.eq(TopicCustomerFavorite::getFavorite, favorite);
         }
         return query;
     }

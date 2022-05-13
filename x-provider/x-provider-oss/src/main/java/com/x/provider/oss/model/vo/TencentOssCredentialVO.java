@@ -13,4 +13,5 @@ public class TencentOssCredentialVO {
     private long expiredTime;
     private String allowPrefix;
     private String regionName;
+    private String fileName;
 }

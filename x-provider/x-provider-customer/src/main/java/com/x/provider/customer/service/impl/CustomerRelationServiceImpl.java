@@ -92,6 +92,7 @@ public class CustomerRelationServiceImpl implements CustomerRelationService {
             if (follow){
                 kafkaTemplate.send(CustomerEventTopic.TOPIC_NAME_FOLLOW, String.valueOf(fromCustomerId),
                         FollowEvent.builder()
+                                .eventType(follow ? FollowEvent.EventTypeEnum.FOLLOW.getValue() : FollowEvent.EventTypeEnum.UN_FOLLOW.getValue())
                                 .firstFollow(customerRelationFrom == null)
                                 .fromCustomerId(fromCustomerId)
                                 .toCustomerId(toCustomerId)

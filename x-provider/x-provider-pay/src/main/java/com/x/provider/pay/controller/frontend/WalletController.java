@@ -3,17 +3,12 @@ package com.x.provider.pay.controller.frontend;
 import com.x.core.web.api.R;
 import com.x.core.web.controller.BaseFrontendController;
 import com.x.provider.api.pay.model.ao.LaunchTransferAo;
-import com.x.provider.api.pay.model.dto.BillDto;
 import com.x.provider.pay.annotation.PayToken;
 import com.x.provider.pay.model.ao.ValidateWalletPasswordAO;
 import com.x.provider.pay.model.domain.Bill;
-import com.x.provider.pay.model.domain.Wallet;
-import com.x.provider.pay.service.WalletService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @Api(tags = "钱包服务")

@@ -1,7 +1,7 @@
 package com.x.provider.api.pay.model.dto;
 
 import com.x.provider.api.pay.enums.BillStatus;
-import com.x.provider.api.pay.enums.BillType;
+import com.x.provider.api.pay.enums.TradeType;
 
 import java.math.BigDecimal;
 
@@ -14,7 +14,7 @@ public class BillDto {
     private long customerId;  // 用户id
     private long toCustomerId;  // 引发订单的目标id, 例如向xx转账
 
-    private BillType type;
+    private TradeType type;
     private BillStatus status;
 
     private BigDecimal amount;
@@ -24,7 +24,7 @@ public class BillDto {
     public BillDto() {
     }
 
-    public BillDto(long id, String serialNumber, long customerId, long toCustomerId, BillType type, BillStatus status, BigDecimal amount, String comment) {
+    public BillDto(long id, String serialNumber, long customerId, long toCustomerId, TradeType type, BillStatus status, BigDecimal amount, String comment) {
         this.id = id;
         this.serialNumber = serialNumber;
         this.customerId = customerId;
@@ -67,11 +67,11 @@ public class BillDto {
         this.toCustomerId = toCustomerId;
     }
 
-    public BillType getType() {
+    public TradeType getType() {
         return type;
     }
 
-    public void setType(BillType type) {
+    public void setType(TradeType type) {
         this.type = type;
     }
 

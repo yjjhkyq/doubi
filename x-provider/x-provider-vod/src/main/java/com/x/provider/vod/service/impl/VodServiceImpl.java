@@ -1,5 +1,6 @@
 package com.x.provider.vod.service.impl;
 
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -11,6 +12,7 @@ import com.x.core.web.api.R;
 import com.x.provider.api.vod.enums.MediaTypeEnum;
 import com.x.provider.api.vod.enums.ReviewResultEnum;
 import com.x.provider.api.vod.model.ao.GetContentReviewResultAO;
+import com.x.provider.api.vod.model.ao.ListMediaAO;
 import com.x.provider.api.vod.model.ao.ListMediaUrlAO;
 import com.x.provider.api.vod.model.dto.ContentReviewResultDTO;
 import com.x.provider.vod.configure.TencentVodConfig;
@@ -76,7 +78,7 @@ public class VodServiceImpl implements VodService {
     }
 
     @Override
-    public VodUploadParamVO getVodUploadParam(long customerId, String extName) {
+    public VodUploadParamVO getVodUploadParam(long customerId, String fileName) {
         VodUploadParamVO result = new VodUploadParamVO();
         TencentSignatureServiceImpl sign = new TencentSignatureServiceImpl();
         sign.setCurrentTime(System.currentTimeMillis());
@@ -87,9 +89,7 @@ public class VodServiceImpl implements VodService {
         try {
             String signature = sign.getUploadSignature(tencentVodConfig.getTaskStreamName());
             result.setSignature(signature);
-            result.setCoverPath(StrUtil.format(OBJECT_PATH, customerId));
-            result.setVideoPath(StrUtil.format(OBJECT_PATH, customerId));
-            result.setFileName(StrUtil.format("{}.{}", IdUtil.simpleUUID(), extName));
+            result.setFileName(StrUtil.format("{}.{}", IdUtil.simpleUUID(), FileUtil.extName(fileName)));
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             throw new ApiException("get upload signature error");
@@ -165,6 +165,7 @@ public class VodServiceImpl implements VodService {
         }
     }
 
+    @Override
     public MediaInfo getMediaInfo(long id, String fileId){
         var query = new LambdaQueryWrapper<MediaInfo>();
         if (id > 0){
@@ -174,6 +175,15 @@ public class VodServiceImpl implements VodService {
             query.eq(MediaInfo::getFileId, fileId);
         }
         return mediaInfoMapper.selectOne(query);
+    }
+
+    @Override
+    public List<MediaInfo> listMediaInfo(ListMediaAO listMediaAO) {
+        var query = new LambdaQueryWrapper<MediaInfo>();
+        if (!CollectionUtils.isEmpty(listMediaAO.getFileIdList())){
+            query.in(MediaInfo::getFileId, listMediaAO.getFileIdList());
+        }
+        return mediaInfoMapper.selectList(query);
     }
 
     public List<MediaInfo> getMediaInfo(List<String> fileIds){
@@ -195,11 +205,25 @@ public class VodServiceImpl implements VodService {
     }
 
     public MediaTranscodeItem getMediaTranscodeItem(String fileId){
+        LambdaQueryWrapper<MediaTranscodeItem> query = buildQuery(fileId, null);
+        return mediaTranscodeItemMapper.selectOne(query);
+    }
+
+    @Override
+    public List<MediaTranscodeItem> listMediaTranscodeItem(List<String> fileIdList){
+        LambdaQueryWrapper<MediaTranscodeItem> query = buildQuery(null, fileIdList);
+        return mediaTranscodeItemMapper.selectList(query);
+    }
+
+    private LambdaQueryWrapper<MediaTranscodeItem> buildQuery(String fileId, List<String> fileIdList) {
         var query = new LambdaQueryWrapper<MediaTranscodeItem>();
         if (!StringUtils.isEmpty(fileId)){
             query.eq(MediaTranscodeItem::getFileId, fileId);
         }
-        return mediaTranscodeItemMapper.selectOne(query);
+        if (!CollectionUtils.isEmpty(fileIdList)){
+            query.in(MediaTranscodeItem::getFileId, fileIdList);
+        }
+        return query;
     }
 
     private void notifyContentReviewResult(String fileId, String notifyUrl, ReviewResultEnum reviewResultEnum) {
@@ -270,7 +294,7 @@ public class VodServiceImpl implements VodService {
             return;
         }
         List<ContentReviewResult> contentReviewResults = prepare(fileId, aiContentReviewResults);
-        Optional<ContentReviewResult> noPass = contentReviewResults.stream().filter(item -> !ReviewResultEnum.PASS.equals(item.getSuggestion())).findAny();
+        Optional<ContentReviewResult> noPass = contentReviewResults.stream().filter(item -> ReviewResultEnum.BLOCK.name().equals(item.getSuggestion())).findAny();
         if (noPass.isPresent()){
             deleteMedia(fileId);
         }

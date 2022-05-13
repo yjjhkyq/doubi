@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.x.core.utils.BeanUtil;
 import com.x.provider.api.common.enums.ItemTypeEnum;
+import com.x.provider.api.general.model.ao.ListStarAO;
 import com.x.provider.api.general.model.ao.StarAO;
 import com.x.provider.api.general.model.dto.CommentDTO;
 import com.x.provider.api.general.model.event.StarEvent;
@@ -18,6 +19,9 @@ import com.x.provider.general.service.StarService;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
+
+import java.util.List;
 
 @Service
 public class StarServiceImpl implements StarService {
@@ -50,7 +54,7 @@ public class StarServiceImpl implements StarService {
                 return false;
             }
         }
-        Star starEntity = starMapper.selectOne(buildQuery(starAO.getItemId(), starAO.getStarCustomerId(), starAO.getItemType()));
+        Star starEntity = starMapper.selectOne(buildQuery(starAO.getItemId(), starAO.getStarCustomerId(), starAO.getItemType(), null));
         boolean firstStar = starEntity == null;
         if (starEntity == null || starEntity.isStar() == starAO.isStar()){
             return false;
@@ -79,12 +83,18 @@ public class StarServiceImpl implements StarService {
         return star != null && star.isStar();
     }
 
+    @Override
+    public List<Star> listStar(ListStarAO listStarAO) {
+        LambdaQueryWrapper<Star> query = buildQuery(0L, listStarAO.getStarCustomerId(), listStarAO.getItemType(), listStarAO.getItemIdList());
+        return starMapper.selectList(query);
+    }
+
     private Star getStar(long itemId, long starCustomerId, int itemType){
-        LambdaQueryWrapper<Star> query = buildQuery(itemId, starCustomerId, itemType);
+        LambdaQueryWrapper<Star> query = buildQuery(itemId, starCustomerId, itemType, null);
         return starMapper.selectOne(query);
     }
 
-    private LambdaQueryWrapper<Star> buildQuery(long itemId, long starCustomerId, int itemType) {
+    private LambdaQueryWrapper<Star> buildQuery(long itemId, long starCustomerId, int itemType, List<Long> itemIdList) {
         LambdaQueryWrapper<Star> query = new LambdaQueryWrapper<>();
         if (itemId > 0){
             query = query.eq(Star::getItemId, itemId);
@@ -94,6 +104,9 @@ public class StarServiceImpl implements StarService {
         }
         if (itemType > 0){
             query = query.eq(Star::getItemType, itemType);
+        }
+        if (!CollectionUtils.isEmpty(itemIdList)){
+            query = query.in(Star::getItemId, itemIdList);
         }
         return query;
     }

@@ -6,7 +6,7 @@ import com.x.provider.api.pay.model.ao.CreateBillAo;
 import com.x.provider.api.pay.model.dto.BillDto;
 import com.x.provider.api.pay.service.BillRpcService;
 import com.x.provider.pay.model.domain.Bill;
-import com.x.provider.pay.service.BillService;
+import com.x.provider.pay.service.AssetService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class BillRpcController extends BaseRpcController implements BillRpcService {
 
     @Autowired
-    private BillService billService;
+    private AssetService billService;
 
     @PostMapping("/")
     @Override

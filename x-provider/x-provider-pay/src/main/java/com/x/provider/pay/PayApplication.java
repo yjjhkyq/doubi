@@ -14,10 +14,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 public class PayApplication {
     public static void main(String[] args)
     {
-        ConfigurableApplicationContext run = SpringApplication.run(PayApplication.class, args);
-        for (String beanDefinitionName : run.getBeanDefinitionNames()) {
-            System.out.println(beanDefinitionName);
-        }
+        SpringApplication.run(PayApplication.class, args);
         System.out.println("(♥◠‿◠)ﾉﾞ  pay provider started success   ლ(´ڡ`ლ)ﾞ  \n" +
                 " .-------.       ____     __        \n" +
                 " |  _ _   \\      \\   \\   /  /    \n" +

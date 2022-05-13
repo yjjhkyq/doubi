@@ -117,7 +117,7 @@ public class Constants {
     public static final String REDIS_KEY_SPLITTER = ":";
 
     public static final String getDraftAttributeName(String attributeName){
-        return StrUtil.format("{}-Draft", attributeName);
+        return StrUtil.format("{}_Draft", attributeName);
     }
 
     public static final int DEFAULT_FRONTEND_PAGE_SIZE = 10;

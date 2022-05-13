@@ -10,7 +10,8 @@ spring:
   profiles:
     # 环境配置
     active: dev
-
+  main:
+    allow-bean-definition-overriding: true
 ---
 spring:
   profiles:

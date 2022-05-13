@@ -6,6 +6,7 @@ import com.x.core.constant.Constants;
 import com.x.core.web.api.R;
 import com.x.core.web.api.ResultCode;
 import com.x.provider.api.customer.service.CustomerRpcService;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +41,7 @@ public class AuthFilter implements GlobalFilter, Ordered
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getPath();
         String header = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        String token = Optional.ofNullable(header).orElse(Constants.BEAR).substring(Constants.BEAR.length());
+        String token = header != null && header.length() > Constants.BEAR.trim().length() ? header.substring(Constants.BEAR.length()) : "";
         final R<Long> authorizeResult = customerRpcService.authorize(token, path);
         if (authorizeResult.isOk()){
             ServerHttpRequest.Builder builder = request.mutate();

@@ -17,4 +17,5 @@ public class SimpleCustomerDTO {
     private int relation;
     @Builder.Default
     private boolean canFollow = true;
+    private CustomerStatDTO statistic;
 }

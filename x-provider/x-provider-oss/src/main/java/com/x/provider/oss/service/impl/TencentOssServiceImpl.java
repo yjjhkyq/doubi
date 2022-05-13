@@ -1,5 +1,7 @@
 package com.x.provider.oss.service.impl;
 
+import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import com.x.provider.oss.configure.TencentOssConfig;
 import com.x.provider.oss.model.vo.TencentOssCredentialVO;
 import com.x.provider.oss.service.OssService;
@@ -46,7 +48,11 @@ public class TencentOssServiceImpl implements TencentOssService {
 
     @Override
     public TencentOssCredentialVO getTencentOssUploadCredentia(long customerId, String extName){
-        return getCredential(tencentOssConfig.getBucketCustomer(), TencentOssConfig.AP_CHENGDU, OssService.getObjectKey(customerId, extName));
+        String fileName = StrUtil.format("{}.{}", IdUtil.simpleUUID(), extName);
+        String objectKey = OssService.getObjectKey(customerId, fileName);
+        TencentOssCredentialVO result = getCredential(tencentOssConfig.getBucketCustomer(), TencentOssConfig.AP_CHENGDU, objectKey);
+        result.setFileName(fileName);
+        return result;
     }
 
     @Override

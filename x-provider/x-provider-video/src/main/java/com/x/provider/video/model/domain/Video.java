@@ -25,5 +25,5 @@ public class Video extends BaseEntity {
   private Boolean top;
   private Long topValue;
   private double duration;
-
+  private String titleItemJson;
 }

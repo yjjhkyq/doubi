@@ -16,12 +16,4 @@ import java.math.BigDecimal;
 @FeignClient(contextId = "payService", value = ServiceNameConstants.PAY_SERVICE, fallbackFactory = WalletFallbackFactory.class)
 public interface WalletRpcService {
 
-    @PostMapping(ServiceNameConstants.PAY_RPC_URL_PREFIX_WALLET + "/wallet")
-    R<String> createWallet(@RequestBody CreateWalletAO createWalletAO);
-    
-    @PostMapping(ServiceNameConstants.PAY_RPC_URL_PREFIX_WALLET + "/recharge")
-    R<BillDto> rechargeWallet(@RequestBody BigDecimal amount);
-
-    @PostMapping(ServiceNameConstants.PAY_RPC_URL_PREFIX_WALLET + "/balance/change")
-    R<BillDto> balanceChange(@RequestBody BalanceChangeAo balanceChangeAo);
 }

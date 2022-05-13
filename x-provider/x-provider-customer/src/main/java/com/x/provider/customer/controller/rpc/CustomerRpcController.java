@@ -2,15 +2,15 @@ package com.x.provider.customer.controller.rpc;
 
 import com.x.core.constant.Constants;
 import com.x.core.utils.ApiAssetUtil;
+import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.controller.BaseRpcController;
 import com.x.provider.api.customer.enums.CustomerOptions;
 import com.x.provider.api.customer.enums.CustomerRelationEnum;
+import com.x.provider.api.customer.model.ao.IncCustomerStatAO;
 import com.x.provider.api.customer.model.ao.ListCustomerAO;
-import com.x.provider.api.customer.model.dto.CustomerAttributeDTO;
-import com.x.provider.api.customer.model.dto.CustomerDTO;
-import com.x.provider.api.customer.model.dto.RoleDTO;
-import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
+import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
+import com.x.provider.api.customer.model.dto.*;
 import com.x.provider.api.customer.service.CustomerRpcService;
 import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
@@ -19,9 +19,12 @@ import com.x.provider.customer.configure.ApplicationConfig;
 import com.x.provider.customer.enums.SystemCustomerAttributeName;
 import com.x.provider.customer.enums.SystemRoleNameEnum;
 import com.x.provider.customer.model.domain.Customer;
+import com.x.provider.customer.model.domain.CustomerStat;
 import com.x.provider.customer.model.domain.Role;
+import com.x.provider.customer.service.AuthenticationService;
 import com.x.provider.customer.service.CustomerRelationService;
 import com.x.provider.customer.service.CustomerService;
+import com.x.provider.customer.service.CustomerStatService;
 import com.x.util.StringUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.StringUtils;
@@ -36,15 +39,21 @@ public class CustomerRpcController extends BaseRpcController implements Customer
     private final ApplicationConfig applicationConfig;
     private final CustomerRelationService customerRelationService;
     private final OssRpcService ossRpcService;
+    private final CustomerStatService customerStatService;
+    private final AuthenticationService authenticationService;
 
     public CustomerRpcController(CustomerService customerService,
                                  ApplicationConfig applicationConfig,
                                  CustomerRelationService customerRelationService,
-                                 OssRpcService ossRpcService){
+                                 OssRpcService ossRpcService,
+                                 CustomerStatService customerStatService,
+                                 AuthenticationService authenticationService){
         this.customerService = customerService;
         this.applicationConfig = applicationConfig;
         this.customerRelationService = customerRelationService;
         this.ossRpcService = ossRpcService;
+        this.customerStatService = customerStatService;
+        this.authenticationService = authenticationService;
     }
 
     @GetMapping("/data")
@@ -71,10 +80,13 @@ public class CustomerRpcController extends BaseRpcController implements Customer
     @Override
     public R<Long> authorize(@RequestParam("token") String token, @RequestParam("path") String path){
         logger.info("authorize, token:{} path:{}", token, path);
-        if (applicationConfig.getAuthIgnoreUrls().stream().anyMatch(item -> item.startsWith(path) || path.endsWith(item))){
-            return R.ok(0L);
+        long customerId = StringUtils.hasText(token) ? authenticationService.getAuthenticatedCustomerId(token) : 0;
+        if (path.startsWith(Constants.FRONT_END_URL_PREFIX)){
+            return R.ok(customerId);
         }
-        long customerId = StringUtils.hasText(token) ? customerService.validateToken(token) : 0;
+        if (applicationConfig.getAuthIgnoreUrls().stream().anyMatch(item -> item.startsWith(path) || path.endsWith(item))){
+            return R.ok(customerId);
+        }
         List<Role> roles = customerService.listCustomerRole(customerId);
         if (path.startsWith(Constants.ADMIN_URL_PREFIX)){
             ApiAssetUtil.isTrue(roles.stream().allMatch(item -> item.getSystemName().equals(SystemRoleNameEnum.ADMINISTRATORS.toString())));
@@ -101,7 +113,21 @@ public class CustomerRpcController extends BaseRpcController implements Customer
     @PostMapping("/simple/list")
     @Override
     public R<Map<Long, SimpleCustomerDTO>> listSimpleCustomer(long loginCustomerId, int customerRelation, String customerIdList) {
-        return R.ok(customerService.listCustomer(loginCustomerId, CustomerRelationEnum.valueOf(customerRelation), StringUtil.parse(customerIdList)));
+        ListSimpleCustomerAO listSimpleCustomerAO = ListSimpleCustomerAO.builder().loginCustomerId(loginCustomerId).customerRelation(customerRelation).customerIds(StringUtil.parse(customerIdList)).build();
+        return R.ok(customerService.listCustomer(listSimpleCustomerAO));
+    }
+
+    @PostMapping("/simple/list/v2")
+    @Override
+    public R<Map<Long, SimpleCustomerDTO>> listSimpleCustomerV2(@RequestBody ListSimpleCustomerAO listSimpleCustomer) {
+        return R.ok(customerService.listCustomer(listSimpleCustomer));
+    }
+
+    @PostMapping("/stat/inc")
+    @Override
+    public R<Void> incCustomerStatAO(IncCustomerStatAO incCustomerStatAO) {
+        customerStatService.inc(BeanUtil.prepare(incCustomerStatAO, CustomerStat.class));
+        return R.ok();
     }
 
 
@@ -139,9 +165,9 @@ public class CustomerRpcController extends BaseRpcController implements Customer
                             .nickName(customerAttribute.get(SystemCustomerAttributeName.NICK_NAME.name())).personalHomePageBackgroundId(customerAttribute.get(SystemCustomerAttributeName.PERSONAL_HOMEPAGE_BACKGROUND_ID.name()))
                             .signature(customerAttribute.get(SystemCustomerAttributeName.SIGNATURE.name())).build());
                     break;
-                case FOLLOW_FAN_COUNT:
-                    customerDTO.setFollowCount(customerRelationService.getFollowCount(customerId));
-                    customerDTO.setFansCount(customerRelationService.getFansCount(customerId));
+                case CUSTOMER_STAT:
+                    Map<Long, CustomerStat> statistics = customerStatService.list(Arrays.asList(customerId));
+                    customerDTO.setStatistic(BeanUtil.prepare(statistics.getOrDefault(customerId, CustomerStat.builder().id(customerId).build()), CustomerStatDTO.class));
                     break;
             }
         });

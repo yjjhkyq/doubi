@@ -63,7 +63,7 @@ public class GenericAttributeServiceImpl implements GenericAttributeService {
 
     @Override
     public void deleteDraftAttribute(String keyGroup, long entityId, String key) {
-        GenericAttribute genericAttribute = getBy(key, entityId, key);
+        GenericAttribute genericAttribute = getBy(keyGroup, entityId, Constants.getDraftAttributeName(key));
         if (genericAttribute == null){
             return;
         }
@@ -93,7 +93,7 @@ public class GenericAttributeServiceImpl implements GenericAttributeService {
     }
 
     private void save(String keyGroup, long entityId, String key, String value){
-        GenericAttribute genericAttribute = getBy(key, entityId, key);
+        GenericAttribute genericAttribute = getBy(keyGroup, entityId, key);
         if (genericAttribute == null){
             genericAttribute = GenericAttribute.builder().entityId(entityId).key(key).keyGroup(keyGroup).value(value).build();
         }

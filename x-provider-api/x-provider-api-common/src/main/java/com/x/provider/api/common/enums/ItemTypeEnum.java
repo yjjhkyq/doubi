@@ -3,7 +3,7 @@ package com.x.provider.api.common.enums;
 public enum ItemTypeEnum {
     VIDEO(1),
     COMMENT(2),
-    USER(3),
+    CUSTOMER(3),
     ;
 
     private final int value;

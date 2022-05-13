@@ -2,6 +2,7 @@ package com.x.core.utils;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -57,6 +58,18 @@ public class JsonUtil {
         }
         try {
             return clazz.equals(String.class) ? (T) str : objectMapper.readValue(str, clazz);
+        } catch (Exception e) {
+            log.warn("Parse String to Object error : {}", e.getMessage());
+            return null;
+        }
+    }
+
+    public static <T> T parseObject(String str, TypeReference<T> valueTypeRef){
+        if(StringUtils.isEmpty(str) || valueTypeRef == null){
+            return null;
+        }
+        try {
+            return valueTypeRef.equals(String.class) ? (T) str : objectMapper.readValue(str, valueTypeRef);
         } catch (Exception e) {
             log.warn("Parse String to Object error : {}", e.getMessage());
             return null;

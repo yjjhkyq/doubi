@@ -9,7 +9,7 @@ import java.util.Map;
 public interface OssService {
     String getOjectBrowseUrl(String objectKey);
     Map<String, String> listOjectBrowseUrl(List<String> objectKeys);
-    static String getObjectKey(long customerId, String extName){
-        return StrUtil.format("/{}/{}.{}", customerId, IdUtil.simpleUUID(), extName);
+    static String getObjectKey(long customerId, String fileName){
+        return StrUtil.format("/{}/{}", customerId, fileName);
     }
 }

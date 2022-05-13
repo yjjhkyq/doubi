@@ -1,5 +1,7 @@
 package com.x.provider.oss.controller.frontend;
 
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.file.FileNameUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.controller.BaseFrontendController;
 import com.x.provider.oss.model.vo.TencentOssCredentialVO;
@@ -37,8 +39,8 @@ public class OssController extends BaseFrontendController {
 
     @ApiOperation(value = "获取对象上传参数")
     @GetMapping("/tencent/upload/credential")
-    public R<TencentOssCredentialVO> getTencentOssUploadCredentia(@RequestParam @NotBlank @ApiParam(value = "上传对象扩展名") String extName){
-        return R.ok(tencentOssService.getTencentOssUploadCredentia(getCurrentCustomerId(), extName));
+    public R<TencentOssCredentialVO> getTencentOssUploadCredentia(@RequestParam @NotBlank @ApiParam(value = "上传文件名") String fileName){
+        return R.ok(tencentOssService.getTencentOssUploadCredentia(getCurrentCustomerId(), FileUtil.extName(fileName)));
     }
 
 }

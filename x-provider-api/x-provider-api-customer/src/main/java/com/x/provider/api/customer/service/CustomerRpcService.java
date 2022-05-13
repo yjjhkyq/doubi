@@ -2,7 +2,9 @@ package com.x.provider.api.customer.service;
 
 import com.x.core.web.api.R;
 import com.x.provider.api.customer.constants.ServiceNameConstants;
+import com.x.provider.api.customer.model.ao.IncCustomerStatAO;
 import com.x.provider.api.customer.model.ao.ListCustomerAO;
+import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
 import com.x.provider.api.customer.model.dto.CustomerDTO;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.customer.service.factory.CustomerFallbackFactory;
@@ -36,4 +38,10 @@ public interface CustomerRpcService {
     R<Map<Long, SimpleCustomerDTO>> listSimpleCustomer(@RequestParam("loginCustomerId") long loginCustomerId,
                                                        @RequestParam("customerRelation") int customerRelation,
                                                        @RequestParam("customerIdList")String customerIdList);
+
+    @PostMapping(ServiceNameConstants.CUSTOMER_URL_PREFIX + "/simple/list/v2")
+    R<Map<Long, SimpleCustomerDTO>> listSimpleCustomerV2(@RequestBody ListSimpleCustomerAO listSimpleCustomer);
+
+    @PostMapping(ServiceNameConstants.CUSTOMER_URL_PREFIX + "/stat/inc")
+    R<Void> incCustomerStatAO(@RequestBody IncCustomerStatAO incCustomerStatAO);
 }

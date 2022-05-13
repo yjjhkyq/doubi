@@ -4,6 +4,7 @@ public enum CustomerRelationEnum {
     NO_RELATION(0),
     FOLLOW(1),
     FRIEND(2),
+    FANS(3)
     ;
 
     private int value;

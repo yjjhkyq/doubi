@@ -1,6 +1,7 @@
 package com.x.provider.customer.service;
 
 import com.x.provider.api.customer.enums.CustomerRelationEnum;
+import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.customer.enums.SystemCustomerAttributeName;
@@ -19,8 +20,6 @@ public interface CustomerService {
     void register(UserNamePasswordRegisterAO userNamePasswordRegisterAO);
     String loginByPassword(LoginByPasswordAO userNamePasswordLoginAO);
     String loginOrRegisterBySms(LoginOrRegBySmsAO loginOrRegByPhoneAO);
-    void logout(String token);
-    long validateToken(String token);
     void checkPhoneBound(long customerId, ValidatePhoneAO validatePhoneAO);
     void bindPhone(long customerId, BindPhoneAO bindPhoneAO);
     void changePassword(long customerId, ChangePasswordByOldPasswordAO changePasswordAO);
@@ -35,7 +34,8 @@ public interface CustomerService {
     Map<String, String> listCustomerAttribute(long customerId);
     Map<String, String> listCustomerAttribute(long customerId, List<SystemCustomerAttributeName> attributeNames);
     void onCustomerDraftAttributeGreenFinished(long customerId, SystemCustomerAttributeName attributeName, String value, SuggestionTypeEnum suggestionTypeEnum);
-    Map<Long, SimpleCustomerDTO> listCustomer(long loginCustomerId, CustomerRelationEnum customerRelationEnum, List<Long> customerIdList);
+    Map<Long, SimpleCustomerDTO> listCustomer(ListSimpleCustomerAO listCustomerAO);
     void prepareRelation(long loginCustomerId, List<SimpleCustomerDTO> source, Map<Long, CustomerRelation> customerRelations);
+    Customer registerCustomer(Customer customer);
 
 }

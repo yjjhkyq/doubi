@@ -9,12 +9,11 @@ spring:
     name: x-provider-customer
   profiles:
     # 环境配置
-    active: dev
-
+    active: local
+  main:
+    allow-bean-definition-overriding: true
 ---
 spring:
-  profiles:
-    active: dev
   cloud:
     nacos:
       discovery:
@@ -28,4 +27,8 @@ spring:
         file-extension: yml
         namespace: 7657749b-b8f4-423b-a6ba-5425e63e8f86
         group: dev
+  config:
+    activate:
+      on-profile: dev
 ---
+

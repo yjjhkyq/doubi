@@ -13,11 +13,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 @FeignClient(contextId = "payService", value = ServiceNameConstants.PAY_SERVICE, fallbackFactory = BillFallbackFactory.class)
 public interface BillRpcService {
 
-    @PostMapping(ServiceNameConstants.PAY_RPC_URL_PREFIX_BILL + "/")
-    R<BillDto> createBill(@RequestBody CreateBillAo createBillAo);
-
-    @PutMapping(ServiceNameConstants.PAY_RPC_URL_PREFIX_BILL + "/")
-    R<BillDto> launchBill(String billSerialNumber);
 
 
 }

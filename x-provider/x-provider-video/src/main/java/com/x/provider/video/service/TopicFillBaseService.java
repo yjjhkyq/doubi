@@ -7,11 +7,13 @@ import com.x.provider.video.model.domain.Topic;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public abstract class TopicFillBaseService<T> {
-    private static final int SYSTEM_TOPIC_DEFAULT_EFFECT_VALE = 100;
-    private static final int NOT_SYSTEM_TOPIC_DEFAULT_EFFECT_VALE = 10;
+
+    public static final Map<TopicSourceTypeEnum, Integer> TOPIC_SOURCE_EFFECT_VALUE_MAP = Map.of(TopicSourceTypeEnum.SECURITY, 100, TopicSourceTypeEnum.INDUSTRY, 80,
+            TopicSourceTypeEnum.CUSTOMER_CUSTOMIZE, 0);
 
     private final TopicMapper topicMapper;
 
@@ -46,8 +48,8 @@ public abstract class TopicFillBaseService<T> {
     public abstract String getTopicSourceId(T t);
     public abstract Topic prepare(Topic topic, T t);
     public abstract TopicSourceTypeEnum getTopicSourceType();
-    public int getEffectValue(boolean isSystemTopic){
-        return isSystemTopic ? SYSTEM_TOPIC_DEFAULT_EFFECT_VALE : NOT_SYSTEM_TOPIC_DEFAULT_EFFECT_VALE;
+    public int getEffectValue(){
+        return TOPIC_SOURCE_EFFECT_VALUE_MAP.getOrDefault(getTopicSourceType(), 0);
     }
 
     private List<Topic> listTopic(TopicSourceTypeEnum topicSourceType){

@@ -21,4 +21,5 @@ public class MediaInfoDTO {
     private double duration;
     private String name;
     private String description;
+    private String vodUrl;
 }

@@ -6,6 +6,8 @@ public enum MetricEnum {
     COUNT(3),
     REPLY_COUNT(5),
     SCORE(50),
+    FOLLOW_COUNT(51),
+    FANS_COUNT(52),
     ;
 
     private final int value;

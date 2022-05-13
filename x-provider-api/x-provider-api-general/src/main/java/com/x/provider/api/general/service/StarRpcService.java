@@ -12,6 +12,8 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import java.util.List;
+
 @FeignClient(contextId = "generalStarService", value = ServiceNameConstants.SERVICE, fallbackFactory = StarFallbackFactory.class)
 public interface StarRpcService {
     @PostMapping(ServiceNameConstants.RPC_URL_PREFIX_STAR + "/is/starred")
@@ -19,4 +21,7 @@ public interface StarRpcService {
 
     @PostMapping(ServiceNameConstants.RPC_URL_PREFIX_STAR + "/create")
     R<Boolean> star(@RequestBody StarAO starAO);
+
+    @PostMapping(ServiceNameConstants.RPC_URL_PREFIX_STAR + "/list")
+    R<List<StarDTO>> listStar(@RequestBody ListStarAO listStarAO);
 }

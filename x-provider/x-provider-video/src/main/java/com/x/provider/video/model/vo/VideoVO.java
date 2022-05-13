@@ -2,6 +2,7 @@ package com.x.provider.video.model.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
+import com.x.provider.video.model.vo.topic.TopicVO;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
@@ -9,7 +10,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @ApiModel(value = "视频信息")
 @Data
@@ -29,6 +32,8 @@ public class VideoVO {
     private int videoStatus;
     @ApiModelProperty(value = "视频播放文件id")
     private String fileId;
+    @ApiModelProperty(value = "文件播放地址")
+    private String vodUrl;
     @ApiModelProperty(value = "创建日期")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createdOnUtc;
@@ -40,5 +45,10 @@ public class VideoVO {
     private VideoStatisticVO statistic;
     @ApiModelProperty(value = "播放时长")
     private double duration;
+    @ApiModelProperty(value = "作品标题项")
+    private List<ProductTitleItemVO> productTitleItemList;
+    @ApiModelProperty(value = "作品交互")
+    private InteractVO interact = new InteractVO();
+
 
 }

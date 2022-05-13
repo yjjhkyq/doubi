@@ -26,10 +26,9 @@ public class SecurityTopicFillService extends TopicFillBaseService<SecurityDTO> 
         if (topic == null){
             topic = new Topic();
             topic.setSystemTopic(true);
-            topic.setEffectValue(getEffectValue(true));
-            topic.setSourceType(TopicSourceTypeEnum.SECURITY.ordinal());
+            topic.setEffectValue(getEffectValue());
+            topic.setSourceType(getTopicSourceType().ordinal());
             topic.setSourceId(String.valueOf(securityDTO.getId()));
-            topic.setSystemTopic(true);
         }
         topic.setTitle(securityDTO.getName());
         topic.setSearchKeyWord(StrUtil.format("{},{},{},{}", securityDTO.getName(), securityDTO.getFullName(), securityDTO.getSymbol(), securityDTO.getCnSpell()));

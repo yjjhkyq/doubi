@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.time.Duration;
@@ -364,6 +365,10 @@ public class RedisService {
         return redisTemplate.opsForZSet().reverseRange(key, (page - 1) * limit, (page - 1) * limit + limit);
     }
 
+    public <T> Set<T> reverseRangeByCursor(final String key, long cursor, long limit) {
+        return redisTemplate.opsForZSet().reverseRange(key, cursor, cursor + limit);
+    }
+
     public <T> Set<T> rangeByScore(final String key, long startScore, long count){
         return redisTemplate.opsForZSet().rangeByScore(key, startScore, Long.MAX_VALUE, 0, count);
     }
@@ -470,5 +475,16 @@ public class RedisService {
         if (value.equals(currentValue)) {
             redisTemplate.delete(key);
         }
+    }
+
+    public <T> Set<T> dynamicPage(String key,  long timeout, TimeUnit unit, long cursor, int pageSize, Supplier<Set<ZSetOperations.TypedTuple>> initSupplier){
+        if (cursor == 0){
+            Set<ZSetOperations.TypedTuple> initData = initSupplier.get();
+            if (!initData.isEmpty()){
+                redisTemplate.opsForZSet().add(key, initData);
+            }
+            redisTemplate.expire(key, timeout, unit);
+        }
+        return reverseRangeByCursor(key, cursor, pageSize);
     }
 }

@@ -9,9 +9,9 @@ import com.x.provider.video.model.domain.VideoRecommendPoolHotTopic;
 import java.util.List;
 
 public interface VideoReadService {
-    List<Video> listMyFollowPersonVideo(Long customerId);
-    List<Long> listMyFollowTopicHotVideo(Long customerId);
-    List<VideoRecommendPool> listHotVideo();
-    List<VideoRecommendPoolHotTopic> listHotVideoTopic(Long topicId);
-    PageList<VideoRecommendPool> listScreenVideo(PageDomain pageDomain);
+    PageList<Video> listMyFollowPersonVideo(PageDomain pageDomain, Long customerId);
+    PageList<Video> listMyFollowTopicHotVideo(PageDomain pageDomain, Long customerId);
+    PageList<Video> listHotVideo(PageDomain pageDomain);
+    PageList<Video> listHotVideoTopic(PageDomain pageDomain, Long topicId);
+    PageList<Video> listScreenVideo(PageDomain pageDomain);
 }

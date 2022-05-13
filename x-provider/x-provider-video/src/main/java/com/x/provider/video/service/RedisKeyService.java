@@ -13,4 +13,5 @@ public interface RedisKeyService {
     String getMyFollowVideoInitTimeKey();
     String getMyFollowVideoInitTimeHashKey(FollowVideoTypeEnum followVideoTypeEnum, long customerId);
     String getVideoRecommendPoolKey(VideoRecommendPoolEnum videoRecommendPoolIdEnum);
+    String getHotVideoByTopicId(long topicId);
 }

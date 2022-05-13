@@ -14,6 +14,7 @@ public enum UserResultCode implements IErrorCode {
     USER_PHONE_EXISTED(10004, "手机号已注册"),
     USER_PHONE_ERROR(10005, "手机号输入错误"),
     USER_PHONE_BOUND(10006, "手机号已绑定"),
+    WEIXIN_MICRO_APP_AUTH_FAILED(10007, "微信小程序授权失败，请稍后重试"),
     LAST(-1, "");
 
     private long code;

@@ -10,6 +10,9 @@ import com.x.provider.api.general.service.StarRpcService;
 import feign.hystrix.FallbackFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Component
 public class StarFallbackFactory implements FallbackFactory<StarRpcService> {
 
@@ -25,6 +28,11 @@ public class StarFallbackFactory implements FallbackFactory<StarRpcService> {
             @Override
             public R<Boolean> star(StarAO starAO) {
                 return R.ok();
+            }
+
+            @Override
+            public R<List<StarDTO>> listStar(ListStarAO listStarAO) {
+                return R.ok(new ArrayList<>());
             }
         };
     }

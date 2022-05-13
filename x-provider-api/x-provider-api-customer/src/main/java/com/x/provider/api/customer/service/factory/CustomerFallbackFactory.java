@@ -2,7 +2,9 @@ package com.x.provider.api.customer.service.factory;
 
 import com.x.core.web.api.R;
 import com.x.provider.api.customer.enums.CustomerRelationEnum;
+import com.x.provider.api.customer.model.ao.IncCustomerStatAO;
 import com.x.provider.api.customer.model.ao.ListCustomerAO;
+import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
 import com.x.provider.api.customer.model.dto.CustomerDTO;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
@@ -48,6 +50,16 @@ public class CustomerFallbackFactory implements FallbackFactory<CustomerRpcServi
             @Override
             public R<Map<Long, SimpleCustomerDTO>> listSimpleCustomer(long loginCustomerId, int customerRelation, String customerIdList) {
                 return R.ok(new HashMap<>());
+            }
+
+            @Override
+            public R<Map<Long, SimpleCustomerDTO>> listSimpleCustomerV2(ListSimpleCustomerAO listSimpleCustomer) {
+                return R.ok(new HashMap<>());
+            }
+
+            @Override
+            public R<Void> incCustomerStatAO(IncCustomerStatAO incCustomerStatAO) {
+                return R.ok();
             }
         };
     }

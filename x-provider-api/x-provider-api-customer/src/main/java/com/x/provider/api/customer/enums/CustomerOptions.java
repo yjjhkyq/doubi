@@ -4,5 +4,6 @@ public enum  CustomerOptions {
     CUSTOMER,
     CUSTOMER_ROLE,
     CUSTOMER_ATTRIBUTE,
-    FOLLOW_FAN_COUNT
+    CUSTOMER_STAT,
+    CUSTOMER_RELATION,
 }

@@ -68,7 +68,7 @@ public class PageList<T> implements Serializable
     public PageList(List<T> list, int pageSize, long cursor)
     {
         this.list = list;
-        this.hasMore = list.size() > 0;
+        this.hasMore = list.size() == pageSize;
         this.cursor = cursor;
     }
 
@@ -179,6 +179,16 @@ public class PageList<T> implements Serializable
         result.setTotal(source.getTotal());
         result.setCursor(source.getCursor());
         result.setList(new ArrayList<>());
+        return result;
+    }
+
+    public <D> PageList<D> map(List<D> dest){
+        PageList<D> result = new PageList<>();
+        result.setHasMore(this.hasMore);
+        result.setPageSize(this.getPageSize());
+        result.setTotal(this.getTotal());
+        result.setCursor(this.getCursor());
+        result.setList(dest);
         return result;
     }
 }

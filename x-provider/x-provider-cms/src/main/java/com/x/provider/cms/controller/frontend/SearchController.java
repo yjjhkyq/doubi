@@ -2,11 +2,16 @@ package com.x.provider.cms.controller.frontend;
 
 import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
+import com.x.core.web.controller.BaseFrontendController;
 import com.x.core.web.page.PageList;
 import com.x.core.web.page.PageHelper;
 import com.x.provider.api.customer.enums.CustomerOptions;
+import com.x.provider.api.customer.enums.CustomerRelationEnum;
 import com.x.provider.api.customer.model.ao.ListCustomerAO;
+import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
 import com.x.provider.api.customer.model.dto.CustomerDTO;
+import com.x.provider.api.customer.model.dto.CustomerStatDTO;
+import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
 import com.x.provider.api.finance.model.ao.ListSecurityAO;
 import com.x.provider.api.finance.model.dto.SecurityDTO;
@@ -19,10 +24,7 @@ import com.x.provider.cms.model.domain.CustomerDocument;
 import com.x.provider.cms.model.domain.SecurityDocument;
 import com.x.provider.cms.model.domain.TopicDocument;
 import com.x.provider.cms.model.domain.VideoDocument;
-import com.x.provider.cms.model.vo.CustomerDocumentVO;
-import com.x.provider.cms.model.vo.SecurityDocumentVO;
-import com.x.provider.cms.model.vo.TopicDocumentVO;
-import com.x.provider.cms.model.vo.VideoDocumentVO;
+import com.x.provider.cms.model.vo.*;
 import com.x.provider.cms.service.SearchService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -41,7 +43,7 @@ import java.util.stream.Collectors;
 @Api(tags = "搜索服务")
 @RestController
 @RequestMapping("/frontend/search")
-public class SearchController {
+public class SearchController extends BaseFrontendController {
 
     private final SearchService searchService;
     private final FinanceRpcService financeRpcService;
@@ -62,7 +64,7 @@ public class SearchController {
     @GetMapping("/security")
     public R<PageList<SecurityDocumentVO>> searchSecurity(@ApiParam(value = "关键字") @RequestParam String keyword,
                                                           @ApiParam(value = "页") @RequestParam(required = false, defaultValue = "1") int page,
-                                                          @ApiParam(value = "每页大小，对于auto complete 搜索，此值填入8,代表发发发") @RequestParam(required = false, defaultValue = "8") @Max(20) int size){
+                                                          @ApiParam(value = "每页大小，对于auto complete 搜索，此值填入8,代表发发发") @RequestParam(required = false, defaultValue = "8") @Max(20) int pageSize){
         final Page<SecurityDocument> securityDocuments = searchService.searchSecurity(keyword, PageHelper.getPageRequest());
         return R.ok(PageList.map(securityDocuments, (t) -> BeanUtil.prepare(t, SecurityDocumentVO.class)));
     }
@@ -71,7 +73,7 @@ public class SearchController {
     @GetMapping("/topic")
     public R<PageList<TopicDocumentVO>> searchTopic(@ApiParam(value = "关键字") @RequestParam String keyword,
                                                     @ApiParam(value = "页") @RequestParam(required = false, defaultValue = "1") int page,
-                                                    @ApiParam(value = "每页大小，对于auto complete 搜索，此值填入8,代表发发发") @RequestParam(required = false, defaultValue = "8") @Max(20) int size){
+                                                    @ApiParam(value = "每页大小，对于auto complete 搜索，此值填入8,代表发发发") @RequestParam(required = false, defaultValue = "8") @Max(20) int pageSize){
         final Page<TopicDocument> securityDocuments = searchService.searchTopic(keyword, PageHelper.getPageRequest());
         PageList<TopicDocumentVO> result = PageList.map(securityDocuments, (t) -> BeanUtil.prepare(t, TopicDocumentVO.class));
         Set<Long> securityIdList = result.getList().stream().filter(item -> item.getSourceType().equals(TopicSourceTypeEnum.SECURITY.ordinal())).map(TopicDocumentVO::getSourceId).filter(item -> StringUtils.hasText(item))
@@ -90,7 +92,7 @@ public class SearchController {
     @GetMapping("/video")
     public R<PageList<VideoDocumentVO>> searchVideo(@ApiParam(value = "关键字") @RequestParam String keyword,
                                                     @ApiParam(value = "页") @RequestParam(required = false, defaultValue = "1") int page,
-                                                    @ApiParam(value = "每页大小，对于auto complete 搜索，此值填入8,代表发发发") @RequestParam(required = false, defaultValue = "8") @Max(20) int size){
+                                                    @ApiParam(value = "每页大小，对于auto complete 搜索，此值填入8,代表发发发") @RequestParam(required = false, defaultValue = "8") @Max(20) int pageSize){
         final Page<VideoDocument> securityDocuments = searchService.searchVideo(keyword, PageHelper.getPageRequest());
         PageList<VideoDocumentVO> result = PageList.map(securityDocuments, (t) -> BeanUtil.prepare(t, VideoDocumentVO.class));
         Set<Long> customerIdList = result.getList().stream().map(VideoDocumentVO::getCustomerId).collect(Collectors.toSet());
@@ -111,10 +113,24 @@ public class SearchController {
 
     @ApiOperation(value = "搜索用户信息")
     @GetMapping("/customer")
-    public R<PageList<CustomerDocumentVO>> searchCustomer(@ApiParam(value = "关键字") @RequestParam String keyword,
-                                                          @ApiParam(value = "页") @RequestParam(required = false, defaultValue = "1") int page,
-                                                          @ApiParam(value = "每页大小，对于auto complete 搜索，此值填入8,代表发发发") @RequestParam(required = false, defaultValue = "8") @Max(20) int size){
+    public R<PageList<SimpleCustomerVO>> searchCustomer(@ApiParam(value = "关键字") @RequestParam String keyword,
+                                                        @ApiParam(value = "页") @RequestParam(required = false, defaultValue = "1") int page,
+                                                        @ApiParam(value = "每页大小，对于auto complete 搜索，此值填入8,代表发发发") @RequestParam(required = false, defaultValue = "8") @Max(20) int pageSize){
         final Page<CustomerDocument> securityDocuments = searchService.searchCustomer(keyword, PageHelper.getPageRequest());
-        return R.ok(PageList.map(securityDocuments, (t) -> BeanUtil.prepare(t, CustomerDocumentVO.class)));
+        if (securityDocuments.isEmpty()){
+            return R.ok(new PageList<>());
+        }
+        Map<Long, SimpleCustomerDTO> customerMap = customerRpcService.listSimpleCustomerV2(ListSimpleCustomerAO.builder().customerOptions(
+                Arrays.asList(CustomerOptions.CUSTOMER_RELATION.name(), CustomerOptions.CUSTOMER_STAT.name()))
+                .loginCustomerId(getCurrentCustomerId())
+                .customerRelation(CustomerRelationEnum.FOLLOW.getValue())
+                .customerIds(securityDocuments.get().map(CustomerDocument::getId).collect(Collectors.toList()))
+                .build()).getData();
+        return R.ok(PageList.map(securityDocuments, (t) -> {
+            SimpleCustomerDTO simpleCustomerDTO = customerMap.get(t.getId());
+            SimpleCustomerVO simpleCustomerVO = BeanUtil.prepare(simpleCustomerDTO, SimpleCustomerVO.class);
+            simpleCustomerVO.setStatistics(BeanUtil.prepare(simpleCustomerDTO.getStatistic(), CustomerStatVO.class));
+            return simpleCustomerVO;
+        }));
     }
 }

@@ -2,13 +2,14 @@ package com.x.provider.video.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.x.core.utils.ApiAssetUtil;
 import com.x.core.utils.BeanUtil;
+import com.x.core.utils.JsonUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.page.PageDomain;
-import com.x.core.web.page.PageHelper;
 import com.x.core.web.page.PageList;
+import com.x.provider.api.customer.model.ao.IncCustomerStatAO;
+import com.x.provider.api.customer.service.CustomerRpcService;
 import com.x.provider.api.general.enums.StarItemTypeEnum;
 import com.x.provider.api.general.model.event.StarEvent;
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
@@ -25,19 +26,19 @@ import com.x.provider.api.vod.model.dto.MediaInfoDTO;
 import com.x.provider.api.vod.service.VodRpcService;
 import com.x.provider.video.constant.Constants;
 import com.x.provider.video.enums.VideoErrorEnum;
+import com.x.provider.video.enums.VideoTitleItemTypeEnum;
 import com.x.provider.video.mapper.VideoAttributeMapper;
 import com.x.provider.video.mapper.VideoMapper;
 import com.x.provider.video.mapper.VideoTopicMapper;
 import com.x.provider.video.model.ao.homepage.CreateVideoAO;
-import com.x.provider.video.model.domain.Video;
-import com.x.provider.video.model.domain.VideoAttribute;
-import com.x.provider.video.model.domain.VideoTopic;
+import com.x.provider.video.model.domain.*;
 import com.x.provider.video.service.RedisKeyService;
 import com.x.provider.video.service.TopicService;
 import com.x.provider.video.service.VideoService;
 import com.x.redis.domain.LongTypeTuple;
 import com.x.redis.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -65,6 +66,7 @@ public class VideoServiceImpl implements VideoService {
     private final RedisKeyService redisKeyService;
     private final RedisService redisService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final CustomerRpcService customerRpcService;
 
     public VideoServiceImpl(VideoMapper videoMapper,
                             TopicService topicService,
@@ -75,7 +77,8 @@ public class VideoServiceImpl implements VideoService {
                             GreenRpcService greenRpcService,
                             RedisKeyService redisKeyService,
                             RedisService redisService,
-                            KafkaTemplate<String, Object> kafkaTemplate){
+                            KafkaTemplate<String, Object> kafkaTemplate,
+                            CustomerRpcService customerRpcService){
         this.videoMapper = videoMapper;
         this.topicService = topicService;
         this.videoTopicMapper = videoTopicMapper;
@@ -86,6 +89,7 @@ public class VideoServiceImpl implements VideoService {
         this.redisKeyService = redisKeyService;
         this.redisService = redisService;
         this.kafkaTemplate = kafkaTemplate;
+        this.customerRpcService = customerRpcService;
     }
 
     @Override
@@ -93,17 +97,29 @@ public class VideoServiceImpl implements VideoService {
     public long createVideo(CreateVideoAO createVideoAO, long customerId) {
         R<String> greenResult = greenRpcService.greenSync(GreenRpcAO.builder().dataType(GreenDataTypeEnum.TEXT.name()).value(createVideoAO.getTitle()).build());
         ApiAssetUtil.isTrue(SuggestionTypeEnum.PASS.name().equals(greenResult.getData()), VideoErrorEnum.VIDEO_TITLE_REVIEW_BLOCKED);
-        var topicTitleList = parseVideoTopicTitle(createVideoAO.getTitle());
-        var topicList = topicService.listOrCreateTopics(topicTitleList);
-        ApiAssetUtil.isTrue(topicList.size() == topicList.size());
+        List<ProductTitleItem> videoTitleList = BeanUtil.prepare(createVideoAO.getProductTitleItemList(), ProductTitleItem.class);
+        final List<ProductTitleItem> needCreteVideoTopic = videoTitleList.stream().filter(item -> VideoTitleItemTypeEnum.TOPIC.getValue().equals(item.getVideoTitleType()) &&
+                (item.getKey() == null || item.getKey() <= 0 ))
+                .collect(Collectors.toList());
+        if (!needCreteVideoTopic.isEmpty()){
+            final Map<String, Topic> createdTopic = topicService.listOrCreateTopics(new ArrayList<>(needCreteVideoTopic.stream().map(item -> item.getText()).collect(Collectors.toSet()))).stream()
+                    .collect(Collectors.toMap(item -> item.getTitle(), item -> item));
+            needCreteVideoTopic.stream().forEach(item -> {
+                item.setKey(createdTopic.get(item.getKey()).getId());
+            });
+        }
+
         Video video = Video.builder().customerId(customerId).fileId(createVideoAO.getFileId()).reviewed(false).title(createVideoAO.getTitle()).videoStatus(VideoStatusEnum.REVIEW.ordinal()).build();
+        if (!videoTitleList.isEmpty()){
+            video.setTitleItemJson(JsonUtil.toJSONString(videoTitleList));
+        }
         videoMapper.insert(video);
-        topicList.forEach(item -> {
-            videoTopicMapper.insert(VideoTopic.builder().topicId(item.getId()).videoId(video.getId()).videoStatus(video.getVideoStatus()).build());
+        needCreteVideoTopic.stream().filter(item -> VideoTitleItemTypeEnum.TOPIC.getValue().equals(item.getVideoTitleType())).forEach(item -> {
+            videoTopicMapper.insert(VideoTopic.builder().topicId(item.getKey()).videoId(video.getId()).videoStatus(video.getVideoStatus()).build());
         });
         //以后这个地方改为kafka
         executor.execute(() -> {
-            vodRpcService.contentReview(GetContentReviewResultAO.builder().fileIds(Arrays.asList(video.getFileId())).notifyUrl(Constants.VIDEO_REVIEW_NOTIFY_RUL).build());
+            //vodRpcService.contentReview(GetContentReviewResultAO.builder().fileIds(Arrays.asList(video.getFileId())).notifyUrl(Constants.VIDEO_REVIEW_NOTIFY_RUL).build());
         });
         return video.getId();
     }
@@ -153,7 +169,6 @@ public class VideoServiceImpl implements VideoService {
                 videoTopicMapper.deleteBatchIds(videoTopics.stream().map(VideoTopic::getId).collect(Collectors.toList()));
             });
             sendVideoChangedEvent(video, VideoChangedEvent.EventTypeEnum.VIDEO_DELETED);
-            //TODO:发送消息通知用户审核失败
         }
     }
 
@@ -193,6 +208,11 @@ public class VideoServiceImpl implements VideoService {
     @Override
     public void onStar(StarEvent starEvent) {
         if (starEvent.getItemType().equals(StarItemTypeEnum.VIDEO.getValue())){
+            final Optional<Video> video = getVideo(Long.parseLong(starEvent.getItemId()));
+            if(!video.isPresent()){
+              return;
+            }
+            customerRpcService.incCustomerStatAO(IncCustomerStatAO.builder().starCount(starEvent.isStar() ? 1L : -1L).id(video.get().getCustomerId()).build());
             if(starEvent.isStar()) {
                 addVideoStarList(Long.parseLong(starEvent.getItemId()), starEvent.getStarCustomerId());
                 return;
@@ -301,5 +321,26 @@ public class VideoServiceImpl implements VideoService {
             query.eq(Video::getVideoStatus, videoStatus);
         }
         return query;
+    }
+
+    private List<ProductTitleItem> parse(String title){
+        if (StringUtils.isEmpty(title)){
+            return new ArrayList<>();
+        }
+        final String[] split = title.split(Constants.PRODUCT_TITLE_SPLITTER);
+        List<ProductTitleItem> result = new ArrayList<>();
+        Arrays.stream(split).forEach(item -> {
+            ProductTitleItem videoTitle = new ProductTitleItem();
+            if (item.startsWith(Constants.PRODUCT_TITLE_TOPIC_PREFIX)){
+                videoTitle.setText(item.replaceFirst(Constants.PRODUCT_TITLE_TOPIC_PREFIX, Constants.PRODUCT_TITLE_TOPIC_PREFIX));
+                videoTitle.setVideoTitleType(VideoTitleItemTypeEnum.TOPIC.getValue());
+            }
+            else{
+                videoTitle.setText(item);
+                videoTitle.setVideoTitleType(VideoTitleItemTypeEnum.TEXT.getValue());
+            }
+            result.add(videoTitle);
+        });
+        return result;
     }
 }

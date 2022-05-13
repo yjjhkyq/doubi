@@ -1,12 +1,15 @@
 package com.x.provider.customer.controller.frontend;
 
+import com.x.core.constant.Constants;
 import com.x.core.utils.ApiAssetUtil;
 import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.api.ResultCode;
 import com.x.core.web.controller.BaseFrontendController;
 import com.x.core.web.page.PageList;
+import com.x.provider.api.customer.enums.CustomerOptions;
 import com.x.provider.api.customer.enums.CustomerRelationEnum;
+import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.general.model.ao.SendVerificationCodeAO;
 import com.x.provider.api.general.service.SmsRpcService;
@@ -15,10 +18,15 @@ import com.x.provider.customer.enums.SystemCustomerAttributeName;
 import com.x.provider.customer.model.ao.*;
 import com.x.provider.customer.model.domain.Customer;
 import com.x.provider.customer.model.domain.CustomerRelation;
+import com.x.provider.customer.model.domain.CustomerStat;
 import com.x.provider.customer.model.vo.CustomerHomePageVO;
+import com.x.provider.customer.model.vo.CustomerStatVO;
 import com.x.provider.customer.model.vo.SimpleCustomerVO;
+import com.x.provider.customer.service.AuthenticationService;
 import com.x.provider.customer.service.CustomerRelationService;
 import com.x.provider.customer.service.CustomerService;
+import com.x.provider.customer.service.CustomerStatService;
+import com.x.provider.customer.service.impl.authext.ExternalAuthEngine;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -41,15 +49,24 @@ public class CustomerController extends BaseFrontendController {
     private final CustomerRelationService customerRelationService;
     private final OssRpcService ossRpcService;
     private final SmsRpcService smsRpcService;
+    private final CustomerStatService customerStatService;
+    private final AuthenticationService authenticationService;
+    private final ExternalAuthEngine externalAuthEngine;
 
     public CustomerController(CustomerService customerService,
                               CustomerRelationService customerRelationService,
                               OssRpcService ossRpcService,
-                              SmsRpcService smsRpcService){
+                              SmsRpcService smsRpcService,
+                              CustomerStatService customerStatService,
+                              AuthenticationService authenticationService,
+                              ExternalAuthEngine externalAuthEngine){
         this.customerService = customerService;
         this.customerRelationService = customerRelationService;
         this.ossRpcService = ossRpcService;
         this.smsRpcService = smsRpcService;
+        this.customerStatService = customerStatService;
+        this.authenticationService = authenticationService;
+        this.externalAuthEngine = externalAuthEngine;
     }
 
     @ApiOperation(value = "用户名密码注册")
@@ -77,10 +94,16 @@ public class CustomerController extends BaseFrontendController {
         return smsRpcService.sendVerificationCode(SendVerificationCodeAO.builder().phoneNumber(sendSmsVerificationCodeAO.getPhoneNumber()).build());
     }
 
+    @ApiOperation(value = "第三方登陆，目前支持微信小程序, 返回token,下次方法其它接口是在此Token至于http header Authorization 中，值为 Bear token")
+    @PostMapping("/login/external")
+    public R<String> loginExternal(@RequestBody @Validated ExternalAuthenticationAO externalAuthenticationAO){
+        return R.ok(externalAuthEngine.authenticate(externalAuthenticationAO));
+    }
+
     @ApiOperation(value = "注销")
     @PostMapping("/logout")
     public R<Void> logout(){
-        customerService.logout(getBearAuthorizationToken());
+        authenticationService.signOut();
         return R.ok();
     }
 
@@ -129,18 +152,17 @@ public class CustomerController extends BaseFrontendController {
     @ApiOperation(value = "个人主页信息")
     @GetMapping("/homepage")
     public R<CustomerHomePageVO> getCustomerHomePage(@RequestParam(required = false) @ApiParam(value = "用户id") Long customerId){
-        if (customerId <= 0){
+        if (customerId == null || customerId <= 0){
             customerId = getCurrentCustomerIdAndNotCheckLogin();
         }
         Customer customer = customerService.getCustomer(customerId);
-        ApiAssetUtil.isTrue(!customer.isSystemAccount(), ResultCode.FORBIDDEN);
         CustomerHomePageVO customerHomePage = new CustomerHomePageVO();
         BeanUtils.copyProperties(customer, customerHomePage);
         Map<String, String> customerAttribute = customerService.listCustomerAttribute(customerId);
         prepareCustomerAttribute(customerAttribute);
         customerHomePage.setAttributes(customerAttribute);
-        customerHomePage.setFansCount(customerRelationService.getFansCount(customerId));
-        customerHomePage.setFansCount(customerRelationService.getFollowCount(customerId));
+        Map<Long, CustomerStat> customerStatMap = customerStatService.list(Arrays.asList(customerId));
+        customerHomePage.setStatistic(BeanUtil.prepare(customerStatMap.getOrDefault(customerId, CustomerStat.builder().id(customerId).build()), CustomerStatVO.class));
         return R.ok(customerHomePage);
     }
 
@@ -205,7 +227,10 @@ public class CustomerController extends BaseFrontendController {
                 customerRelations.stream().collect(Collectors.toMap(CustomerRelation::getFromCustomerId, item -> item));
         List<Long> customerIdList = CustomerRelationEnum.FOLLOW.getValue() == relation.getValue() ? customerRelations.stream().map(CustomerRelation::getToCustomerId).collect(Collectors.toList()) :
                 customerRelations.stream().map(CustomerRelation::getFromCustomerId).collect(Collectors.toList());
-        Map<Long, SimpleCustomerDTO> customers = customerService.listCustomer(customerId, CustomerRelationEnum.NO_RELATION, new ArrayList<>(customerRelationMap.keySet()));
+        Map<Long, SimpleCustomerDTO> customers = customerService.listCustomer(ListSimpleCustomerAO.builder()
+                .customerIds(new ArrayList<>(customerRelationMap.keySet()))
+                .customerRelation(relation.getValue()).loginCustomerId(customerId).customerOptions(Arrays.asList(CustomerOptions.CUSTOMER_RELATION.name()))
+                .build());
         customers.entrySet().forEach(item ->{
             if (customerRelationMap.containsKey(item.getKey())) {
                 item.getValue().setRelation(customerRelationMap.get(item.getKey()).getRelation());
@@ -219,7 +244,11 @@ public class CustomerController extends BaseFrontendController {
     }
 
     private void prepareCustomerAttribute(Map<String, String> attributes){
-        List<String> allMediaCustomerAttributeNames = CustomerService.MEDIA_CUSTOMER_ATTRIBUTE_NAME;
+        List<String> allMediaCustomerAttributeNames = new ArrayList<>();
+        allMediaCustomerAttributeNames.addAll(CustomerService.MEDIA_CUSTOMER_ATTRIBUTE_NAME);
+        CustomerService.MEDIA_CUSTOMER_ATTRIBUTE_NAME.forEach(item -> {
+            allMediaCustomerAttributeNames.add(Constants.getDraftAttributeName(item));
+        });
         Map<String, String> mediaAttribute = attributes.entrySet().stream().filter(item -> allMediaCustomerAttributeNames.contains(item.getKey()))
                 .collect(Collectors.toMap(item -> item.getKey(), item -> item.getValue()));
         if (CollectionUtils.isEmpty(mediaAttribute)){

@@ -9,8 +9,12 @@ import com.x.core.utils.IdUtils;
 import com.x.core.web.api.R;
 import com.x.core.web.api.ResultCode;
 import com.x.provider.api.customer.constants.CustomerEventTopic;
+import com.x.provider.api.customer.enums.CustomerOptions;
 import com.x.provider.api.customer.enums.CustomerRelationEnum;
+import com.x.provider.api.customer.model.ao.ListCustomerAO;
+import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
 import com.x.provider.api.customer.model.dto.CustomerAttributeDTO;
+import com.x.provider.api.customer.model.dto.CustomerStatDTO;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.customer.model.event.CustomerAttributeEvent;
 import com.x.provider.api.customer.model.event.CustomerEvent;
@@ -56,8 +60,6 @@ import java.util.stream.Collectors;
 @Service
 public class CustomerServiceImpl implements CustomerService {
 
-    private final Duration TOKEN_EXPIRED_DURATION = Duration.ofDays(100);
-
     private final RedisKeyService redisKeyService;
     private final RedisService redisService;
     private final CustomerMapper customerMapper;
@@ -73,6 +75,8 @@ public class CustomerServiceImpl implements CustomerService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final OssRpcService ossRpcService;
     private final CustomerRelationService customerRelationService;
+    private final CustomerStatService customerStatService;
+    private final AuthenticationService authenticationService;
 
     public CustomerServiceImpl(RedisKeyService redisKeyService,
                                RedisService redisService,
@@ -88,7 +92,9 @@ public class CustomerServiceImpl implements CustomerService {
                                SmsRpcService smsRpcService,
                                KafkaTemplate<String, Object> kafkaTemplate,
                                OssRpcService ossRpcService,
-                               CustomerRelationService customerRelationService){
+                               CustomerRelationService customerRelationService,
+                               CustomerStatService customerStatService,
+                               AuthenticationService authenticationService){
         this.redisKeyService = redisKeyService;
         this.redisService = redisService;
         this.customerMapper =customerMapper;
@@ -104,6 +110,8 @@ public class CustomerServiceImpl implements CustomerService {
         this.kafkaTemplate = kafkaTemplate;
         this.ossRpcService = ossRpcService;
         this.customerRelationService = customerRelationService;
+        this.customerStatService = customerStatService;
+        this.authenticationService = authenticationService;
     }
 
     @Override
@@ -112,16 +120,12 @@ public class CustomerServiceImpl implements CustomerService {
         Customer customerExisted = getCustomer(userNamePasswordRegisterAO.getUserName());
         ApiAssetUtil.isNull(customerExisted, UserResultCode.USER_NAME_EXISTED);
         Customer customer = new Customer(userNamePasswordRegisterAO.getUserName());
-        customerMapper.insert(customer);
+        registerCustomer(customer);
         CustomerPassword customerPassword = new CustomerPassword(customer.getId(), RandomUtil.randomNumbers(4));
         customerPassword.setPassword(passwordEncoderService.encode(userNamePasswordRegisterAO.getPassword(), customerPassword.getPasswordSalt()));
         customerPasswordMapper.insert(customerPassword);
-        Role registeredRole = getRole(SystemRoleNameEnum.REGISTERED.name());
-        CustomerRole customerRole = new CustomerRole(customer.getId(), registeredRole.getId());
-        customerRoleMapper.insert(customerRole);
-        entityChangedEventBus.postEntityInserted(new CustomerChangedEvent(customer));
         entityChangedEventBus.postEntityInserted(new CustomerPasswordChangedEvent(customerPassword));
-        entityChangedEventBus.postEntityInserted(new CustomerRoleChangedEvent(customerRole));
+
         sendCustomerInfoChanged(customer, null, CustomerEvent.EventTypeEnum.ADD);
     }
 
@@ -132,43 +136,33 @@ public class CustomerServiceImpl implements CustomerService {
         ApiAssetUtil.isTrue(customer.isActive(), UserResultCode.CUSTOMER_NOT_ACTIVE);
         CustomerPassword customerPassword = getCustomerPassword(customer.getId());
         ApiAssetUtil.isTrue(passwordEncoderService.matches(userNamePasswordLoginAO.getPassword(), customerPassword.getPasswordSalt(), customerPassword.getPassword()), UserResultCode.USER_NAME_OR_PWD_ERROR);
-        String token = IdUtils.fastSimpleUUID();
-        redisService.setCacheObject(redisKeyService.getCustomerLoginInfoKey(token), Long.valueOf(customer.getId()), TOKEN_EXPIRED_DURATION);
+        String token = authenticationService.signIn(customer);
         return token;
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public String loginOrRegisterBySms(LoginOrRegBySmsAO loginOrRegByPhoneAO) {
         smsRpcService.validateVerificationCode(ValidateVerificationCodeAO.builder().phoneNumber(loginOrRegByPhoneAO.getPhoneNumber()).sms(loginOrRegByPhoneAO.getSmsVerificationCode()).build());
         Customer customer = getCustomerByPhone(loginOrRegByPhoneAO.getPhoneNumber());
         if (customer == null){
             customer = Customer.builder().phone(loginOrRegByPhoneAO.getPhoneNumber()).build();
-            customerMapper.insert(customer);
-            Role registeredRole = getRole(SystemRoleNameEnum.REGISTERED.name());
-            CustomerRole customerRole = new CustomerRole(customer.getId(), registeredRole.getId());
-            customerRoleMapper.insert(customerRole);
-            entityChangedEventBus.postEntityInserted(new CustomerChangedEvent(customer));
-            entityChangedEventBus.postEntityInserted(new CustomerRoleChangedEvent(customerRole));
-            sendCustomerInfoChanged(customer, null, CustomerEvent.EventTypeEnum.ADD);
+            registerCustomer(customer);
         }
-        String token = IdUtils.fastSimpleUUID();
-        redisService.setCacheObject(redisKeyService.getCustomerLoginInfoKey(token), Long.valueOf(customer.getId()), TOKEN_EXPIRED_DURATION);
+        String token = authenticationService.signIn(customer);
         return token;
     }
 
     @Override
-    public void logout(String token) {
-        redisService.deleteObject(token);
-    }
-
-    @Override
-    public long validateToken(String token) {
-        Long customerId = redisService.getLongCacheObject(redisKeyService.getCustomerLoginInfoKey(token));
-        if (customerId != null){
-            redisService.expire(redisKeyService.getCustomerLoginInfoKey(token), TOKEN_EXPIRED_DURATION);
-        }
-        ApiAssetUtil.notNull(customerId, ResultCode.UNAUTHORIZED);
-        return customerId;
+    public Customer registerCustomer(Customer customer){
+        customerMapper.insert(customer);
+        Role registeredRole = getRole(SystemRoleNameEnum.REGISTERED.name());
+        CustomerRole customerRole = new CustomerRole(customer.getId(), registeredRole.getId());
+        customerRoleMapper.insert(customerRole);
+        entityChangedEventBus.postEntityInserted(new CustomerChangedEvent(customer));
+        entityChangedEventBus.postEntityInserted(new CustomerRoleChangedEvent(customerRole));
+        sendCustomerInfoChanged(customer, null, CustomerEvent.EventTypeEnum.ADD);
+        return customer;
     }
 
     /**
@@ -342,9 +336,9 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public Map<Long, SimpleCustomerDTO> listCustomer(long loginCustomerId, CustomerRelationEnum customerRelationEnum, List<Long> customerIdList) {
-        List<Customer> customers = customerMapper.selectList(buildQuery(0, customerIdList, null, null, null));
-        return prepare(loginCustomerId, customerRelationEnum, customers);
+    public Map<Long, SimpleCustomerDTO> listCustomer(ListSimpleCustomerAO listCustomerAO) {
+        List<Customer> customers = customerMapper.selectList(buildQuery(0, listCustomerAO.getCustomerIds(), null, null, null));
+        return prepare(listCustomerAO, customers);
     }
 
     public Customer getCustomer(long id, String userName, String phone, String email){
@@ -425,14 +419,17 @@ public class CustomerServiceImpl implements CustomerService {
         kafkaTemplate.send(CustomerEventTopic.TOPIC_NAME_CUSTOMER_INFO_CHANGED, String.valueOf(customer.getId()), customerEvent);
     }
 
-    private Map<Long, SimpleCustomerDTO> prepare(long loginCustomerId, CustomerRelationEnum customerRelationEnum,  List<Customer> source){
+    private Map<Long, SimpleCustomerDTO> prepare(ListSimpleCustomerAO listSimpleCustomerAO, List<Customer> source){
         if (source.isEmpty()){
             return Collections.emptyMap();
         }
         List<SimpleCustomerDTO> result = BeanUtil.prepare(source, SimpleCustomerDTO.class);
         prepareAttribute(result);
-        if (loginCustomerId > 0) {
-            prepareRelation(loginCustomerId, customerRelationEnum, result);
+        if (listSimpleCustomerAO.getLoginCustomerId() > 0 && listSimpleCustomerAO.getCustomerOptions().contains(CustomerOptions.CUSTOMER_RELATION.name())) {
+            prepareRelation(listSimpleCustomerAO.getLoginCustomerId(), CustomerRelationEnum.valueOf(listSimpleCustomerAO.getCustomerRelation()), result);
+        }
+        if (!CollectionUtils.isEmpty(listSimpleCustomerAO.getCustomerOptions()) && listSimpleCustomerAO.getCustomerOptions().contains(CustomerOptions.CUSTOMER_STAT.name())){
+            prepareStat(result);
         }
         return result.stream().collect(Collectors.toMap(SimpleCustomerDTO::getId, item -> item));
     }
@@ -467,6 +464,13 @@ public class CustomerServiceImpl implements CustomerService {
         List<Long> customerIdList = source.stream().map(SimpleCustomerDTO::getId).collect(Collectors.toList());
         Map<Long, CustomerRelation> customerRelations = customerRelationService.listRelationMap(loginCustomerId, customerRelationEnum, customerIdList);
         prepareRelation(loginCustomerId, source, customerRelations);
+    }
+
+    private void prepareStat(List<SimpleCustomerDTO> source){
+        Map<Long, CustomerStat> customerStatMap = customerStatService.list(source.stream().map(SimpleCustomerDTO::getId).collect(Collectors.toList()));
+        source.forEach(item -> {
+            item.setStatistic(BeanUtil.prepare(customerStatMap.getOrDefault(item.getId(), CustomerStat.builder().id(item.getId()).build()), CustomerStatDTO.class));
+        });
     }
 
     @Override

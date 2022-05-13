@@ -4,6 +4,7 @@ package com.x.core.web.page;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.x.core.utils.ServletUtils;
+import com.x.core.web.api.R;
 import org.springframework.data.domain.PageRequest;
 
 import java.util.ArrayList;
@@ -101,5 +102,9 @@ public class PageHelper
     public static PageRequest getPageRequest(){
         final PageDomain pageDomain = getPageDomain();
         return PageRequest.of(pageDomain.getPageNum() - 1, pageDomain.getPageSize());
+    }
+
+    public static <R> PageList<R> buildPageList(PageDomain pageDomain, List<R> source, boolean hasMore){
+        return new PageList<R>(source, pageDomain.getPageSize(), hasMore, pageDomain.getCursor() + pageDomain.getPageNum());
     }
 }

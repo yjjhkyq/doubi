@@ -1,16 +1,17 @@
 # Tomcat
 server:
-  port: 9205
+  port: 9213
 
 # Spring
 spring:
   application:
     # 应用名称
-    name: x-provider-vod
+    name: x-provider-finance
   profiles:
     # 环境配置
     active: dev
-
+  main:
+    allow-bean-definition-overriding: true
 ---
 spring:
   profiles:

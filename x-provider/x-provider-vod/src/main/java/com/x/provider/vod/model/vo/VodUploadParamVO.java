@@ -9,10 +9,6 @@ import lombok.Data;
 public class VodUploadParamVO {
     @ApiModelProperty(value = "签名")
     private String signature;
-    @ApiModelProperty(value = "视频路径")
-    private String videoPath;
-    @ApiModelProperty(value = "视频封面路径")
-    private String coverPath;
     @ApiModelProperty(value = "文件名")
     private String fileName;
 }

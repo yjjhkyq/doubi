@@ -16,21 +16,6 @@ public class WalletFallbackFactory implements FallbackFactory<WalletRpcService> 
     @Override
     public WalletRpcService create(Throwable throwable) {
         return new WalletRpcService() {
-            @Override
-            public R<String> createWallet(CreateWalletAO createWalletAO) {
-                return null;
-            }
-
-            @Override
-            public R<BillDto> rechargeWallet(BigDecimal amount) {
-                return null;
-            }
-
-            @Override
-            public R<BillDto> balanceChange(BalanceChangeAo balanceChangeAo) {
-                return null;
-            }
-
         };
     }
 }

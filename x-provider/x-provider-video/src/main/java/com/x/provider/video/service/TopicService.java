@@ -1,5 +1,7 @@
 package com.x.provider.video.service;
 
+import com.x.core.web.page.PageDomain;
+import com.x.core.web.page.PageList;
 import com.x.provider.api.finance.model.event.FinanceDataChangedEvent;
 import com.x.provider.api.video.enums.TopicSourceTypeEnum;
 import com.x.provider.api.video.model.ao.ListTopicAO;
@@ -21,4 +23,5 @@ public interface TopicService {
     Boolean isFavoriteTopic(Long customerId, Long topicId);
     List<TopicCustomerFavorite> listTopicCustomerFavorite(Long customerId, TopicSourceTypeEnum topicSourceTypeEnum);
     List<Topic> listTopic(ListTopicAO listTopicAO);
+    PageList<Topic> listTopic(long customerId, PageDomain pageDomain);
 }

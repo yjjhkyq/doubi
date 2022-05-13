@@ -28,7 +28,7 @@ public class CustomerMcServiceImpl implements CustomerMcService {
 
     @Override
     public void onFollowEvent(FollowEvent followEvent) {
-        if (!followEvent.isFirstFollow()){
+        if (FollowEvent.EventTypeEnum.FOLLOW.getValue().equals(followEvent.getEventType()) && !followEvent.isFirstFollow()){
             return;
         }
         String nickName = this.customerService.listCustomerAttribute(followEvent.getFromCustomerId()).get(SystemCustomerAttributeName.NICK_NAME.name());

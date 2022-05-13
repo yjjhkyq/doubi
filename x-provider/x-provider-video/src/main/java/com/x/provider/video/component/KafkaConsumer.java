@@ -46,7 +46,7 @@ public class KafkaConsumer {
     public void onStar(StarEvent event) {
         videoService.onStar(event);
         videoRecommendService.onStar(event);
-        videoMcService.onStar(event);
+      //  videoMcService.onStar(event);
     }
 
     @KafkaListener(topics = VideoEventTopic.TOPIC_NAME_VIDEO_PLAY)

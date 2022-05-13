@@ -19,6 +19,7 @@ public class RedisKeyServiceImpl implements RedisKeyService {
     private static final String VIDEO_MY_FOLLOW_INIT_TIME = "Video:My:Follow:Init:Time";
     private static final String VIDEO_MY_FOLLOW_INIT_TIME_HASH = "CustomerId:{}:FollowVideoType:{}";
     private static final String VIDEO_RECOMMEND_POOL = "Video:RecommendPool:Id:{}";
+    private static final String VIDEO_HOT_TOPIC_ID = "Video:Hot:Topic:Id:{}";
 
     private String getFullKey(CharSequence keyTemplate, Object... params){
         return StrUtil.format(FULL_KEY, StrUtil.format(keyTemplate, params));
@@ -62,5 +63,10 @@ public class RedisKeyServiceImpl implements RedisKeyService {
     @Override
     public String getVideoRecommendPoolKey(VideoRecommendPoolEnum videoRecommendPoolIdEnum) {
         return getFullKey(VIDEO_RECOMMEND_POOL, videoRecommendPoolIdEnum.name());
+    }
+
+    @Override
+    public String getHotVideoByTopicId(long topicId) {
+        return getFullKey(VIDEO_HOT_TOPIC_ID, topicId);
     }
 }
