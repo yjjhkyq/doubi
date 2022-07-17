@@ -1,18 +1,27 @@
 package com.x.provider.mc.service.impl;
 
 import cn.hutool.core.util.StrUtil;
-import com.x.provider.api.mc.enums.MessageTargetType;
-import com.x.provider.mc.enums.ChannelTypeEnum;
+import com.x.core.utils.CompareUtils;
+import com.x.core.utils.JsonUtil;
+import com.x.provider.api.mc.enums.ConversationType;
+import com.x.provider.api.mc.model.ao.SendMessageRawAO;
 import com.x.provider.mc.model.domain.Message;
+import com.x.provider.mc.model.dto.ConversationDTO;
+import com.x.provider.mc.model.dto.MessageDTO;
 import com.x.provider.mc.service.CentrifugoEngineService;
 import com.x.provider.mc.service.MessageEngineService;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 public class MessageEngineServiceImpl implements MessageEngineService {
+
+    private static final String CHANNEL_FORMATTER = "{}_{}";
 
     private final CentrifugoEngineService centrifugoEngineService;
 
@@ -21,21 +30,25 @@ public class MessageEngineServiceImpl implements MessageEngineService {
     }
 
     @Override
-    public void sendMessage(String channel, Message message) {
-        Map<String, Object> msg = new HashMap<>();
-        msg.put("id", message.getId());
-        msg.put("senderUid", message.getSenderUid());
-        msg.put("targetId", message.getTargetId());
-        msg.put("messageType", message.getMessageType());
-        msg.put("alertMsg", message.getAlertMsg());
-        msg.put("msgBody", message.getMsgBody());
-        msg.put("createdOnUtc", message.getCreatedOnUtc());
-        this.centrifugoEngineService.publish(channel, msg);
+    public void sendMessage(ConversationDTO conversation, MessageDTO message) {
+        Map<String, Object> data = Map.of("conversation", conversation, "message", message);
+        SendMessageRawAO sendMessageRawAO = SendMessageRawAO.builder()
+                .jsonData(JsonUtil.toJSONString(data))
+                .messageClass(message.getMessageClass())
+                .messageType(message.getMessageType())
+                .toCustomerId(message.getToCustomerId())
+                .toGroupId(message.getToGroupId())
+                .build();
+        sendMessage(sendMessageRawAO);
     }
 
     @Override
-    public void sendMessage(MessageTargetType messageTargetType, Message message) {
-        sendMessage(getChannelName(message.getTargetId(),  messageTargetType), message);
+    public void sendMessage(SendMessageRawAO sendMessageRawAO){
+        Map<String, Object> msg = new HashMap<>();
+        msg.put("messageClass", sendMessageRawAO.getMessageClass());
+        msg.put("messageType", sendMessageRawAO.getMessageType());
+        msg.put("jsonData", sendMessageRawAO.getJsonData());
+        this.centrifugoEngineService.publish(getChannelName(sendMessageRawAO.getToCustomerId(), sendMessageRawAO.getToGroupId()), msg);
     }
 
     @Override
@@ -49,13 +62,15 @@ public class MessageEngineServiceImpl implements MessageEngineService {
     }
 
     @Override
-    public String getChannelName(Long targetId, MessageTargetType messageTargetType){
-        if (messageTargetType.getValue().equals(MessageTargetType.PERSONAL.getValue())){
-            return StrUtil.format("personal:target_id#{}", targetId);
+    public String getChannelName(String targetId, Integer conversationType){
+        return StrUtil.format("{}_{}", ConversationType.valueOf(conversationType).name(), targetId);
+    }
+
+    @Override
+    public String getChannelName(Long customerId, Long groupId) {
+        if (CompareUtils.gtZero(customerId)){
+            return getChannelName(customerId.toString(), ConversationType.C2C.getValue());
         }
-        if (messageTargetType.getValue().equals(MessageTargetType.ALL.getValue())){
-            return StrUtil.format("all:target_id_{}", targetId);
-        }
-        throw new IllegalStateException("not support message target type: " + messageTargetType.getValue());
+        return getChannelName(groupId.toString(), ConversationType.GROUP.getValue());
     }
 }

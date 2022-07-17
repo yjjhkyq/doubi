@@ -9,7 +9,7 @@ spring:
     name: x-provider-customer
   profiles:
     # 环境配置
-    active: local
+    active: dev
   main:
     allow-bean-definition-overriding: true
 ---

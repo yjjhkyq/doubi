@@ -477,14 +477,14 @@ public class RedisService {
         }
     }
 
-    public <T> Set<T> dynamicPage(String key,  long timeout, TimeUnit unit, long cursor, int pageSize, Supplier<Set<ZSetOperations.TypedTuple>> initSupplier){
-        if (cursor == 0){
+    public Set<Long> dynamicPage(String key,  long timeout, TimeUnit unit, long cursor, int pageSize, Supplier<Set<ZSetOperations.TypedTuple>> initSupplier){
+        if (cursor == 1){
             Set<ZSetOperations.TypedTuple> initData = initSupplier.get();
             if (!initData.isEmpty()){
                 redisTemplate.opsForZSet().add(key, initData);
             }
             redisTemplate.expire(key, timeout, unit);
         }
-        return reverseRangeByCursor(key, cursor, pageSize);
+        return reverseRangeLong(key, cursor, pageSize);
     }
 }

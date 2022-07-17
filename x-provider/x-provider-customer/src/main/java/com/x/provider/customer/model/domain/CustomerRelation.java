@@ -15,18 +15,18 @@ import lombok.*;
 public class CustomerRelation extends BaseEntity {
 
   @TableId
-  private long id;
+  private Long id;
 
   @TableField("from_customer_id")
-  private long fromCustomerId;
+  private Long fromCustomerId;
 
   @TableField("to_customer_id")
-  private long toCustomerId;
+  private Long toCustomerId;
 
-  @TableField("relation")
-  private int relation;
+  @TableField("is_follow")
+  private Boolean follow;
 
-  @TableField("is_delete")
-  private Boolean deleted;
+  @TableField("is_friend")
+  private Boolean friend;
 
 }

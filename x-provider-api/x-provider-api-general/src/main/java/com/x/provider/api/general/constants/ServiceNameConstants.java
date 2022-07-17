@@ -5,6 +5,5 @@ public class ServiceNameConstants {
     public static final String RPC_URL_PREFIX_STAR = "/rpc/general/star";
     public static final String RPC_URL_PREFIX_COMMENT = "/rpc/general/comment";
     public static final String ADMIN_URL_PREFIX = "/admin/general";
-    public static final String RPC_URL_PREFIX_SMS = "/rpc/general/sms";
     public static final String RPC_URL_PREFIX_ITEM = "/rpc/general/item";
 }

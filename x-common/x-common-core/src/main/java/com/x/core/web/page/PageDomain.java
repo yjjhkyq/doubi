@@ -9,9 +9,6 @@ import org.springframework.util.StringUtils;
  */
 public class PageDomain
 {
-    /** 当前记录起始索引 */
-    private int pageNum;
-
     /** 每页显示记录数 */
     private int pageSize;
 
@@ -34,12 +31,8 @@ public class PageDomain
 
     public int getPageNum()
     {
-        return pageNum;
-    }
-
-    public void setPageNum(int pageNum)
-    {
-        this.pageNum = pageNum;
+        int pageNumber = (int)cursor / pageSize;
+        return pageNumber == 0 ? 1 : pageNumber ;
     }
 
     public int getPageSize()

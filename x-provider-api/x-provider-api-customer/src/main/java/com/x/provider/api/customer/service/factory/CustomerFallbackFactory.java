@@ -38,11 +38,6 @@ public class CustomerFallbackFactory implements FallbackFactory<CustomerRpcServi
             }
 
             @Override
-            public R<Integer> getCustomerRelation(long fromCustomerId, long toCustomerId) {
-                return R.ok(CustomerRelationEnum.NO_RELATION.getValue());
-            }
-
-            @Override
             public R<List<Long>> listFollow(long customerId) {
                 return R.ok(new ArrayList<>());
             }

@@ -2,26 +2,25 @@ package com.x.provider.customer.service.impl;
 
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.x.core.cache.event.EntityChangedEventBus;
+import com.x.core.exception.ApiException;
 import com.x.core.utils.ApiAssetUtil;
 import com.x.core.utils.BeanUtil;
-import com.x.core.utils.IdUtils;
 import com.x.core.web.api.R;
 import com.x.core.web.api.ResultCode;
 import com.x.provider.api.customer.constants.CustomerEventTopic;
 import com.x.provider.api.customer.enums.CustomerOptions;
 import com.x.provider.api.customer.enums.CustomerRelationEnum;
-import com.x.provider.api.customer.model.ao.ListCustomerAO;
 import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
 import com.x.provider.api.customer.model.dto.CustomerAttributeDTO;
+import com.x.provider.api.customer.model.dto.CustomerRelationDTO;
 import com.x.provider.api.customer.model.dto.CustomerStatDTO;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.customer.model.event.CustomerAttributeEvent;
 import com.x.provider.api.customer.model.event.CustomerEvent;
 import com.x.provider.api.customer.model.event.CustomerInfoGreenEvent;
-import com.x.provider.api.general.model.ao.SendVerificationCodeAO;
-import com.x.provider.api.general.model.ao.ValidateVerificationCodeAO;
-import com.x.provider.api.general.service.SmsRpcService;
+import com.x.provider.api.mc.model.ao.SendVerificationCodeAO;
+import com.x.provider.api.mc.model.ao.ValidateVerificationCodeAO;
+import com.x.provider.api.mc.service.SmsRpcService;
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
 import com.x.provider.api.oss.enums.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
@@ -41,9 +40,6 @@ import com.x.provider.customer.mapper.RoleMapper;
 import com.x.provider.customer.model.ao.*;
 import com.x.provider.customer.model.domain.*;
 import com.x.provider.customer.service.*;
-import com.x.provider.customer.service.cache.customer.CustomerChangedEvent;
-import com.x.provider.customer.service.cache.customer.CustomerPasswordChangedEvent;
-import com.x.provider.customer.service.cache.customer.CustomerRoleChangedEvent;
 import com.x.redis.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -52,7 +48,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -67,7 +62,6 @@ public class CustomerServiceImpl implements CustomerService {
     private final CustomerRoleMapper customerRoleMapper;
     private final RoleMapper roleMapper;
     private final PasswordEncoderService passwordEncoderService;
-    private final EntityChangedEventBus entityChangedEventBus;
     private final GenericAttributeService genericAttributeService;
     private final GreenRpcService greenRpcService;
     private final ApplicationConfig applicationConfig;
@@ -85,7 +79,6 @@ public class CustomerServiceImpl implements CustomerService {
                                CustomerRoleMapper customerRoleMapper,
                                RoleMapper roleMapper,
                                PasswordEncoderService passwordEncoderService,
-                               EntityChangedEventBus entityChangedEventBus,
                                GenericAttributeService genericAttributeService,
                                GreenRpcService greenRpcService,
                                ApplicationConfig applicationConfig,
@@ -102,7 +95,6 @@ public class CustomerServiceImpl implements CustomerService {
         this.customerRoleMapper = customerRoleMapper;
         this.roleMapper = roleMapper;
         this.passwordEncoderService = passwordEncoderService;
-        this.entityChangedEventBus = entityChangedEventBus;
         this.genericAttributeService = genericAttributeService;
         this.greenRpcService = greenRpcService;
         this.applicationConfig = applicationConfig;
@@ -124,8 +116,6 @@ public class CustomerServiceImpl implements CustomerService {
         CustomerPassword customerPassword = new CustomerPassword(customer.getId(), RandomUtil.randomNumbers(4));
         customerPassword.setPassword(passwordEncoderService.encode(userNamePasswordRegisterAO.getPassword(), customerPassword.getPasswordSalt()));
         customerPasswordMapper.insert(customerPassword);
-        entityChangedEventBus.postEntityInserted(new CustomerPasswordChangedEvent(customerPassword));
-
         sendCustomerInfoChanged(customer, null, CustomerEvent.EventTypeEnum.ADD);
     }
 
@@ -159,8 +149,6 @@ public class CustomerServiceImpl implements CustomerService {
         Role registeredRole = getRole(SystemRoleNameEnum.REGISTERED.name());
         CustomerRole customerRole = new CustomerRole(customer.getId(), registeredRole.getId());
         customerRoleMapper.insert(customerRole);
-        entityChangedEventBus.postEntityInserted(new CustomerChangedEvent(customer));
-        entityChangedEventBus.postEntityInserted(new CustomerRoleChangedEvent(customerRole));
         sendCustomerInfoChanged(customer, null, CustomerEvent.EventTypeEnum.ADD);
         return customer;
     }
@@ -200,7 +188,6 @@ public class CustomerServiceImpl implements CustomerService {
         smsRpcService.validateVerificationCode(ValidateVerificationCodeAO.builder().phoneNumber(bindPhoneAO.getPhone()).sms(bindPhoneAO.getSms()).build());
         customer.setPhone(bindPhoneAO.getPhone());
         customerMapper.updateById(customer);
-        entityChangedEventBus.postEntityUpdated(new CustomerChangedEvent(customer));
         sendCustomerInfoChanged(customer, null, CustomerEvent.EventTypeEnum.ADD);
     }
 
@@ -218,7 +205,6 @@ public class CustomerServiceImpl implements CustomerService {
             customerPassword.setPassword(passwordEncoderService.encode(changePasswordAO.getNewPassword(), customerPassword.getPasswordSalt()));
             customerPasswordMapper.updateById(customerPassword);
         }
-        entityChangedEventBus.postEntityUpdated(new CustomerPasswordChangedEvent(customerPassword));
     }
 
     @Override
@@ -232,7 +218,6 @@ public class CustomerServiceImpl implements CustomerService {
             Customer customerExisted = getCustomerByPhone(changePhoneAO.getPhone());
             ApiAssetUtil.isNull(customerExisted, UserResultCode.USER_PHONE_EXISTED);
             customerMapper.updateById(customer);
-            entityChangedEventBus.postEntityUpdated(new CustomerChangedEvent(customer));
             sendCustomerInfoChanged(customer, null, CustomerEvent.EventTypeEnum.ADD);
         }
     }
@@ -244,37 +229,31 @@ public class CustomerServiceImpl implements CustomerService {
         ApiAssetUtil.isNull(customerExisted, UserResultCode.USER_NAME_EXISTED);
         customer.setUserName(changeUserNameAO.getUserName());
         customerMapper.updateById(customer);
-        entityChangedEventBus.postEntityUpdated(new CustomerChangedEvent(customer));
         sendCustomerInfoChanged(customer, null, CustomerEvent.EventTypeEnum.ADD);
     }
 
     @Override
     public Customer getCustomer(String userName) {
-        return redisService.getCacheObject(redisKeyService.getCustomerKey(userName), () ->
-            getCustomer(0, userName, null, null));
+        return getCustomer(0, userName, null, null);
     }
 
     @Override
     public Customer getCustomer(long id) {
-        return redisService.getCacheObject(redisKeyService.getCustomerKey(id), () ->
-            getCustomer(id, null, null, null));
+        return getCustomer(id, null, null, null);
     }
 
     @Override
     public CustomerPassword getCustomerPassword(long customerId) {
-        return redisService.getCacheObject(redisKeyService.getCustomerPasswordKey(customerId), () ->
-                getCustomerPassword(0, customerId));
+        return getCustomerPassword(0, customerId);
     }
 
     @Override
     public List<Role> listCustomerRole(long customerId) {
-        return redisService.getCacheObject(redisKeyService.getCustomerRoleKey(customerId), () -> {
-            List<CustomerRole> customerRoles = customerRoleMapper.selectList(new LambdaQueryWrapper<CustomerRole>().eq(CustomerRole::getCustomerId, customerId));
-            if (customerRoles.isEmpty()){
-                return Collections.emptyList();
-            }
-            return roleMapper.selectBatchIds(customerRoles.stream().map(CustomerRole::getRoleId).collect(Collectors.toList()));
-        });
+        List<CustomerRole> customerRoles = customerRoleMapper.selectList(new LambdaQueryWrapper<CustomerRole>().eq(CustomerRole::getCustomerId, customerId));
+        if (customerRoles.isEmpty()){
+            return Collections.emptyList();
+        }
+        return roleMapper.selectBatchIds(customerRoles.stream().map(CustomerRole::getRoleId).collect(Collectors.toList()));
     }
 
     @Override
@@ -376,8 +355,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     public Role getRole(String systemName) {
-        return redisService.getCacheObject(redisKeyService.getRoleKey(systemName), () ->
-                getRole(0, systemName));
+        return getRole(0, systemName);
     }
 
     public Role getRole(long id, String systemName){
@@ -462,7 +440,7 @@ public class CustomerServiceImpl implements CustomerService {
             return;
         }
         List<Long> customerIdList = source.stream().map(SimpleCustomerDTO::getId).collect(Collectors.toList());
-        Map<Long, CustomerRelation> customerRelations = customerRelationService.listRelationMap(loginCustomerId, customerRelationEnum, customerIdList);
+        Map<Long, CustomerRelation> customerRelations = customerRelationService.listRelationMap(loginCustomerId, customerIdList, customerRelationEnum);
         prepareRelation(loginCustomerId, source, customerRelations);
     }
 
@@ -479,10 +457,12 @@ public class CustomerServiceImpl implements CustomerService {
             return;
         }
         source.forEach(item ->{
-            if (customerRelations.containsKey(item.getId())){
-                item.setRelation(customerRelations.get(item.getId()).getRelation());
+            CustomerRelation customerRelation = customerRelations.get(item.getId());
+            if (customerRelation == null){
+                return;
             }
-            item.setCanFollow(loginCustomerId != item.getId() && CustomerRelationEnum.NO_RELATION.getValue() == item.getRelation());
+            item.setCustomerRelation(BeanUtil.prepare(customerRelation, CustomerRelationDTO.class));
+            item.setCanFollow(!Objects.equals(loginCustomerId, item.getId()) && (customerRelation == null || !customerRelation.getFollow()));
         });
     }
 

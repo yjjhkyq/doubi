@@ -88,18 +88,18 @@ public class VideoReadServiceImpl implements VideoReadService {
                 return Collections.emptySet();
             }
             Set<Long> videos = new HashSet<>(applicationConfig.getFollowTopicHotVideoShowSize());
-            IPage page = new Page(1, applicationConfig.getFollowTopicHotVideoShowSize(), false);
+            IPage page = new Page(0, applicationConfig.getFollowTopicHotVideoShowSize(), false);
             List<Long> followTopics = topicCustomerFavorites.stream().map(TopicCustomerFavorite::getTopicId).collect(Collectors.toList());
             Set<ZSetOperations.TypedTuple> initData = new HashSet<ZSetOperations.TypedTuple>(1000);
-            while (videos.size() < applicationConfig.getFollowTopicHotVideoShowSize()){
+//            while (videos.size() < applicationConfig.getFollowTopicHotVideoShowSize()){
                 IPage<VideoRecommendPoolHotTopic> videoHotTopicList = hotTopicVideoReadService.selectPage(page, followTopics);
                 if (videoHotTopicList.getRecords().size() == 0){
-                    break;
+                    return initData;
                 }
                 videoHotTopicList.getRecords().stream().forEach(item -> {
-                    initData.add(new LongTypeTuple(item.getId(), item.getId().doubleValue()));
+                    initData.add(new LongTypeTuple(item.getVideoId(), item.getVideoId().doubleValue()));
                 });
-            }
+//            }
             return initData;
         });
         return PageHelper.buildPageList(pageDomain, videoService.listVideo(new ArrayList<>(videoIdList)), !videoIdList.isEmpty());
@@ -107,17 +107,17 @@ public class VideoReadServiceImpl implements VideoReadService {
 
     @Override
     public PageList<Video> listHotVideoTopic(PageDomain pageDomain, Long topicId){
-        List<VideoRecommendPoolHotTopic> result = hotTopicVideoReadService.selectPage(new Page<>(0, applicationConfig.getTopicHotVideoShowSize(), false),
+        List<VideoRecommendPoolHotTopic> result = hotTopicVideoReadService.selectPage(PageHelper.buildIPageRequest(pageDomain),
                 Arrays.asList(topicId)).getRecords().stream().filter(item -> item.getVideoId() >= pageDomain.getCursor()).collect(Collectors.toList());
         if (result.isEmpty()){
             return new PageList<>();
         }
-        List<VideoRecommendPoolHotTopic> videoRecommendPoolHotTopics = result.subList(0, pageDomain.getPageNum() > result.size() ? result.size() : pageDomain.getPageNum());
+        List<VideoRecommendPoolHotTopic> videoRecommendPoolHotTopics = result.subList(0, pageDomain.getPageSize() > result.size() ? result.size() : pageDomain.getPageSize());
         if (videoRecommendPoolHotTopics.isEmpty()){
             return new PageList<>();
         }
-        List<Video> videoList = videoService.listVideo(videoRecommendPoolHotTopics.stream().map(item -> item.getVideoId()).collect(Collectors.toList()));
-        return PageHelper.buildPageList(pageDomain, videoList, !videoRecommendPoolHotTopics.isEmpty());
+        List<Video> videoList = videoService.listVideo(result.stream().map(item -> item.getVideoId()).collect(Collectors.toList()));
+        return PageHelper.buildPageList(pageDomain, videoList, !result.isEmpty());
     }
 
     @Override

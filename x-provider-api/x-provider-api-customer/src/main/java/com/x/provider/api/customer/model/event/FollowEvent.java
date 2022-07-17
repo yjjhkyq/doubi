@@ -12,7 +12,8 @@ public class FollowEvent {
   private Long id;
   private Long fromCustomerId;
   private Long toCustomerId;
-  private Integer relation;
+  private Boolean follow;
+  private Boolean friend;
   private boolean firstFollow;
 
   private Integer eventType;

@@ -10,4 +10,5 @@ public interface CustomerStatService {
     void inc(CustomerStat customerStat);
      Map<Long, CustomerStat> list(List<Long> idList);
      void onFollowEvent(FollowEvent followEvent);
+     CustomerStat getCustomerStat(Long customerId);
 }

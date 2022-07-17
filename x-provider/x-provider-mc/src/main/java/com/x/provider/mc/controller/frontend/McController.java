@@ -4,32 +4,27 @@ import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.controller.BaseFrontendController;
 import com.x.core.web.page.PageList;
-import com.x.provider.api.customer.enums.CustomerOptions;
-import com.x.provider.api.customer.model.ao.ListCustomerAO;
-import com.x.provider.api.customer.model.dto.CustomerDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
-import com.x.provider.api.mc.enums.MessageTargetType;
 import com.x.provider.api.mc.model.ao.SendMessageAO;
+import com.x.provider.api.mc.model.protocol.MessageClassEnum;
+import com.x.provider.mc.model.ao.MarkMessageAsReadAO;
 import com.x.provider.mc.model.ao.SendImAO;
+import com.x.provider.mc.model.domain.Conversation;
 import com.x.provider.mc.model.domain.Message;
-import com.x.provider.mc.model.domain.MessageReadBadge;
-import com.x.provider.mc.model.domain.MessageSenderSystem;
-import com.x.provider.mc.model.vo.MessageCenterConnectInfoVO;
-import com.x.provider.mc.model.vo.MessageReadBadgeVO;
-import com.x.provider.mc.model.vo.MessageSenderVO;
+import com.x.provider.mc.model.vo.ConnectInfoVO;
+import com.x.provider.mc.model.vo.ConversationVO;
 import com.x.provider.mc.model.vo.MessageVO;
 import com.x.provider.mc.service.MessageService;
-import com.x.util.StringUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
 
-@Api(tags = "用户服务")
+@Api(tags = "消息服務")
 @RestController
 @RequestMapping("/frontend/message/center")
 public class McController extends BaseFrontendController {
@@ -43,46 +38,11 @@ public class McController extends BaseFrontendController {
         this.customerRpcService = customerRpcService;
     }
 
-    @ApiOperation(value = "获取消息发送人信息")
-    @GetMapping("/sender/list")
-    public R<List<MessageSenderVO>> listSenderInfo(@RequestParam String customerIds){
-        List<Long> customerIdList = StringUtil.parse(customerIds);
-        if (customerIdList.isEmpty()){
-            return R.ok();
-        }
-        return R.ok(prepare(customerIdList).values().stream().collect(Collectors.toList()));
-    }
-
-    @ApiOperation(value = "获取站内信消息角标信息")
-    @GetMapping("/read/badge")
-    public R<List<MessageReadBadgeVO>> listMessageReadBadge(){
-        List<MessageReadBadge> messageReadBadges = messageService.listMessageReadBadge(getCurrentCustomerId());
-        return R.ok(BeanUtil.prepare(messageReadBadges, MessageReadBadgeVO.class));
-    }
-
-    @ApiOperation(value = "读取站内信")
-    @GetMapping("/read")
-    public R<PageList<MessageVO>> readMessage(@RequestParam(required = false, defaultValue = "0") long cursor,
-                                                @RequestParam int pageSize,
-                                                @ApiParam(value = "发送人用户id") Long senderCustomerId
-                                                ){
-
-        PageList<Message> messageCursorList = messageService.readMessage(senderCustomerId, getCurrentCustomerId(), getPageDomain());
-        return R.ok(messageCursorList.map((s) -> BeanUtil.prepare(s, MessageVO.class)));
-    }
-
-    @ApiOperation(value = "发送私信")
-    @PostMapping("/im/send")
-    public R<Void> sendIm(@Validated @RequestBody SendImAO sendImAO){
-        messageService.sendMessage(new SendMessageAO(getCurrentCustomerId(), MessageTargetType.PERSONAL.getValue(), sendImAO.getTargetCustomerId(), sendImAO.getMessageType(), sendImAO.getAlertMsg(), sendImAO.getMsgBody()));
-        return R.ok();
-    }
-
     @ApiOperation(value = "获取连接信息,用户连接centrifugo服务器")
     @GetMapping("/connect/info")
-    public R<MessageCenterConnectInfoVO> getConnectInfo(){
+    public R<ConnectInfoVO> getConnectInfo(){
         Long customerId = getCurrentCustomerId();
-        MessageCenterConnectInfoVO connectInfoVO = MessageCenterConnectInfoVO.builder()
+        ConnectInfoVO connectInfoVO = ConnectInfoVO.builder()
                 .authenticationToken(messageService.authenticationToken(customerId))
                 .subscribeChannelList(new ArrayList<>(messageService.subscribeChannelList(customerId)))
                 .webSocketUrl(messageService.getWebSocketUrl())
@@ -90,15 +50,54 @@ public class McController extends BaseFrontendController {
         return R.ok(connectInfoVO);
     }
 
-    private Map<Long, MessageSenderVO> prepare(List<Long> customerIds){
-        Map<Long, MessageSenderSystem> messageSenderSystemMap = messageService.listMessageSenderSystem().stream().collect(Collectors.toMap(MessageSenderSystem::getCustomerId, item -> item));
-        Map<Long, MessageSenderVO> result = new HashMap<>();
-        Map<Long, CustomerDTO> data = customerRpcService.listCustomer(ListCustomerAO.builder().customerIds(customerIds).customerOptions(Arrays.asList(CustomerOptions.CUSTOMER_ATTRIBUTE.name())).build()).getData();
-        data.entrySet().forEach(customer ->{
-            result.put(customer.getKey(), MessageSenderVO.builder().senderUid(customer.getKey()).nickName(customer.getValue().getCustomerAttribute().getNickName())
-                    .avatarUrl(customer.getValue().getCustomerAttribute().getAvatarUrl()).im(!messageSenderSystemMap.containsKey(customer.getKey())
-                            || messageSenderSystemMap.get(customer.getKey()).getIm()).build());
-        });
-        return result;
+    @ApiOperation(value = "获取会话列表")
+    @GetMapping("/conversation/list")
+    public R<PageList<ConversationVO>> listConversation(@RequestParam(required = false, defaultValue = "0") long cursor,
+                                                   @RequestParam int pageSize){
+        PageList<Conversation> conversationList = messageService.listConversation(getCurrentCustomerId(), getPageDomain());
+        List<ConversationVO> resultList = BeanUtil.prepare(messageService.prepare(conversationList.getList()), ConversationVO.class);
+        return R.ok(conversationList.map(resultList));
+    }
+
+    @ApiOperation(value = "获取会话列表")
+    @GetMapping("/conversation/get")
+    public R<ConversationVO> getConversation(@ApiParam(value = "会话id") @RequestParam String conversationId){
+        Conversation conversation = messageService.getConversation(conversationId, getCurrentCustomerId());
+        return R.ok(BeanUtil.prepare(messageService.prepare(conversation), ConversationVO.class));
+    }
+
+
+    @ApiOperation(value = "获取历史消息")
+    @GetMapping("/message/list")
+    public R<PageList<MessageVO>> listMessage(@RequestParam(required = false, defaultValue = "0") long cursor,
+                                              @RequestParam int pageSize,
+                                              @ApiParam(value = "会话id") String conversationId){
+        PageList<Message> messageCursorList = messageService.listMessage(conversationId, getCurrentCustomerId(), getPageDomain());
+        List<MessageVO> resultList = BeanUtil.prepare(messageService.prepareMessage(messageCursorList.getList()), MessageVO.class);
+        return R.ok(messageCursorList.map(resultList));
+    }
+
+    @ApiOperation(value = "发送私信,返回私信id")
+    @PostMapping("/message/send")
+    public R<Long> markMessageAsRead(@Validated @RequestBody SendImAO sendImAO){
+        SendMessageAO sendMessageAO = BeanUtil.prepare(sendImAO, SendMessageAO.class);
+        sendMessageAO.setFromCustomerId(getCurrentCustomerId());
+        sendMessageAO.setMessageClass(MessageClassEnum.IM.getValue());
+        sendMessageAO.setOnlineUserOnly(false);
+        Long id = messageService.sendMessage(sendMessageAO);
+        return R.ok(id);
+    }
+
+    @ApiOperation(value = "标记会话中的所有消息为已读,每次打开会话后都应该调用此接口")
+    @PostMapping("/message/mark/as/read")
+    public R<Void> markMessageAsRead(@Validated @RequestBody MarkMessageAsReadAO markMessageAsReadAO){
+        messageService.markMessageAsRead(markMessageAsReadAO, getCurrentCustomerId());
+        return R.ok();
+    }
+
+    @ApiOperation(value = "获取消息总未读数")
+    @GetMapping("/message/total/unread/count")
+    public R<Long> getTotalUnreadMessageCount(){
+        return R.ok(messageService.getTotalUnreadMessageCount(getCurrentCustomerId()));
     }
 }

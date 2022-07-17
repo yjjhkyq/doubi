@@ -10,7 +10,7 @@ import javax.validation.constraints.NotBlank;
 @Data
 public class SetCustomerAttributeAO {
 
-    @ApiModelProperty(value = "属性名,NICK_NAME 昵称 AVATAR_ID 头像文件ID PERSONAL_HOMEPAGE_BACKGROUND_ID 个人主页背景图片 SIGNATURE 签名")
+    @ApiModelProperty(value = "属性名,NICK_NAME 昵称 AVATAR_ID 头像文件ID PERSONAL_HOMEPAGE_BACKGROUND_ID 个人主页背景图片 SIGNATURE 签名 GENDER 1 男 2 女")
     @NotBlank
     private String attributeName;
 

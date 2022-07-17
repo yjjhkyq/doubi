@@ -8,5 +8,4 @@ import org.springframework.context.annotation.Configuration;
 @RefreshScope
 @Configuration
 public class GeneralConfig {
-    private int verificationCodeExpireMinute = 5;
 }

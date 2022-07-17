@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.x.provider.pay.mapper.AssetMapper">
+    <update id="sumUnreadCount">
+        select sum(unread_count) from conversation where owner_customer_id = #{ownerCustomerId}
+    </update>
+
+</mapper>

@@ -47,8 +47,7 @@ public class TopicController extends BaseFrontendController {
     @ApiOperation(value = "自选话题")
     @GetMapping("/favorite/list")
     public R<PageList<TopicVO>> listFavoriteTopic(@RequestParam(required = false, defaultValue = "0") long cursor,
-                                                      @RequestParam int pageSize,
-                                                      @RequestParam @Min(1) long customerId){
+                                                      @RequestParam int pageSize){
         PageList<Topic> topics = topicService.listTopic(getCurrentCustomerId(), getPageDomain());
         List<TopicVO> topicList = prepare(topics.getList());
         topicList.forEach(item -> item.setMyFavorite(true));
@@ -56,7 +55,7 @@ public class TopicController extends BaseFrontendController {
     }
 
     @ApiOperation(value = "主题详情")
-    @PostMapping("/detail")
+    @GetMapping("/detail")
     public R<TopicVO> topicDetail(@ApiParam(value = "主题id") @RequestParam long id){
         final Optional<Topic> topic = topicService.getTopic(id, null);
         TopicVO result = prepare(Arrays.asList(topic.get())).get(0);

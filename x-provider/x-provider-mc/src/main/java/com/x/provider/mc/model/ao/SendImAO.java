@@ -11,8 +11,10 @@ public class SendImAO {
     private String alertMsg;
     @ApiModelProperty(value = "消息体")
     private String msgBody;
-    @ApiModelProperty(value = "消息类型")
+    @ApiModelProperty(value = "消息类型 TEXT 文本消息 IMAGE 图片消息 VIDEO 视频信息")
     private String messageType;
     @ApiModelProperty(value = "接收人用户id")
-    private Long targetCustomerId;
+    private Long toCustomerId = 0L;
+    @ApiModelProperty(value = "接收群 组id")
+    private Long toGroupId = 0L;
 }

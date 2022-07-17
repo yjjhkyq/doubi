@@ -10,12 +10,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SimpleCustomerDTO {
-    private long id;
+    private Long id;
     private String userName;
     private String nickName;
     private String avatarUrl;
-    private int relation;
-    @Builder.Default
-    private boolean canFollow = true;
+    private CustomerRelationDTO customerRelation;
     private CustomerStatDTO statistic;
+    private Boolean canFollow;
 }

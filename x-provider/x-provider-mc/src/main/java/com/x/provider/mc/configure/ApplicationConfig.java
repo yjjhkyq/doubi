@@ -24,4 +24,6 @@ public class ApplicationConfig {
 
     @Value("${message.expire.day:100}")
     private Integer messageExpireDays;
+
+    private int verificationCodeExpireMinute = 5;
 }

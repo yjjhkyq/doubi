@@ -1,18 +1,15 @@
 package com.x.provider.customer.controller.frontend;
 
 import com.x.core.constant.Constants;
-import com.x.core.utils.ApiAssetUtil;
 import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
-import com.x.core.web.api.ResultCode;
 import com.x.core.web.controller.BaseFrontendController;
 import com.x.core.web.page.PageList;
-import com.x.provider.api.customer.enums.CustomerOptions;
 import com.x.provider.api.customer.enums.CustomerRelationEnum;
 import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
-import com.x.provider.api.general.model.ao.SendVerificationCodeAO;
-import com.x.provider.api.general.service.SmsRpcService;
+import com.x.provider.api.mc.model.ao.SendVerificationCodeAO;
+import com.x.provider.api.mc.service.SmsRpcService;
 import com.x.provider.api.oss.service.OssRpcService;
 import com.x.provider.customer.enums.SystemCustomerAttributeName;
 import com.x.provider.customer.model.ao.*;
@@ -20,6 +17,7 @@ import com.x.provider.customer.model.domain.Customer;
 import com.x.provider.customer.model.domain.CustomerRelation;
 import com.x.provider.customer.model.domain.CustomerStat;
 import com.x.provider.customer.model.vo.CustomerHomePageVO;
+import com.x.provider.customer.model.vo.CustomerRelationVO;
 import com.x.provider.customer.model.vo.CustomerStatVO;
 import com.x.provider.customer.model.vo.SimpleCustomerVO;
 import com.x.provider.customer.service.AuthenticationService;
@@ -163,43 +161,25 @@ public class CustomerController extends BaseFrontendController {
         customerHomePage.setAttributes(customerAttribute);
         Map<Long, CustomerStat> customerStatMap = customerStatService.list(Arrays.asList(customerId));
         customerHomePage.setStatistic(BeanUtil.prepare(customerStatMap.getOrDefault(customerId, CustomerStat.builder().id(customerId).build()), CustomerStatVO.class));
+        CustomerRelation relation = customerRelationService.getRelation(getCurrentCustomerIdAndNotCheckLogin(), customerId);
+        customerHomePage.setCustomerRelation(BeanUtil.prepare(relation, CustomerRelationVO.class));
+        customerHomePage.setCanFollow(!Objects.equals(customerId, getCurrentCustomerIdAndNotCheckLogin()) && (relation == null || !relation.getFollow()));
         return R.ok(customerHomePage);
     }
 
-    @ApiOperation(value = "获取我与toCustomerId的关系 0 没有关系 1 关注关系 2 朋友关系")
-    @GetMapping("/relation")
-    public R<Integer> getRelation(@RequestParam @Validated @Min(1) @ApiParam(value = "用户id") long toCustomerId){
-        return R.ok(customerRelationService.getRelation(getCurrentCustomerId(), toCustomerId).getValue());
-    }
-
-    @ApiOperation(value = "关注")
-    @PostMapping("/relation/following")
-    public R<Void> following(@RequestParam @Validated @Min(1) @ApiParam(value = "用户id") long toCustomerId){
-        customerRelationService.following(getCurrentCustomerId(), toCustomerId);
+    @ApiOperation(value = "关注,取消关注")
+    @PostMapping("/follow/or/unfollow")
+    public R<Void> following(@RequestBody FollowOrUnFollowAO followOrUnFollowAO){
+        if (followOrUnFollowAO.getFollow()) {
+            customerRelationService.following(getCurrentCustomerId(), followOrUnFollowAO.getToCustomerId());
+        } else {
+            customerRelationService.unFollowing(getCurrentCustomerId(), followOrUnFollowAO.getToCustomerId());
+        }
         return R.ok();
-    }
-
-    @ApiOperation(value = "取消关注")
-    @PostMapping("/relation/unfollowing")
-    public R<Void> unFollowing(@RequestParam @Validated @Min(1) @ApiParam(value = "用户id") long toCustomerId){
-        customerRelationService.unFollowing(getCurrentCustomerId(), toCustomerId);
-        return R.ok();
-    }
-
-    @ApiOperation(value = "粉丝个数")
-    @GetMapping("/relation/fans/count")
-    public R<Long> getFansCount(@RequestParam @Validated @Min(1)  @ApiParam(value = "用户id") long customerId){
-        return R.ok(customerRelationService.getFansCount(customerId));
-    }
-
-    @ApiOperation(value = "关注的人的个数")
-    @GetMapping("/relation/follow/count")
-    public R<Long> getFollowCount(@RequestParam @Validated @Min(1)  @ApiParam(value = "用户id") long customerId){
-        return R.ok(customerRelationService.getFollowCount(customerId));
     }
 
     @ApiOperation(value = "查询关注列表")
-    @GetMapping("/relation/follows")
+    @GetMapping("/following/list")
     public R<PageList<SimpleCustomerVO>> listFollow(@RequestParam Long cursor,
                                                     @RequestParam Integer pageSize,
                                                     @RequestParam @Validated @Min(0)  @ApiParam(value = "用户id") long customerId){
@@ -212,13 +192,13 @@ public class CustomerController extends BaseFrontendController {
     }
 
     @ApiOperation(value = "查询粉丝列表")
-    @GetMapping("/relation/fans")
+    @GetMapping("/fans/list")
     public R<PageList<SimpleCustomerVO>> listFans(@RequestParam Long cursor, @RequestParam Integer pageSize, @RequestParam @Validated @Min(1)  @ApiParam(value = "用户id") long customerId){
         PageList<CustomerRelation> fans = customerRelationService.listFans(customerId, getPageDomain());
         if (fans.getList().isEmpty()){
             return R.ok(new PageList<>());
         }
-        List<SimpleCustomerVO> followsCustomer = prepareRelation(customerId, CustomerRelationEnum.FOLLOW, fans.getList());
+        List<SimpleCustomerVO> followsCustomer = prepareRelation(customerId, CustomerRelationEnum.FANS, fans.getList());
         return R.ok(PageList.map(fans, followsCustomer));
     }
 
@@ -228,17 +208,19 @@ public class CustomerController extends BaseFrontendController {
         List<Long> customerIdList = CustomerRelationEnum.FOLLOW.getValue() == relation.getValue() ? customerRelations.stream().map(CustomerRelation::getToCustomerId).collect(Collectors.toList()) :
                 customerRelations.stream().map(CustomerRelation::getFromCustomerId).collect(Collectors.toList());
         Map<Long, SimpleCustomerDTO> customers = customerService.listCustomer(ListSimpleCustomerAO.builder()
-                .customerIds(new ArrayList<>(customerRelationMap.keySet()))
-                .customerRelation(relation.getValue()).loginCustomerId(customerId).customerOptions(Arrays.asList(CustomerOptions.CUSTOMER_RELATION.name()))
+                .customerIds(new ArrayList<>(customerRelationMap.keySet())).loginCustomerId(customerId)
                 .build());
-        customers.entrySet().forEach(item ->{
-            if (customerRelationMap.containsKey(item.getKey())) {
-                item.getValue().setRelation(customerRelationMap.get(item.getKey()).getRelation());
-            }
-        });
         List<SimpleCustomerVO> result = new ArrayList<>(customerIdList.size());
         customerIdList.forEach(item ->{
-            result.add(BeanUtil.prepare(customers.get(item), SimpleCustomerVO.class));
+            SimpleCustomerDTO simpleCustomerDTO = customers.get(item);
+            SimpleCustomerVO simpleCustomerVO = BeanUtil.prepare(simpleCustomerDTO, SimpleCustomerVO.class);
+            CustomerRelation customerRelation = customerRelationMap.get(item);
+            if (relation.equals(CustomerRelationEnum.FANS)){
+                customerRelation.setFollow(customerRelation.getFriend() ? true : false);
+            }
+            simpleCustomerVO.setCustomerRelation(BeanUtil.prepare(customerRelation, CustomerRelationVO.class));
+            simpleCustomerVO.setCanFollow(relation.getValue() == CustomerRelationEnum.FANS.getValue() && !customerRelation.getFriend());
+            result.add(simpleCustomerVO);
         });
         return result;
     }

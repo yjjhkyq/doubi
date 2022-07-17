@@ -2,7 +2,9 @@ package com.x.provider.mc.controller.rpc;
 
 import com.x.core.web.api.R;
 import com.x.provider.api.mc.model.ao.SendMessageAO;
+import com.x.provider.api.mc.model.ao.SendMessageRawAO;
 import com.x.provider.api.mc.service.MessageRpcService;
+import com.x.provider.mc.service.MessageEngineService;
 import com.x.provider.mc.service.MessageService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,15 +18,24 @@ import org.springframework.web.bind.annotation.RestController;
 public class MessageRpcController implements MessageRpcService {
 
     private final MessageService messageService;
+    private final MessageEngineService messageEngineService;
 
-    public MessageRpcController(MessageService messageService){
+    public MessageRpcController(MessageService messageService,
+                                MessageEngineService messageEngineService){
         this.messageService = messageService;
+        this.messageEngineService = messageEngineService;
     }
 
     @PostMapping("send")
     @Override
-    public R<Void> sendMessage(@RequestBody SendMessageAO sendMessageAO) {
-        messageService.sendMessage(sendMessageAO);
+    public R<Long> sendMessage(@RequestBody SendMessageAO sendMessageAO) {
+        return R.ok(messageService.sendMessage(sendMessageAO));
+    }
+
+    @PostMapping("send/raw")
+    @Override
+    public R<Long> sendMessageRaw(@RequestBody SendMessageRawAO sendMessageAO) {
+        messageEngineService.sendMessage(sendMessageAO);
         return R.ok();
     }
 }

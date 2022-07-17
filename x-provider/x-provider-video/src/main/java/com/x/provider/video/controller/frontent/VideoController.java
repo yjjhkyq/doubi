@@ -204,7 +204,7 @@ public class VideoController extends BaseFrontendController {
     }
 
     @ApiOperation(value = "热门视频")
-    @GetMapping("/hot/")
+    @GetMapping("/hot")
     public R<PageList<VideoVO>> listHotVideo(@RequestParam(required = false, defaultValue = "0") long cursor,
                                       @RequestParam int pageSize){
         PageList<Video> hotVideoList = videoRecommendService.listHotVideo(getPageDomain());

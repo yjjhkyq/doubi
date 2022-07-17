@@ -49,7 +49,6 @@ public class PageHelper
     public static PageDomain getPageDomain()
     {
         PageDomain pageDomain = new PageDomain();
-        pageDomain.setPageNum(ServletUtils.getParameterToInt(PAGE, DEFAULT_PAGE));
         pageDomain.setPageSize(ServletUtils.getParameterToInt(PAGE_SIZE, DEFAULT_PAGE_SIZE));
         pageDomain.setOrderByColumn(ServletUtils.getParameter(ORDER_BY_COLUMN));
         pageDomain.setIsAsc(ServletUtils.getParameter(IS_ASC));
@@ -68,7 +67,7 @@ public class PageHelper
     }
 
     public static IPage buildIPageRequest(PageDomain pageDomain){
-        return new Page<>(pageDomain.getPageNum(), pageDomain.getPageSize(), false);
+        return new Page<>(pageDomain.getCursor(), pageDomain.getPageSize(), false);
     }
 
     public static <T, R> PageList<R> buildPageList(IPage<T> page, Function<T, R> funcation){
@@ -105,6 +104,6 @@ public class PageHelper
     }
 
     public static <R> PageList<R> buildPageList(PageDomain pageDomain, List<R> source, boolean hasMore){
-        return new PageList<R>(source, pageDomain.getPageSize(), hasMore, pageDomain.getCursor() + pageDomain.getPageNum());
+        return new PageList<R>(source, pageDomain.getPageSize(), hasMore, pageDomain.getCursor() + pageDomain.getPageSize());
     }
 }

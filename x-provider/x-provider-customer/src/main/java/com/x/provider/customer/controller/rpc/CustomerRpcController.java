@@ -98,12 +98,6 @@ public class CustomerRpcController extends BaseRpcController implements Customer
         return R.ok(customerId);
     }
 
-    @PostMapping("/relation")
-    @Override
-    public R<Integer> getCustomerRelation(@RequestParam("fromCustomerId") long fromCustomerId, @RequestParam("toCustomerId") long toCustomerId) {
-        return R.ok(customerRelationService.getRelation(fromCustomerId, toCustomerId).getValue());
-    }
-
     @PostMapping("/follow/list")
     @Override
     public R<List<Long>> listFollow(@RequestParam long customerId) {

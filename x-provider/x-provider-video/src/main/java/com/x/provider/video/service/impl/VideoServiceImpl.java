@@ -202,7 +202,14 @@ public class VideoServiceImpl implements VideoService {
 
     @Override
     public List<Video> listVideo(List<Long> ids) {
-        return videoMapper.selectList(new LambdaQueryWrapper<Video>().in(Video::getId, ids));
+        Map<Long, Video> videoMap = videoMapper.selectList(new LambdaQueryWrapper<Video>().in(Video::getId, ids)).stream().collect(Collectors.toMap(item -> item.getId(), item -> item));
+        List<Video> result = new ArrayList<>(ids.size());
+        ids.forEach(item ->{
+            if (videoMap.containsKey(item)){
+                result.add(videoMap.get(item));
+            }
+        });
+        return result;
     }
 
     @Override

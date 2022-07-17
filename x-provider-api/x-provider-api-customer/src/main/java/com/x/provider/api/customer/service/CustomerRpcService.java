@@ -28,9 +28,6 @@ public interface CustomerRpcService {
     @PostMapping(ServiceNameConstants.CUSTOMER_URL_PREFIX + "/authorize")
     R<Long> authorize(@RequestParam("token") String token, @RequestParam("path") String path);
 
-    @PostMapping(ServiceNameConstants.CUSTOMER_URL_PREFIX + "/relation")
-    R<Integer> getCustomerRelation(@RequestParam("fromCustomerId") long fromCustomerId, @RequestParam("toCustomerId") long toCustomerId);
-
     @PostMapping(ServiceNameConstants.CUSTOMER_URL_PREFIX + "/follow/list")
     R<List<Long>> listFollow(@RequestParam("customerId") long customerId);
 

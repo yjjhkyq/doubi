@@ -109,6 +109,11 @@ public class CustomerStatServiceImpl implements CustomerStatService {
         statisticTotalRpcService.incStatisticTotals(IncMetricValuesAO.builder().incMetricValues(incMetricValueValuesAO).build());
     }
 
+    @Override
+    public CustomerStat getCustomerStat(Long customerId) {
+        return list(Arrays.asList(customerId)).get(customerId);
+    }
+
     private Map<Long, CustomerStat> prepare(List<ListMetricValueDTO> metricValues){
         if (metricValues.isEmpty()){
             return new HashMap<>();

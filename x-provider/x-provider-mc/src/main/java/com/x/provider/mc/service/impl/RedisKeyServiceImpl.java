@@ -10,9 +10,16 @@ public class RedisKeyServiceImpl implements RedisKeyService {
 
     public static final String MESSAGE_SENDER_SYSTEM_VO = "VO:Message:Sender:System";
 
+    private static final String SMS_BY_PHONE_NUMBER_TEMPLATE_ID = "Phone:{}:TemplateId:{}";
+
     @Override
     public String getMessageSenderSystemVOKey() {
         return getFullKey(MESSAGE_SENDER_SYSTEM_VO);
+    }
+
+    @Override
+    public String getSmsKey(String phoneNumber, String templateId) {
+        return getFullKey(SMS_BY_PHONE_NUMBER_TEMPLATE_ID, phoneNumber, templateId);
     }
 
     private String getFullKey(CharSequence keyTemplate, Object... params){

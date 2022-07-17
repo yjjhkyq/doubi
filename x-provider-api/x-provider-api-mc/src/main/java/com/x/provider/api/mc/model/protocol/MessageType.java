@@ -20,6 +20,9 @@ public enum MessageType {
      * 视频
      */
     VIDEO,
+    /**
+     * 卡片
+     */
     CARD,
     /**
      * 关注列表
@@ -32,13 +35,13 @@ public enum MessageType {
     /**
      * 点赞视频
      */
-    STAR_VIDEO,
+    STAR_PRODUCT,
     /**
      * 点赞视频评论
      */
-    STAR_VIDEO_COMMENT,
+    STAR_PRODUCT_COMMENT,
     /**
      * 视频评论或者回复视频评论
      */
-    COMMENT_VIDEO
+    COMMENT_PRODUCT
 }

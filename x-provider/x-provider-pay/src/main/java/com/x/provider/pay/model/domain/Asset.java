@@ -13,9 +13,11 @@ import lombok.*;
 @TableName("asset")
 public class Asset extends BaseEntity {
     @TableId
-    private long id;
-    private long customerId;
-    private int assetType;
-    private int amount;
+    private Long id;
+    private Long customerId;
+    private Long coin;
+    private Long costCoin;
+    private Long rice;
+    private Long withdrawRice;
 }
 
