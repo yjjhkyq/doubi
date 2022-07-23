@@ -6,7 +6,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <update id="incAsset">
         update asset
         <set>
-            <if test="coin lt 0">cost_coin = cost_coin - #{coin},</if>
+            cost_coin = cost_coin + #{costCoin}
             coin = coin + #{coin},
             rice = rice + #{rice},
         </set>

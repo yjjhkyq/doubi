@@ -8,7 +8,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(contextId = "mcService", value = McServiceNameConstants.SERVICE_NAME, fallbackFactory = NotifyFallbackFactory.class)
+@FeignClient(contextId = "mcService", value = McServiceNameConstants.SERVICE_NAME)
 public interface MessageRpcService {
 
     @PostMapping(McServiceNameConstants.MC_RPC_URL_PREFIX_MESSAGE + "/send")

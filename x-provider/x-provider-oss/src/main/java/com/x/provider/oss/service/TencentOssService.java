@@ -1,6 +1,6 @@
 package com.x.provider.oss.service;
 
-import com.x.provider.oss.model.vo.TencentOssCredentialVO;
+import com.x.provider.oss.model.vo.oss.TencentOssCredentialVO;
 
 import java.io.InputStream;
 import java.util.List;

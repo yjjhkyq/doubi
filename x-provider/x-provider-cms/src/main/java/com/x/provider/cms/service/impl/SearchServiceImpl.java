@@ -8,6 +8,7 @@ import com.x.provider.api.finance.model.ao.ListSecurityAO;
 import com.x.provider.api.finance.model.dto.SecurityDTO;
 import com.x.provider.api.finance.model.event.SecurityChangedBatchEvent;
 import com.x.provider.api.finance.service.FinanceRpcService;
+import com.x.provider.api.oss.service.VodRpcService;
 import com.x.provider.api.video.enums.TopicSourceTypeEnum;
 import com.x.provider.api.video.model.ao.ListTopicAO;
 import com.x.provider.api.video.model.dto.TopicDTO;
@@ -15,7 +16,6 @@ import com.x.provider.api.video.model.event.TopicBatchEvent;
 import com.x.provider.api.video.model.event.TopicEvent;
 import com.x.provider.api.video.model.event.VideoChangedEvent;
 import com.x.provider.api.video.service.VideoRpcService;
-import com.x.provider.api.vod.service.VodRpcService;
 import com.x.provider.cms.model.domain.CustomerDocument;
 import com.x.provider.cms.model.domain.SecurityDocument;
 import com.x.provider.cms.model.domain.TopicDocument;
@@ -25,11 +25,10 @@ import com.x.provider.cms.repository.SecurityDocumentRepository;
 import com.x.provider.cms.repository.TopicDocumentRepository;
 import com.x.provider.cms.repository.VideoDocumentRepository;
 import com.x.provider.cms.service.SearchService;
-import com.x.util.ChineseCharToEn;
+import com.x.util.ChineseCharToEnUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.search.sort.SortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.data.domain.Page;
@@ -219,7 +218,7 @@ public class SearchServiceImpl implements SearchService {
         Map<Long, SecurityDTO> securityMap = financeRpcService.listSecurity(ListSecurityAO.builder().ids(new ArrayList<>(securityIdList)).build()).stream().collect(Collectors.toMap(SecurityDTO::getId, item -> item));
         topicDocumentList.forEach(item -> {
             try {
-                item.setTitleCnSpell(ChineseCharToEn.getAllFirstLetter(item.getTitle()));
+                item.setTitleCnSpell(ChineseCharToEnUtils.getAllFirstLetter(item.getTitle()));
             } catch (UnsupportedEncodingException e) {
                 log.error("get first letter error, id:{} title:{}", item.getId(), item.getTitle());
             }

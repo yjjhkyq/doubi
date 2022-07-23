@@ -6,13 +6,12 @@ import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.controller.BaseRpcController;
 import com.x.provider.api.customer.enums.CustomerOptions;
-import com.x.provider.api.customer.enums.CustomerRelationEnum;
 import com.x.provider.api.customer.model.ao.IncCustomerStatAO;
 import com.x.provider.api.customer.model.ao.ListCustomerAO;
 import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
 import com.x.provider.api.customer.model.dto.*;
 import com.x.provider.api.customer.service.CustomerRpcService;
-import com.x.provider.api.oss.enums.SuggestionTypeEnum;
+import com.x.core.domain.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
 import com.x.provider.api.oss.service.OssRpcService;
 import com.x.provider.customer.configure.ApplicationConfig;
@@ -80,8 +79,11 @@ public class CustomerRpcController extends BaseRpcController implements Customer
     @Override
     public R<Long> authorize(@RequestParam("token") String token, @RequestParam("path") String path){
         logger.info("authorize, token:{} path:{}", token, path);
+        if (path.startsWith(Constants.WS_URL_PREFIX)){
+            return R.ok(0L);
+        }
         long customerId = StringUtils.hasText(token) ? authenticationService.getAuthenticatedCustomerId(token) : 0;
-        if (path.startsWith(Constants.FRONT_END_URL_PREFIX)){
+        if (path.startsWith(Constants.APP_URL_PREFIX)){
             return R.ok(customerId);
         }
         if (applicationConfig.getAuthIgnoreUrls().stream().anyMatch(item -> item.startsWith(path) || path.endsWith(item))){
@@ -92,7 +94,7 @@ public class CustomerRpcController extends BaseRpcController implements Customer
             ApiAssetUtil.isTrue(roles.stream().allMatch(item -> item.getSystemName().equals(SystemRoleNameEnum.ADMINISTRATORS.toString())));
         }
 
-        if (path.startsWith(Constants.FRONT_END_URL_PREFIX)){
+        if (path.startsWith(Constants.APP_URL_PREFIX)){
             ApiAssetUtil.isTrue(roles.stream().allMatch(item -> item.getSystemName().equals(SystemRoleNameEnum.REGISTERED.toString())));
         }
         return R.ok(customerId);

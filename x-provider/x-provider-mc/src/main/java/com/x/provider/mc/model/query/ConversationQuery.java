@@ -1,9 +1,7 @@
 package com.x.provider.mc.model.query;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.x.core.domain.BaseEntity;
-import lombok.*;
+import lombok.Builder;
+import lombok.Data;
 
 @Data
 @Builder

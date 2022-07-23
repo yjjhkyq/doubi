@@ -1,7 +1,5 @@
 package com.x.core.domain;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.io.Serializable;

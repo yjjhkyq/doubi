@@ -14,7 +14,7 @@ public class ConversationDTO {
     private Long customerId;
     private Long groupId;
     private Long ownerCustomerId;
-    private String alertMsg;
+    private String alertMessage;
     private Integer conversationType;
     private Long unreadCount;
     private Long displayOrder;

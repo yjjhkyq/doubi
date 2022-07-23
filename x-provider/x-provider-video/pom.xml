@@ -88,10 +88,6 @@
         </dependency>
         <dependency>
             <groupId>com.x</groupId>
-            <artifactId>x-provider-api-vod</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.x</groupId>
             <artifactId>x-provider-api-statistic</artifactId>
         </dependency>
         <dependency>

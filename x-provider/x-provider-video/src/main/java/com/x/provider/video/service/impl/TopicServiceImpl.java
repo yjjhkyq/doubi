@@ -25,7 +25,7 @@ import com.x.provider.video.model.domain.Topic;
 import com.x.provider.video.model.domain.TopicCustomerFavorite;
 import com.x.provider.video.service.TopicFillBaseService;
 import com.x.provider.video.service.TopicService;
-import com.x.util.ChineseCharToEn;
+import com.x.util.ChineseCharToEnUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -271,7 +271,7 @@ public class TopicServiceImpl implements TopicService {
 
     private String getFirstLetter(String source){
         try {
-            return ChineseCharToEn.getAllFirstLetter(source);
+            return ChineseCharToEnUtils.getAllFirstLetter(source);
         }
         catch (UnsupportedEncodingException e){
             log.error(e.getMessage(), e);

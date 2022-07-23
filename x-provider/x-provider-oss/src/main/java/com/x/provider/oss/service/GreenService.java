@@ -1,7 +1,7 @@
 package com.x.provider.oss.service;
 
 
-import com.x.provider.api.oss.enums.SuggestionTypeEnum;
+import com.x.core.domain.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
 import com.x.provider.api.oss.model.ao.GreenRpcAO;
 import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;

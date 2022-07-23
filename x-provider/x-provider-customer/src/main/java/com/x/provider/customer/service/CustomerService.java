@@ -1,9 +1,8 @@
 package com.x.provider.customer.service;
 
-import com.x.provider.api.customer.enums.CustomerRelationEnum;
 import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
-import com.x.provider.api.oss.enums.SuggestionTypeEnum;
+import com.x.core.domain.SuggestionTypeEnum;
 import com.x.provider.customer.enums.SystemCustomerAttributeName;
 import com.x.provider.customer.model.ao.*;
 import com.x.provider.customer.model.domain.Customer;

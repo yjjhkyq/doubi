@@ -10,7 +10,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
-@TableName("group")
+@TableName("message_group")
 public class Group extends BaseEntity {
     @TableId
     private Long id;

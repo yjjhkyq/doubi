@@ -1,33 +1,31 @@
 package com.x.provider.mc.service.impl;
 
-import cn.hutool.core.util.StrUtil;
-import com.x.core.utils.CompareUtils;
 import com.x.core.utils.JsonUtil;
+import com.x.core.utils.SpringUtils;
 import com.x.provider.api.mc.enums.ConversationType;
 import com.x.provider.api.mc.model.ao.SendMessageRawAO;
-import com.x.provider.mc.model.domain.Message;
+import com.x.provider.mc.model.dto.ConnectInfoDTO;
 import com.x.provider.mc.model.dto.ConversationDTO;
 import com.x.provider.mc.model.dto.MessageDTO;
-import com.x.provider.mc.service.CentrifugoEngineService;
 import com.x.provider.mc.service.MessageEngineService;
+import com.x.provider.mc.service.WebSocketEngineService;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 @Service
 public class MessageEngineServiceImpl implements MessageEngineService {
 
+    private static final Integer TOKEN_LIVE_DAYS = 2;
     private static final String CHANNEL_FORMATTER = "{}_{}";
 
-    private final CentrifugoEngineService centrifugoEngineService;
-
-    public MessageEngineServiceImpl(CentrifugoEngineService imEngineService){
-        this.centrifugoEngineService = imEngineService;
-    }
+    private final Map<Integer, WebSocketEngineService> WEB_SOCKET_ENGINE_MAP = SpringUtils.getBanListOfType(WebSocketEngineService.class).stream()
+            .collect(Collectors.toMap(item -> item.getWebSocketEngineType(), item -> item));
 
     @Override
     public void sendMessage(ConversationDTO conversation, MessageDTO message) {
@@ -48,29 +46,25 @@ public class MessageEngineServiceImpl implements MessageEngineService {
         msg.put("messageClass", sendMessageRawAO.getMessageClass());
         msg.put("messageType", sendMessageRawAO.getMessageType());
         msg.put("jsonData", sendMessageRawAO.getJsonData());
-        this.centrifugoEngineService.publish(getChannelName(sendMessageRawAO.getToCustomerId(), sendMessageRawAO.getToGroupId()), msg);
+        WEB_SOCKET_ENGINE_MAP.values().forEach(item -> {
+            item.sendMessage(sendMessageRawAO.getToCustomerId(), sendMessageRawAO.getToGroupId(), JsonUtil.toJSONString(msg));
+        });
+
     }
 
     @Override
-    public String authenticationToken(Long customerId) {
-        return centrifugoEngineService.authenticationToken(customerId.toString(), 0);
+    public List<ConnectInfoDTO> listConnectionInfo(Long customerId) {
+        List<ConnectInfoDTO> result = new ArrayList<>();
+        Long tokenExpireTime = System.currentTimeMillis() + Duration.ofDays(TOKEN_LIVE_DAYS).getSeconds() * 1000;
+        WEB_SOCKET_ENGINE_MAP.values().forEach(item -> {
+            ConnectInfoDTO connectInfoDTO = new ConnectInfoDTO();
+            connectInfoDTO.setAuthenticationToken(item.authenticationToken(customerId.toString(), tokenExpireTime));
+            connectInfoDTO.setWebSocketEngineType(item.getWebSocketEngineType());
+            connectInfoDTO.setWebSocketUrl(item.getWebSocketUrl());
+            connectInfoDTO.setSubscribeChannelList(List.of(item.getChannelName(customerId.toString(), ConversationType.C2C.getValue())));
+            result.add(connectInfoDTO);
+        });
+        return result;
     }
 
-    @Override
-    public String getWebSocketUrl() {
-        return centrifugoEngineService.getWebSocketUrl();
-    }
-
-    @Override
-    public String getChannelName(String targetId, Integer conversationType){
-        return StrUtil.format("{}_{}", ConversationType.valueOf(conversationType).name(), targetId);
-    }
-
-    @Override
-    public String getChannelName(Long customerId, Long groupId) {
-        if (CompareUtils.gtZero(customerId)){
-            return getChannelName(customerId.toString(), ConversationType.C2C.getValue());
-        }
-        return getChannelName(groupId.toString(), ConversationType.GROUP.getValue());
-    }
 }

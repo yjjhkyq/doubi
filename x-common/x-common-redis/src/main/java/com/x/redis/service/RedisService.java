@@ -1,11 +1,10 @@
 package com.x.redis.service;
 
+import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.json.JSONUtil;
 import com.x.redis.domain.LongTypeTuple;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.HashOperations;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.data.redis.core.*;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -23,8 +22,9 @@ import java.util.stream.Collectors;
 @SuppressWarnings(value = { "unchecked", "rawtypes" })
 @Component
 public class RedisService {
+
     @Autowired
-    public RedisTemplate redisTemplate;
+    public StringRedisTemplate redisTemplate;
 
     /**
      * 缓存基本的对象，Integer、String、实体类等
@@ -33,7 +33,7 @@ public class RedisService {
      * @param value 缓存的值
      */
     public <T> void setCacheObject(final String key, final T value) {
-        redisTemplate.opsForValue().set(key, value, Duration.ofDays(2));
+        redisTemplate.opsForValue().set(key, toJsonStr(value), Duration.ofDays(2));
     }
 
     /**
@@ -43,7 +43,7 @@ public class RedisService {
      * @param value 缓存的值
      */
     public <T> void setCacheObjectIfAbsent(final String key, final T value) {
-        redisTemplate.opsForValue().setIfAbsent(key, value, Duration.ofDays(2));
+        redisTemplate.opsForValue().setIfAbsent(key, toJsonStr(value), Duration.ofDays(2));
     }
 
     /**
@@ -55,7 +55,7 @@ public class RedisService {
      * @param timeUnit 时间颗粒度
      */
     public <T> void setCacheObject(final String key, final T value, final Long timeout, final TimeUnit timeUnit) {
-        redisTemplate.opsForValue().set(key, value, timeout, timeUnit);
+        redisTemplate.opsForValue().set(key, toJsonStr(value), timeout, timeUnit);
     }
 
     /**
@@ -66,7 +66,7 @@ public class RedisService {
      * @param timeout 时间颗粒度
      */
     public <T> void setCacheObject(final String key, final T value, Duration timeout) {
-        redisTemplate.opsForValue().set(key, value, timeout);
+        redisTemplate.opsForValue().set(key, toJsonStr(value), timeout);
     }
 
     /**
@@ -129,14 +129,23 @@ public class RedisService {
      * @param key 缓存键值
      * @return 缓存键值对应的数据
      */
-    public <T> T getCacheObject(final String key) {
-        ValueOperations<String, T> operation = redisTemplate.opsForValue();
-        return operation.get(key);
+    public <T> T getCacheObject(final String key, Class<T> cls) {
+        ValueOperations<String, String> operation = redisTemplate.opsForValue();
+        String jsonObject = operation.get(key);
+        if (jsonObject == null){
+            return null;
+        }
+        return toBean(jsonObject, cls);
     }
 
-    public <T> List<T> listCacheObject(final List<String> keys){
-        ValueOperations<String, T> operation = redisTemplate.opsForValue();
-        return operation.multiGet(keys).stream().filter(item -> item != null).collect(Collectors.toList());
+    public <T> List<T> listCacheObject(final List<String> keys, Class<T> cls){
+        ValueOperations<String, String> operation = redisTemplate.opsForValue();
+        List<String> strResult = operation.multiGet(keys).stream().filter(item -> item != null).collect(Collectors.toList());
+        List<T> result = new ArrayList<>(strResult.size());
+        strResult.forEach(item -> {
+            result.add(toBean(item, cls));
+        });
+        return result;
     }
 
     /**
@@ -145,15 +154,12 @@ public class RedisService {
      * @param key 缓存键值
      * @return 缓存键值对应的数据
      */
-    public <T> Optional<T> getOptionalCacheObject(final String key) {
-        ValueOperations<String, T> operation = redisTemplate.opsForValue();
-        return Optional.ofNullable(operation.get(key));
+    public <T> Optional<T> getOptionalCacheObject(final String key, Class<T> cls) {
+        return Optional.ofNullable(getCacheObject(key, cls));
     }
 
     public Long getLongCacheObject(final String key) {
-        ValueOperations<String, Integer> operation = redisTemplate.opsForValue();
-        Integer value = operation.get(key);
-        return value != null ? value.longValue() : null;
+        return getCacheObject(key, Long.class);
     }
     /**
      * 获得缓存的基本对象。
@@ -161,9 +167,8 @@ public class RedisService {
      * @param key 缓存键值
      * @return 缓存键值对应的数据
      */
-    public <T> T getCacheObject(final String key, Supplier<T> supplier) {
-        ValueOperations<String, T> operation = redisTemplate.opsForValue();
-        T result = operation.get(key);
+    public <T> T getCacheObject(final String key, Supplier<T> supplier, Class<T> cls) {
+        T result = getCacheObject(key, cls);
         if (result == null) {
             result = supplier.get();
             if (result != null) {
@@ -199,8 +204,12 @@ public class RedisService {
      * @param dataList 待缓存的List数据
      * @return 缓存的对象
      */
-    public <T> long setCacheList(final String key, final List<T> dataList) {
-        Long count = redisTemplate.opsForList().rightPushAll(key, dataList);
+    public <T> long setCacheList(final String key, final List<T> dataList, Class<T> cls) {
+        List<String> dataStrList = new ArrayList<>(dataList.size());
+        dataList.stream().forEach(item -> {
+            dataStrList.add(toJsonStr(item));
+        });
+        Long count = redisTemplate.opsForList().rightPushAll(key, dataStrList);
         return count == null ? 0 : count;
     }
 
@@ -210,8 +219,16 @@ public class RedisService {
      * @param key 缓存的键值
      * @return 缓存键值对应的数据
      */
-    public <T> List<T> getCacheList(final String key) {
-        return redisTemplate.opsForList().range(key, 0, -1);
+    public <T> List<T> getCacheList(final String key, Class<T> cls) {
+        List<String>  strResult = redisTemplate.opsForList().range(key, 0, -1);
+        if (CollectionUtil.isEmpty(strResult)){
+            return new ArrayList<>();
+        }
+        List<T> result = new ArrayList<>(strResult.size());
+        strResult.forEach(item -> {
+            result.add(toBean(item, cls));
+        });
+        return result;
     }
 
     /**
@@ -222,7 +239,12 @@ public class RedisService {
      * @return 缓存数据的对象
      */
     public <T> long setCacheSet(final String key, final Set<T> dataSet) {
-        Long count = redisTemplate.opsForSet().add(key, dataSet);
+        String[] strSet = new String[dataSet.size()];
+        int index = 0;
+        for (T item : dataSet){
+            strSet[index++] = toJsonStr(item);
+        }
+        Long count = redisTemplate.opsForSet().add(key, strSet);
         return count == null ? 0 : count;
     }
 
@@ -232,8 +254,12 @@ public class RedisService {
      * @param key
      * @return
      */
-    public <T> Set<T> getCacheSet(final String key) {
-        return redisTemplate.opsForSet().members(key);
+    public <T> Set<T> getCacheSet(final String key, Class<T> cls) {
+        Set<String> strSet = redisTemplate.opsForSet().members(key);
+        if (CollectionUtil.isEmpty(strSet)){
+            return new LinkedHashSet<>();
+        }
+        return strSet.stream().map(item ->toBean(item, cls)).collect(Collectors.toSet());
     }
 
     /**
@@ -254,8 +280,12 @@ public class RedisService {
      * @param key
      * @return
      */
-    public <T> Map<String, T> getCacheMap(final String key) {
-        return redisTemplate.opsForHash().entries(key);
+    public <T> Map<String, T> getCacheMap(final String key, Class<T> cls) {
+        Map<Object, Object> strMap = redisTemplate.opsForHash().entries(key);
+        if (CollectionUtil.isEmpty(strMap)){
+            return new HashMap<>();
+        }
+        return strMap.entrySet().stream().collect(Collectors.toMap(item -> String.valueOf(item.getKey()), item -> toBean(String.valueOf(item.getValue()), cls)));
     }
 
     /**
@@ -264,8 +294,8 @@ public class RedisService {
      * @param key
      * @return
      */
-    public <T> Optional<Map<String, T>>getCacheMapOptional(final String key) {
-        return Optional.ofNullable(redisTemplate.opsForHash().entries(key));
+    public <T> Optional<Map<String, T>>getCacheMapOptional(final String key,  Class<T> cls) {
+        return Optional.ofNullable(getCacheMap(key, cls));
     }
 
     /**
@@ -321,8 +351,12 @@ public class RedisService {
      * @param hKeys Hash键集合
      * @return Hash对象集合
      */
-    public <T> List<T> getMultiCacheMapValue(final String key, final Collection<Object> hKeys) {
-        return redisTemplate.opsForHash().multiGet(key, hKeys);
+    public <T> List<T> getMultiCacheMapValue(final String key, final Collection<Object> hKeys, Class<T> cls) {
+        List<Object> strResult = redisTemplate.opsForHash().multiGet(key, hKeys);
+        if (CollectionUtil.isEmpty(strResult)){
+            return new ArrayList<>();
+        }
+        return strResult.stream().map(item -> toBean(String.valueOf(item), cls)).collect(Collectors.toList());
     }
 
     /**
@@ -346,11 +380,15 @@ public class RedisService {
     }
 
     public <T> Boolean zadd(final String key, T value, double score) {
-        return redisTemplate.opsForZSet().add(key, value, score);
+        return redisTemplate.opsForZSet().add(key, toJsonStr(value), score);
     }
 
     public Long zadd(final String key, Set<LongTypeTuple> values) {
-        return redisTemplate.opsForZSet().add(key, values);
+        Set<ZSetOperations.TypedTuple<String>> strSet = new LinkedHashSet<>(values.size());
+        values.forEach(item -> {
+            strSet.add(new DefaultTypedTuple<String>(item.getValue().toString(), item.getScore()));
+        });
+        return redisTemplate.opsForZSet().add(key, strSet);
     }
 
     public <T> Long zremove(final String key, T value) {
@@ -361,43 +399,63 @@ public class RedisService {
         return redisTemplate.opsForZSet().size(key);
     }
 
-    public <T> Set<T> reverseRange(final String key, long page, long limit) {
-        return redisTemplate.opsForZSet().reverseRange(key, (page - 1) * limit, (page - 1) * limit + limit);
+    public <T> Set<T> reverseRange(final String key, long page, long limit, Class<T> cls) {
+        Set<String> strSet = redisTemplate.opsForZSet().reverseRange(key, (page - 1) * limit, (page - 1) * limit + limit);
+        if (CollectionUtil.isEmpty(strSet)){
+            return new LinkedHashSet<>();
+        }
+        return strSet.stream().map(item -> toBean(item, cls)).collect(Collectors.toSet());
     }
 
-    public <T> Set<T> reverseRangeByCursor(final String key, long cursor, long limit) {
-        return redisTemplate.opsForZSet().reverseRange(key, cursor, cursor + limit);
+    public <T> Set<T> reverseRangeByCursor(final String key, long cursor, long limit, Class<T> cls) {
+        Set<String> strSet = redisTemplate.opsForZSet().reverseRange(key, cursor, cursor + limit);
+        if(CollectionUtil.isEmpty(strSet)){
+            return new LinkedHashSet<>();
+        }
+        return strSet.stream().map(item -> toBean(item, cls)).collect(Collectors.toSet());
     }
 
-    public <T> Set<T> rangeByScore(final String key, long startScore, long count){
-        return redisTemplate.opsForZSet().rangeByScore(key, startScore, Long.MAX_VALUE, 0, count);
+    public <T> Set<T> rangeByScore(final String key, long startScore, long count, Class<T> cls){
+        Set<String> strSet = redisTemplate.opsForZSet().rangeByScore(key, startScore, Long.MAX_VALUE, 0, count);
+        if (CollectionUtil.isEmpty(strSet)){
+            return new LinkedHashSet<>();
+        }
+        return strSet.stream().map(item -> toBean(item, cls)).collect(Collectors.toSet());
     }
 
-    public <T> Set<ZSetOperations.TypedTuple<T>> reverseRangeByScore(final String key, double startScore, double endScore, long start, long count){
-        return redisTemplate.opsForZSet().reverseRangeByScoreWithScores(key, startScore, endScore, start, count);
+    public <T> Set<ZSetOperations.TypedTuple<T>> reverseRangeByScore(final String key, double startScore, double endScore, long start, long count, Class<T> cls){
+        Set<ZSetOperations.TypedTuple<String>> strSet = redisTemplate.opsForZSet().reverseRangeByScoreWithScores(key, startScore, endScore, start, count);
+        if (CollectionUtil.isEmpty(strSet)){
+            return new LinkedHashSet<>();
+        }
+        return strSet.stream().map(item -> new DefaultTypedTuple<T>(toBean(item.getValue(), cls), item.getScore())).collect(Collectors.toSet());
     }
 
-    public <T> Set<ZSetOperations.TypedTuple<T>> reverseRangeByScore(final String key, double cursor, long count){
+    public <T> Set<ZSetOperations.TypedTuple<T>> reverseRangeByScore(final String key, double cursor, long count, Class<T> cls){
         if (cursor == 0){
             cursor = Long.MAX_VALUE;
         }
-        return redisTemplate.opsForZSet().reverseRangeByScoreWithScores(key, 0, cursor, 0, count);
+        Set<ZSetOperations.TypedTuple<String>> strSet = redisTemplate.opsForZSet().reverseRangeByScoreWithScores(key, 0, cursor, 0, count);
+        if (CollectionUtil.isEmpty(strSet)){
+            return new LinkedHashSet<>();
+        }
+        return strSet.stream().map(item -> new DefaultTypedTuple<T>(toBean(item.getValue(), cls), item.getScore())).collect(Collectors.toSet());
     }
 
     public  Set<LongTypeTuple> reverseRangeByScoreLong(final String key, double cursor, long count){
         if (cursor == 0){
             cursor = Long.MAX_VALUE;
         }
-        Set<ZSetOperations.TypedTuple<Integer>> values = reverseRangeByScore(key, cursor, count);
+        Set<ZSetOperations.TypedTuple<Long>> values = reverseRangeByScore(key, cursor, count, Long.class);
         Set<LongTypeTuple> result = new LinkedHashSet<>(values.size());
         values.forEach(item -> {
-            result.add(new LongTypeTuple(Long.valueOf(item.getValue().toString()), item.getScore()));
+            result.add(new LongTypeTuple(item.getValue(), item.getScore()));
         });
         return result;
     }
 
     public Set<Long> rangeByScoreLong(final String key, long startScore, long count){
-        Set<Integer> values = rangeByScore(key, startScore, count);
+        Set<Integer> values = rangeByScore(key, startScore, count, Integer.class);
         Set<Long> result = new LinkedHashSet<>(values.size());
         values.stream().forEach(item -> {
             result.add(item.longValue());
@@ -406,20 +464,27 @@ public class RedisService {
     }
 
     public Set<Long> reverseRangeLong(final String key, long page, long limit) {
-        Set<Integer> values =  redisTemplate.opsForZSet().reverseRange(key, (page - 1) * limit, (page - 1) * limit + limit);
+        Set<String> values =  redisTemplate.opsForZSet().reverseRange(key, (page - 1) * limit, (page - 1) * limit + limit);
+        if (CollectionUtil.isEmpty(values)){
+            return new LinkedHashSet<>();
+        }
         Set<Long> result = new LinkedHashSet<>(values.size());
         values.stream().forEach(item -> {
-            result.add(item.longValue());
+            result.add(toBean(item, Long.class));
         });
         return result;
     }
 
-    public <T> Set<T> range(final String key){
-        return redisTemplate.opsForZSet().range(key, 0, -1);
+    public <T> Set<T> range(final String key, Class<T> cls){
+        Set<String> strSet = redisTemplate.opsForZSet().range(key, 0, -1);
+        if (CollectionUtil.isEmpty(strSet)){
+            return new LinkedHashSet<>();
+        }
+        return strSet.stream().map(item -> toBean(item, cls)).collect(Collectors.toSet());
     }
 
     public Set<Long> rangeLong(final String key){
-        Set<Integer> values = range(key);
+        Set<Long> values = range(key, Long.class);
         Set<Long> result = new LinkedHashSet<>(values.size());
         values.stream().forEach(item -> {
             result.add(item.longValue());
@@ -452,7 +517,7 @@ public class RedisService {
         if (operation.setIfAbsent(key, value, Duration.ofMillis(200))) {
             return true;
         }
-        String currentValue = getCacheObject(key);
+        String currentValue = getCacheObject(key, String.class);
         if (value.equals(currentValue)) {
             //获取上一个锁的时间 如果高并发的情况可能会出现已经被修改的问题  所以多一次判断保证线程的安全
             String oldValue = operation.getAndSet(key, value);
@@ -477,14 +542,38 @@ public class RedisService {
         }
     }
 
-    public Set<Long> dynamicPage(String key,  long timeout, TimeUnit unit, long cursor, int pageSize, Supplier<Set<ZSetOperations.TypedTuple>> initSupplier){
+    public Set<Long> dynamicPage(String key,  long timeout, TimeUnit unit, long cursor, int pageSize, Supplier<Set<ZSetOperations.TypedTuple<Long>>> initSupplier){
         if (cursor == 1){
-            Set<ZSetOperations.TypedTuple> initData = initSupplier.get();
+            Set<ZSetOperations.TypedTuple<Long>> initData = initSupplier.get();
             if (!initData.isEmpty()){
-                redisTemplate.opsForZSet().add(key, initData);
+                redisTemplate.opsForZSet().add(key, initData.stream().map(item -> new DefaultTypedTuple<String>(toJsonStr(item), item.getScore())).collect(Collectors.toSet()));
             }
             redisTemplate.expire(key, timeout, unit);
         }
         return reverseRangeLong(key, cursor, pageSize);
+    }
+
+    public void convertAndSend(String channel, String message){
+        redisTemplate.convertAndSend(channel, message);
+    }
+
+    private <T> T toBean(String src, Class<T> cls){
+        if (cls.equals(Long.class)){
+            return (T) Long.valueOf(src);
+        }
+        if (cls.equals(Integer.class)){
+            return (T) Integer.valueOf(src);
+        }
+        if (cls.equals(Double.class)){
+            return (T) Double.valueOf(src);
+        }
+        return JSONUtil.toBean(src, cls);
+    }
+
+    private <T> String toJsonStr(T t){
+        if (t instanceof Number){
+            return t.toString();
+        }
+        return JSONUtil.toJsonStr(t);
     }
 }

@@ -1,5 +1,6 @@
 package com.x.provider.mc.model.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
@@ -18,9 +19,11 @@ public class MessageVO {
     @ApiModelProperty(value = "消息id")
     private Long id;
     @ApiModelProperty(value = "消息发送人用户id")
-    private Long senderUid;
-    @ApiModelProperty(value = "消息接收目标id")
-    private Long targetId;
+    private Long fromCustomerId;
+    @ApiModelProperty(value = "消息接收人用户id")
+    private Long toCustomerId = 0L;
+    @ApiModelProperty(value = "消息接收群组id")
+    private Long toGroupId = 0L;
     @ApiModelProperty(value = "消息类型")
     private String messageType;
     @ApiModelProperty(value = "提示信息")
@@ -28,5 +31,12 @@ public class MessageVO {
     @ApiModelProperty(value = "消息体")
     private String msgBody;
     @ApiModelProperty(value = "消息创建日期")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createdOnUtc;
+    @ApiModelProperty(value = "消息创建日期, 毫秒")
+    private Long createdTimestamp;
+    @ApiModelProperty(value = "消息发送人头像")
+    private String fromCustomerAvatarUrl;
+    @ApiModelProperty(value = "消息发送人昵称")
+    private String fromCustomerNickName;
 }

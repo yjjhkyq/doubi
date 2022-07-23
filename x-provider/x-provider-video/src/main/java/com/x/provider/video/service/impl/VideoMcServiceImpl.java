@@ -8,13 +8,13 @@ import com.x.provider.api.general.enums.CommentItemTypeEnum;
 import com.x.provider.api.general.enums.StarItemTypeEnum;
 import com.x.provider.api.general.model.event.CommentEvent;
 import com.x.provider.api.general.model.event.StarEvent;
-import com.x.provider.api.mc.model.protocol.VideoCommentInteractMsgBody;
-import com.x.provider.api.mc.model.protocol.VideoCommentStarInteractMsgBody;
-import com.x.provider.api.mc.model.protocol.VideoStarInteractMsgBody;
+import com.x.provider.api.mc.model.protocol.ProductCommentInteractMsgBody;
+import com.x.provider.api.mc.model.protocol.ProductCommentStarInteractMsgBody;
+import com.x.provider.api.mc.model.protocol.ProductStarInteractMsgBody;
 import com.x.provider.api.mc.service.McHelper;
 import com.x.provider.api.mc.service.MessageRpcService;
+import com.x.provider.api.oss.service.VodRpcService;
 import com.x.provider.api.video.model.event.VideoChangedEvent;
-import com.x.provider.api.vod.service.VodRpcService;
 import com.x.provider.video.model.domain.Video;
 import com.x.provider.video.service.VideoMcService;
 import com.x.provider.video.service.VideoService;
@@ -28,15 +28,15 @@ import java.util.Optional;
 @Service
 public class VideoMcServiceImpl implements VideoMcService {
 
-    private final MessageRpcService notifyRpcService;
+    private final MessageRpcService messageRpcService;
     private final CustomerRpcService customerRpcService;
     private final VideoService videoService;
     private final VodRpcService vodRpcService;
-    public VideoMcServiceImpl(MessageRpcService notifyRpcService,
+    public VideoMcServiceImpl(MessageRpcService messageRpcService,
                               CustomerRpcService customerRpcService,
                               VideoService videoService,
                               VodRpcService vodRpcService){
-        this.notifyRpcService = notifyRpcService;
+        this.messageRpcService = messageRpcService;
         this.customerRpcService = customerRpcService;
         this.videoService = videoService;
         this.vodRpcService = vodRpcService;
@@ -46,7 +46,7 @@ public class VideoMcServiceImpl implements VideoMcService {
     public void onVideoChanged(VideoChangedEvent videoChangedEvent) {
         if (VideoChangedEvent.EventTypeEnum.VIDEO_PUBLISHED.getValue().equals(videoChangedEvent.getEventType())
                 || VideoChangedEvent.EventTypeEnum.VIDEO_GREEN_BLOCKED.getValue().equals(videoChangedEvent.getEventType())) {
-            notifyRpcService.sendMessage(McHelper.buildVideoGreenNotify(videoChangedEvent.getCustomerId(), videoChangedEvent.getTitle(), videoChangedEvent.getCreatedOnUtc(),
+            messageRpcService.sendMessage(McHelper.buildProductGreenNotify(videoChangedEvent.getCustomerId(), videoChangedEvent.getTitle(), videoChangedEvent.getCreatedOnUtc(),
                     VideoChangedEvent.EventTypeEnum.VIDEO_PUBLISHED.getValue().equals(videoChangedEvent.getEventType())));
             return;
         }
@@ -71,22 +71,22 @@ public class VideoMcServiceImpl implements VideoMcService {
         CustomerDTO customer = customerRpcService.getCustomer(starEvent.getStarCustomerId(), Arrays.asList(CustomerOptions.CUSTOMER_ATTRIBUTE.name())).getData();
 
         if (starEvent.getItemType().equals(StarItemTypeEnum.VIDEO.getValue())){
-            VideoStarInteractMsgBody starInteractMsgBody = new VideoStarInteractMsgBody();
+            ProductStarInteractMsgBody starInteractMsgBody = new ProductStarInteractMsgBody();
             starInteractMsgBody.setFromUid(customer.getId());
             starInteractMsgBody.setFromNickName(customer.getCustomerAttribute().getNickName());
             starInteractMsgBody.setFromAvatarUrl(customer.getCustomerAttribute().getAvatarUrl());
             starInteractMsgBody.setInteractiveTargetId(video.get().getId());
             starInteractMsgBody.setInteractiveIcon(vodRpcService.getMediaInfo(video.get().getFileId()).getData().getCoverUrl());
-            notifyRpcService.sendMessage(McHelper.buildVideoStarInteractMsg(video.get().getCustomerId(), starInteractMsgBody));
+            messageRpcService.sendMessage(McHelper.buildProductStarInteractMsg(video.get().getCustomerId(), starInteractMsgBody));
         }
         else{
-            VideoCommentStarInteractMsgBody starInteractMsgBody = new VideoCommentStarInteractMsgBody();
+            ProductCommentStarInteractMsgBody starInteractMsgBody = new ProductCommentStarInteractMsgBody();
             starInteractMsgBody.setFromUid(customer.getId());
             starInteractMsgBody.setFromNickName(customer.getCustomerAttribute().getNickName());
             starInteractMsgBody.setFromAvatarUrl(customer.getCustomerAttribute().getAvatarUrl());
             starInteractMsgBody.setInteractiveTargetId(video.get().getId());
             starInteractMsgBody.setInteractiveIcon(vodRpcService.getMediaInfo(video.get().getFileId()).getData().getCoverUrl());
-            notifyRpcService.sendMessage(McHelper.buildVideoCommentStarInteractMsg(video.get().getCustomerId(), starInteractMsgBody));
+            messageRpcService.sendMessage(McHelper.buildProductCommentStarInteractMsg(video.get().getCustomerId(), starInteractMsgBody));
         }
     }
 
@@ -100,7 +100,7 @@ public class VideoMcServiceImpl implements VideoMcService {
             return;
         }
         CustomerDTO customer = customerRpcService.getCustomer(commentEvent.getCommentCustomerId(), Arrays.asList(CustomerOptions.CUSTOMER_ATTRIBUTE.name())).getData();
-        VideoCommentInteractMsgBody interactMsgBody = new VideoCommentInteractMsgBody();
+        ProductCommentInteractMsgBody interactMsgBody = new ProductCommentInteractMsgBody();
         interactMsgBody.setFromUid(customer.getId());
         interactMsgBody.setFromNickName(customer.getCustomerAttribute().getNickName());
         interactMsgBody.setFromAvatarUrl(customer.getCustomerAttribute().getAvatarUrl());
@@ -109,6 +109,6 @@ public class VideoMcServiceImpl implements VideoMcService {
         interactMsgBody.setCommentContent(commentEvent.getContent());
         interactMsgBody.setCommentId(commentEvent.getId());
         interactMsgBody.setReply(commentEvent.getParentCommentId() > 0);
-        notifyRpcService.sendMessage(McHelper.buildVideoCommentInteractMsg(video.get().getCustomerId(), interactMsgBody));
+        messageRpcService.sendMessage(McHelper.buildProductCommentInteractMsg(video.get().getCustomerId(), interactMsgBody));
     }
 }

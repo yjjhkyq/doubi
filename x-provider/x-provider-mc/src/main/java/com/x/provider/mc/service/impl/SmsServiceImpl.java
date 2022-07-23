@@ -49,7 +49,7 @@ public class SmsServiceImpl implements SmsService {
     @Override
     public void validateVerificationCode(String phoneNumber, String sms) {
         SmsTemplateEnum templateId = SmsTemplateEnum.VERIFICATION_CODE;
-        String actualSms = redisService.getCacheObject(redisKeyService.getSmsKey(phoneNumber, templateId.name()));
+        String actualSms = redisService.getCacheObject(redisKeyService.getSmsKey(phoneNumber, templateId.name()), String.class);
         ApiAssetUtil.isTrue(sms.equals(actualSms),  McErrorEnum.VERIFICATION_CODE_ERROR);
         redisService.deleteObject(redisKeyService.getSmsKey(phoneNumber, templateId.name()));
     }

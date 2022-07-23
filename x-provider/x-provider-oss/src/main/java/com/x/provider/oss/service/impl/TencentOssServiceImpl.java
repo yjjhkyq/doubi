@@ -3,7 +3,7 @@ package com.x.provider.oss.service.impl;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.x.provider.oss.configure.TencentOssConfig;
-import com.x.provider.oss.model.vo.TencentOssCredentialVO;
+import com.x.provider.oss.model.vo.oss.TencentOssCredentialVO;
 import com.x.provider.oss.service.OssService;
 import com.x.provider.oss.service.RedisKeyService;
 import com.x.provider.oss.service.TencentOssService;
@@ -50,7 +50,7 @@ public class TencentOssServiceImpl implements TencentOssService {
     public TencentOssCredentialVO getTencentOssUploadCredentia(long customerId, String extName){
         String fileName = StrUtil.format("{}.{}", IdUtil.simpleUUID(), extName);
         String objectKey = OssService.getObjectKey(customerId, fileName);
-        TencentOssCredentialVO result = getCredential(tencentOssConfig.getBucketCustomer(), TencentOssConfig.AP_CHENGDU, objectKey);
+        TencentOssCredentialVO result = getCredential(tencentOssConfig.getOssBucketCustomer(), TencentOssConfig.AP_CHENGDU, objectKey);
         result.setFileName(fileName);
         return result;
     }
@@ -83,7 +83,7 @@ public class TencentOssServiceImpl implements TencentOssService {
     }
 
     private COSClient getCosClient(){
-        COSCredentials cred = new BasicCOSCredentials(tencentOssConfig.getSecretId(), tencentOssConfig.getSecretKey());
+        COSCredentials cred = new BasicCOSCredentials(tencentOssConfig.getAppSecretId(), tencentOssConfig.getAppSecretKey());
         // 2 设置 bucket 区域,详情请参阅 COS 地域 https://cloud.tencent.com/document/product/436/6224
         ClientConfig clientConfig = new ClientConfig(new Region(TencentOssConfig.AP_CHENGDU));
         // 3 生成 cos 客户端
@@ -95,9 +95,9 @@ public class TencentOssServiceImpl implements TencentOssService {
         TreeMap<String, Object> config = new TreeMap<>();
         try {
             // 替换为您的 SecretId
-            config.put("SecretId", tencentOssConfig.getSecretId());
+            config.put("SecretId", tencentOssConfig.getAppSecretId());
             // 替换为您的 SecretKey
-            config.put("SecretKey", tencentOssConfig.getSecretKey());
+            config.put("SecretKey", tencentOssConfig.getAppSecretKey());
 
             // 临时密钥有效时长，单位是秒，默认1800秒，目前主账号最长2小时（即7200秒），子账号最长36小时（即129600秒）
             config.put("durationSeconds", OSS_TEMP_SECRET_EXP_TIME);
@@ -143,12 +143,12 @@ public class TencentOssServiceImpl implements TencentOssService {
     }
 
     public String getOjectBrowseUrl(String key){
-        return getObjectAnonymousAccessUrl(tencentOssConfig.getBucketCustomer(), Arrays.asList(key)).get(key);
+        return getObjectAnonymousAccessUrl(tencentOssConfig.getOssBucketCustomer(), Arrays.asList(key)).get(key);
     }
 
     @Override
     public Map<String, String> listOjectBrowseUrl(List<String> objectKeys) {
-        return getObjectAnonymousAccessUrl(tencentOssConfig.getBucketCustomer(), objectKeys);
+        return getObjectAnonymousAccessUrl(tencentOssConfig.getOssBucketCustomer(), objectKeys);
     }
 
 

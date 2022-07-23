@@ -17,6 +17,7 @@ import com.x.redis.domain.LongTypeTuple;
 import com.x.redis.service.RedisService;
 import com.x.util.ListUtil;
 import org.apache.commons.lang.time.DateUtils;
+import org.springframework.data.redis.core.DefaultTypedTuple;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
@@ -68,10 +69,10 @@ public class VideoReadServiceImpl implements VideoReadService {
             if (follows.isEmpty()){
                 return Collections.emptySet();
             }
-            Set<ZSetOperations.TypedTuple> initData = new HashSet<ZSetOperations.TypedTuple>(1000);
+            Set<ZSetOperations.TypedTuple<Long>> initData = new LinkedHashSet<>(1000);
             ListUtil.pageConsume(follows, applicationConfig.getSqlInMaxElement(), (t) -> {
                 videoService.listVideo(t, followVideoInitTime).stream().forEach(item -> {
-                    initData.add(new LongTypeTuple(item.getId(), item.getId().doubleValue()));
+                    initData.add(new DefaultTypedTuple<>(item.getId(), item.getId().doubleValue()));
                 });
             });
             return initData;
@@ -90,7 +91,7 @@ public class VideoReadServiceImpl implements VideoReadService {
             Set<Long> videos = new HashSet<>(applicationConfig.getFollowTopicHotVideoShowSize());
             IPage page = new Page(0, applicationConfig.getFollowTopicHotVideoShowSize(), false);
             List<Long> followTopics = topicCustomerFavorites.stream().map(TopicCustomerFavorite::getTopicId).collect(Collectors.toList());
-            Set<ZSetOperations.TypedTuple> initData = new HashSet<ZSetOperations.TypedTuple>(1000);
+            Set<ZSetOperations.TypedTuple<Long>> initData = new LinkedHashSet<>(1000);
 //            while (videos.size() < applicationConfig.getFollowTopicHotVideoShowSize()){
                 IPage<VideoRecommendPoolHotTopic> videoHotTopicList = hotTopicVideoReadService.selectPage(page, followTopics);
                 if (videoHotTopicList.getRecords().size() == 0){

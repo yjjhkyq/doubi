@@ -2,10 +2,10 @@ package com.x.provider.video.controller.rpc;
 
 import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
+import com.x.provider.api.oss.model.dto.vod.ContentReviewResultDTO;
 import com.x.provider.api.video.model.ao.ListTopicAO;
 import com.x.provider.api.video.model.dto.TopicDTO;
 import com.x.provider.api.video.service.VideoRpcService;
-import com.x.provider.api.vod.model.dto.ContentReviewResultDTO;
 import com.x.provider.video.model.domain.Topic;
 import com.x.provider.video.service.TopicService;
 import com.x.provider.video.service.VideoService;

@@ -16,7 +16,7 @@ import com.x.provider.finance.model.domain.Industry;
 import com.x.provider.finance.model.domain.Security;
 import com.x.provider.finance.service.DataProducer;
 import com.x.provider.finance.service.FinanceDataService;
-import com.x.util.ChineseCharToEn;
+import com.x.util.ChineseCharToEnUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -105,7 +105,7 @@ public class FinanceDataServiceImpl implements FinanceDataService {
         List<Industry> needFillItems = industries.stream().filter(item -> StringUtils.isEmpty(item.getCnSpell())).collect(Collectors.toList());
         needFillItems.forEach(item -> {
             try {
-                item.setCnSpell(ChineseCharToEn.getAllFirstLetter(item.getName()));
+                item.setCnSpell(ChineseCharToEnUtils.getAllFirstLetter(item.getName()));
                 industryMapper.updateById(item);
             } catch (UnsupportedEncodingException e) {
                 log.error(e.getMessage(), e);

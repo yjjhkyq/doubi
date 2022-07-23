@@ -6,14 +6,20 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConfigurationProperties("tencent.oss")
 @Data
 public class TencentOssConfig {
-    private String secretId;
 
-    private String secretKey;
+    @Value("${tencent.app.secret-id}")
+    private String appSecretId;
 
-    private String bucketCustomer;
+    @Value("${tencent.app.secret-key}")
+    private String appSecretKey;
+
+    @Value("${tencent.oss.bucket-customer}")
+    private String ossBucketCustomer;
+
+    @Value("${tencent.vod.task-stream-name}")
+    private String vodTaskStreamName;
 
     public static final String AP_CHENGDU = "ap-chengdu";
     public static final String DOMAIN_QCLOUD = "myqcloud.com";

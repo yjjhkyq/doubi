@@ -3,7 +3,7 @@ package com.x.provider.oss.controller.admin;
 import cn.hutool.core.io.FileUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.controller.BaseAdminController;
-import com.x.provider.oss.model.vo.TencentOssCredentialVO;
+import com.x.provider.oss.model.vo.oss.TencentOssCredentialVO;
 import com.x.provider.oss.service.TencentOssService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;

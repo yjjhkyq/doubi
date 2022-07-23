@@ -23,7 +23,7 @@ public class ConversationVO {
     @ApiModelProperty(value = "会话拥有者用户id")
     private Long ownerCustomerId;
     @ApiModelProperty(value = "最新消息提示")
-    private String alertMsg;
+    private String alertMessage;
     @ApiModelProperty(value = "会话类型 1 1对于1消息 2 群组消息")
     private Integer conversationType;
     @ApiModelProperty(value = "消息未读数")

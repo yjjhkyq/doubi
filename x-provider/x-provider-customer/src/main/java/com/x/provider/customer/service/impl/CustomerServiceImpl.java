@@ -2,9 +2,9 @@ package com.x.provider.customer.service.impl;
 
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.x.core.exception.ApiException;
 import com.x.core.utils.ApiAssetUtil;
 import com.x.core.utils.BeanUtil;
+import com.x.core.utils.CompareUtils;
 import com.x.core.web.api.R;
 import com.x.core.web.api.ResultCode;
 import com.x.provider.api.customer.constants.CustomerEventTopic;
@@ -22,7 +22,7 @@ import com.x.provider.api.mc.model.ao.SendVerificationCodeAO;
 import com.x.provider.api.mc.model.ao.ValidateVerificationCodeAO;
 import com.x.provider.api.mc.service.SmsRpcService;
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
-import com.x.provider.api.oss.enums.SuggestionTypeEnum;
+import com.x.core.domain.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
 import com.x.provider.api.oss.model.ao.GreenRpcAO;
 import com.x.provider.api.oss.service.GreenRpcService;
@@ -403,7 +403,7 @@ public class CustomerServiceImpl implements CustomerService {
         }
         List<SimpleCustomerDTO> result = BeanUtil.prepare(source, SimpleCustomerDTO.class);
         prepareAttribute(result);
-        if (listSimpleCustomerAO.getLoginCustomerId() > 0 && listSimpleCustomerAO.getCustomerOptions().contains(CustomerOptions.CUSTOMER_RELATION.name())) {
+        if (CompareUtils.gtZero(listSimpleCustomerAO.getLoginCustomerId()) && listSimpleCustomerAO.getCustomerOptions().contains(CustomerOptions.CUSTOMER_RELATION.name())) {
             prepareRelation(listSimpleCustomerAO.getLoginCustomerId(), CustomerRelationEnum.valueOf(listSimpleCustomerAO.getCustomerRelation()), result);
         }
         if (!CollectionUtils.isEmpty(listSimpleCustomerAO.getCustomerOptions()) && listSimpleCustomerAO.getCustomerOptions().contains(CustomerOptions.CUSTOMER_STAT.name())){

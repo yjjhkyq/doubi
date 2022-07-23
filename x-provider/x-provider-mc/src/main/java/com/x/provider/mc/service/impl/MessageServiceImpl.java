@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.x.core.utils.BeanUtil;
 import com.x.core.utils.CompareUtils;
+import com.x.core.utils.JsonUtil;
 import com.x.core.web.page.PageDomain;
 import com.x.core.web.page.PageList;
 import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
@@ -19,18 +20,17 @@ import com.x.provider.mc.mapper.*;
 import com.x.provider.mc.model.ao.MarkMessageAsReadAO;
 import com.x.provider.mc.model.domain.ConversationId;
 import com.x.provider.mc.model.domain.*;
+import com.x.provider.mc.model.dto.ConnectInfoDTO;
 import com.x.provider.mc.model.dto.ConversationDTO;
 import com.x.provider.mc.model.dto.MessageDTO;
 import com.x.provider.mc.model.query.ConversationQuery;
 import com.x.provider.mc.model.query.GroupQuery;
 import com.x.provider.mc.model.query.MessageQuery;
-import com.x.provider.mc.model.vo.ConversationVO;
 import com.x.provider.mc.service.MessageEngineService;
 import com.x.provider.mc.service.MessageService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DateUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -46,6 +46,7 @@ public class MessageServiceImpl implements MessageService {
 
     private static final String CONVERSATION_ID_SPLITTER = "_";
     private static final String CONVERSATION_ID_FORMATTER = "{}" + CONVERSATION_ID_SPLITTER +"{}";
+    public static final String DEFAULT_ALERT_MESSAGE = "欢迎新同学";
 
 
     private final MessageMapper messageMapper;
@@ -103,6 +104,7 @@ public class MessageServiceImpl implements MessageService {
         }
         MessageEvent messageEvent = BeanUtil.prepare(message, MessageEvent.class);
         messageEvent.setEventType(MessageEvent.EventTypeEnum.SEND.getValue());
+        messageEvent.setOnlineUserOnly(sendMessageAO.getOnlineUserOnly());
         this.kafkaTemplate.send(McEventTopic.TOPIC_NAME_SEND_MESSAGE, StrUtil.format("{}:{}",sendMessageAO.getToCustomerId() + sendMessageAO.getToGroupId()), messageEvent);
         return message.getId() == null ?0 : message.getId();
     }
@@ -113,7 +115,7 @@ public class MessageServiceImpl implements MessageService {
             return;
         }
         Message message = BeanUtil.prepare(messageEvent, Message.class);
-        if (messageEvent.getOnlineUserOnly()){
+        if (messageEvent.getOnlineUserOnly() != null && messageEvent.getOnlineUserOnly()){
             messageEngineService.sendMessage(null, prepare(message));
             return;
         }
@@ -147,8 +149,8 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public void markMessageAsRead(MarkMessageAsReadAO markMessageAsReadAO, Long customerId){
-        Conversation conversation = getConversation(ConversationQuery.builder().ownerCustomerId(customerId).conversationId(markMessageAsReadAO.getConversationId()).build());
+    public void markMessageAsRead(MarkMessageAsReadAO markMessageAsReadAO, Long ownerCustomerId){
+        Conversation conversation = getConversation(markMessageAsReadAO.getConversationId(), ownerCustomerId);
         if (conversation == null){
             return;
         }
@@ -178,8 +180,13 @@ public class MessageServiceImpl implements MessageService {
     private List<Conversation> saveConversation(Message message, Integer conversationType){
         List<Conversation> conversations = prepareConversation(message);
         conversations.forEach(item ->{
-            if (item.getId() != null){
-                conversationMapper.insert(item);
+            if (item.getId() == null){
+                try {
+                    conversationMapper.insert(item);
+                }
+                catch (Exception e){
+                    log.error("conversation :{}", JsonUtil.toJSONString(item));
+                }
             }
             else {
                 conversationMapper.updateById(item);
@@ -193,7 +200,9 @@ public class MessageServiceImpl implements MessageService {
         if (message.getToCustomerId() > 0){
             List<Conversation> result = new ArrayList<>(2);
             result.add(prepareConversation(message, conversationType, message.getFromCustomerId(), message.getToCustomerId()));
-            result.add(prepareConversation(message, conversationType, message.getToCustomerId(), message.getFromCustomerId()));
+            if (!message.getToCustomerId().equals(message.getFromCustomerId())) {
+                result.add(prepareConversation(message, conversationType, message.getToCustomerId(), message.getFromCustomerId()));
+            }
             return result;
         }
         List<Long> conversationMemberList = listConversationMember(message);
@@ -214,13 +223,14 @@ public class MessageServiceImpl implements MessageService {
         if (conversation == null){
             conversation = Conversation.builder()
                     .ownerCustomerId(ownerCustomerId)
-                    .customerId(message.getToCustomerId())
+                    .customerId(customerId)
                     .groupId(message.getToGroupId())
                     .conversationType(conversationType)
                     .conversationId(toConversationId(ConversationId.builder().groupId(message.getToGroupId()).customerId(customerId).build()))
+                    .unreadCount(0L)
                     .build();
         }
-        conversation.setAlertMsg(message.getAlertMsg());
+        conversation.setAlertMessage(message.getAlertMsg());
         conversation.setUnreadCount(conversation.getUnreadCount() + unReadCount);
         conversation.setDisplayOrder(System.currentTimeMillis());
         return conversation;
@@ -235,10 +245,14 @@ public class MessageServiceImpl implements MessageService {
         return memberCustomerIdList;
     }
 
-    private void initAllGroupConversation(Long ownerCustomerId) {
+    @Override
+    public void initSystemConversation(Long ownerCustomerId) {
         List<Group> groupList = listGroup(GroupQuery.builder().groupType(GroupType.ALL.getValue()).build());
         groupList.forEach(item -> {
-            Conversation conversation = prepareAllConversation(ownerCustomerId, item);
+            Conversation conversation = prepareAllConversation4InitConversation(ownerCustomerId, item);
+            if (conversation == null){
+                return;
+            }
             if (conversation.getId() == null){
                 conversationMapper.insert(conversation);
             }
@@ -248,29 +262,33 @@ public class MessageServiceImpl implements MessageService {
         });
     }
 
-    private Conversation prepareAllConversation(Long ownerCustomerId, Group item) {
+    private Conversation prepareAllConversation4InitConversation(Long ownerCustomerId, Group item) {
         Conversation conversation = get(ConversationQuery.builder().groupId(item.getId()).customerId(0L).ownerCustomerId(ownerCustomerId).build());
         if (conversation == null){
             conversation = Conversation.builder().id(null).unreadCount(0L).lastReadMessageId(0L).conversationType(ConversationType.GROUP.getValue()).groupId(item.getId())
-                    .customerId(0L).ownerCustomerId(ownerCustomerId).conversationId(toConversationId(ConversationId.builder().customerId(0L).groupId(item.getId()).build())).displayOrder(System.currentTimeMillis()).build();
+                    .customerId(0L).ownerCustomerId(ownerCustomerId).conversationId(toConversationId(ConversationId.builder().customerId(null).groupId(item.getId()).build()))
+                    .displayOrder(System.currentTimeMillis()).alertMessage(DEFAULT_ALERT_MESSAGE).build();
         }
         MessageQuery messageQuery = MessageQuery.builder().toGroupId(conversation.getGroupId())
                 .gtId(conversation.getId()).build();
         if (item.getMessageLivedMilliSeconds() > 0){
             messageQuery.setGtCreateDate(DateUtils.addMilliseconds(new Date(), item.getMessageLivedMilliSeconds()));
         }
-        conversation.setUnreadCount(count(messageQuery).longValue());
         Message lastMessage = getLastMessage(messageQuery);
         if (lastMessage != null){
-            conversation.setAlertMsg(lastMessage.getAlertMsg());
+            if (Objects.equals(lastMessage.getId(), conversation.getLastReadMessageId())){
+                return null;
+            }
+            conversation.setAlertMessage(lastMessage.getAlertMsg());
         }
+        conversation.setUnreadCount(count(messageQuery).longValue());
         conversation.setDisplayOrder(item.getDisplayOrder());
         return conversation;
     }
 
     @Override
     public PageList<Conversation> listConversation(Long ownerCustomerId, PageDomain pageDomain){
-        LambdaQueryWrapper<Conversation> query = buildQuery(ConversationQuery.builder().ownerCustomerId(ownerCustomerId).ltDisplayOrder(pageDomain.getCursor()).build()).orderByDesc(item -> item.getDisplayOrder())
+        LambdaQueryWrapper<Conversation> query = buildQuery(ConversationQuery.builder().ownerCustomerId(ownerCustomerId).ltDisplayOrder(pageDomain.getCursor()).build()).orderByDesc(Conversation::getDisplayOrder)
                 .last(StrUtil.format(" limit {} ", pageDomain.getPageSize()));
         List<Conversation> conversationList = conversationMapper.selectList(query);
         if (conversationList.isEmpty()){
@@ -281,43 +299,27 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public Conversation getConversation(String conversationId, Long customerId){
-        return getConversation(ConversationQuery.builder().conversationId(conversationId).ownerCustomerId(customerId).build());
-    }
-
-    public Conversation getConversation(ConversationQuery conversationQuery){
-        Conversation conversation = conversationMapper.selectOne(buildQuery(conversationQuery));
+    public Conversation getConversation(String conversationId, Long ownerCustomerId){
+        Conversation conversation = getConversation(ConversationQuery.builder().conversationId(conversationId).ownerCustomerId(ownerCustomerId).build());
+        final ConversationId conversationIdObject = toConversationId(conversationId);
         if (conversation == null){
             conversation = Conversation.builder()
-                    .conversationId(toConversationId(ConversationId.builder().customerId(conversation.getCustomerId()).groupId(conversationQuery.getGroupId()).build()))
-                    .customerId(conversationQuery.getCustomerId())
-                    .groupId(conversation.getGroupId())
+                    .conversationId(toConversationId(ConversationId.builder().customerId(conversationIdObject.getCustomerId()).groupId(conversationIdObject.getGroupId()).build()))
+                    .customerId(conversationIdObject.getCustomerId())
+                    .groupId(conversationIdObject.getGroupId())
                     .displayOrder(System.currentTimeMillis())
-                    .ownerCustomerId(conversation.getOwnerCustomerId())
-                    .conversationType(CompareUtils.gtZero(conversationQuery.getCustomerId()) ? ConversationType.C2C.getValue() : ConversationType.GROUP.getValue())
+                    .ownerCustomerId(ownerCustomerId)
+                    .conversationType(CompareUtils.gtZero(conversationIdObject.getCustomerId()) ? ConversationType.C2C.getValue() : ConversationType.GROUP.getValue())
                     .unreadCount(0L)
-                    .alertMsg("")
+                    .alertMessage("")
                     .lastReadMessageId(0L)
                     .build();
         }
         return conversation;
     }
 
-    @Override
-    public String getWebSocketUrl() {
-        return messageEngineService.getWebSocketUrl();
-    }
-
-    @Override
-    public String authenticationToken(Long customerId) {
-        return messageEngineService.authenticationToken(customerId);
-    }
-
-    @Override
-    public Set<String> subscribeChannelList(Long customerId) {
-        Set<String> result = new HashSet<>();
-        result.add(messageEngineService.getChannelName(customerId.toString(), ConversationType.C2C.getValue()));
-        return result;
+    public Conversation getConversation(ConversationQuery conversationQuery){
+        return conversationMapper.selectOne(buildQuery(conversationQuery));
     }
 
     private Integer count(MessageQuery messageQuery){
@@ -341,7 +343,7 @@ public class MessageServiceImpl implements MessageService {
             query = query.eq(Message::getToGroupId, messageQuery.getToGroupId());
         }
         if (CompareUtils.gtZero(messageQuery.getToCustomerId())){
-
+            query = query.eq(Message::getToCustomerId, messageQuery.getToCustomerId());
         }
         if (messageQuery.getGtId() != null){
             query = query.gt(Message::getId, messageQuery.getGtId());
@@ -370,11 +372,11 @@ public class MessageServiceImpl implements MessageService {
         if (condition.getId() != null){
             query = query.eq(Conversation::getId, condition.getId());
         }
-        if (condition.getOwnerCustomerId() != null){
-            query = query.eq(Conversation::getOwnerCustomerId, condition.getOwnerCustomerId());
-        }
-        if (condition.getOwnerCustomerId() != null && condition.getOwnerCustomerId() > 0){
+        if (CompareUtils.gtZero(condition.getLtDisplayOrder())){
             query = query.lt(Conversation::getDisplayOrder, condition.getLtDisplayOrder());
+        }
+        if (CompareUtils.gtZero(condition.getOwnerCustomerId())){
+            query = query.eq(Conversation::getOwnerCustomerId, condition.getOwnerCustomerId());
         }
         if (!StrUtil.isEmpty(condition.getConversationId())){
             query = query.eq(Conversation::getConversationId, condition.getConversationId());
@@ -384,6 +386,9 @@ public class MessageServiceImpl implements MessageService {
 
     private LambdaQueryWrapper<Group> buildQuery(GroupQuery condition){
         LambdaQueryWrapper<Group> query = new LambdaQueryWrapper<>();
+        if (condition.getId() != null){
+            query = query.eq(Group::getId, condition.getId());
+        }
         if (condition.getCustomerId() != null){
             query = query.eq(Group::getCustomerId, condition.getCustomerId());
         }
@@ -424,6 +429,7 @@ public class MessageServiceImpl implements MessageService {
             SimpleCustomerDTO fromCustomer = senderMap.get(item.getFromCustomerId());
             item.setFromCustomerNickName(fromCustomer.getNickName());
             item.setFromCustomerAvatarUrl(fromCustomer.getAvatarUrl());
+            item.setCreatedTimestamp(item.getCreatedOnUtc().getTime());
         });
         return result;
     }

@@ -10,7 +10,7 @@ import com.x.provider.api.general.constants.GeneralEventTopic;
 import com.x.provider.api.general.model.ao.CommentAO;
 import com.x.provider.api.general.model.event.CommentEvent;
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
-import com.x.provider.api.oss.enums.SuggestionTypeEnum;
+import com.x.core.domain.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.ao.GreenRpcAO;
 import com.x.provider.api.oss.service.GreenRpcService;
 import com.x.provider.general.enums.GeneralErrorEnum;

@@ -19,7 +19,7 @@ public class Conversation extends BaseEntity {
     private Long customerId;
     private Long groupId;
     private Long ownerCustomerId;
-    private String alertMsg;
+    private String alertMessage;
     private Long lastReadMessageId;
     private Integer conversationType;
     private Long unreadCount;

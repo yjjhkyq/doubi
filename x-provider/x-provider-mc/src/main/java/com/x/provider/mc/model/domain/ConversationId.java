@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ConversationId {
-    private Long customerId;
-    private Long groupId;
+    private Long customerId = 0L;
+    private Long groupId = 0L;
 }

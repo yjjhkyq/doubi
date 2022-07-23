@@ -112,7 +112,8 @@ public class Constants {
     public static final String BEAR = "Bear ";
 
     public static final String ADMIN_URL_PREFIX = "/admin";
-    public static final String FRONT_END_URL_PREFIX = "/frontend";
+    public static final String APP_URL_PREFIX = "/app";
+    public static final String WS_URL_PREFIX = "/ws";
 
     public static final String REDIS_KEY_SPLITTER = ":";
 

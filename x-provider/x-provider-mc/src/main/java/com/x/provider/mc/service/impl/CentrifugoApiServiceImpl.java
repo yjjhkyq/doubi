@@ -28,7 +28,7 @@ public class CentrifugoApiServiceImpl implements CentrifugoApiService {
     }
 
     @Override
-    public void publish(String url, String apiKey, String channel, Map<String, Object> data) {
+    public void publish(String url, String apiKey, String channel, String data) {
         Map<String, Object> params = new HashMap<>();
         params.put("channel", channel);
         params.put("data",data);

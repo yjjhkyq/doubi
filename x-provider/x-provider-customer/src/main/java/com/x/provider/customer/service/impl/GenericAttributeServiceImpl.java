@@ -35,7 +35,7 @@ public class GenericAttributeServiceImpl implements GenericAttributeService {
 
     @Override
     public Map<String, String> listAttributeMap(String keyGroup, long entityId) {
-        Map<String, String> result = redisService.getCacheMap(redisKeyService.getGenricAttributeHashKey(entityId, keyGroup));
+        Map<String, String> result = redisService.getCacheMap(redisKeyService.getGenricAttributeHashKey(entityId, keyGroup), String.class);
         return Optional.ofNullable(result).orElse(new HashMap<>());
     }
 

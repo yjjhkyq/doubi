@@ -9,4 +9,5 @@ public class IncAssetAO {
     private Long customerId;
     private Long coin;
     private Long rice;
+    private Long costCoin;
 }

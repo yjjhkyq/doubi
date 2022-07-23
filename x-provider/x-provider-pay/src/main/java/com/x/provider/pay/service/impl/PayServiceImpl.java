@@ -107,6 +107,7 @@ public class PayServiceImpl implements PayService {
                     .customerId(makeTransactionAo.getFromCustomerId())
                     .coin(makeTransactionAo.getFromCoin())
                     .rice(makeTransactionAo.getFromRice())
+                    .costCoin(makeTransactionAo.getFromCostCoin())
                     .build());
         }
         if (makeTransactionAo.getToCustomerId() > 0){
@@ -114,6 +115,7 @@ public class PayServiceImpl implements PayService {
                     .customerId(makeTransactionAo.getToCustomerId())
                     .coin(makeTransactionAo.getToCoin())
                     .rice(makeTransactionAo.getToRice())
+                    .costCoin(makeTransactionAo.getToCostCoin())
                     .build());
         }
         return result;

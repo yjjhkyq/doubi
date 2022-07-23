@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -22,6 +24,7 @@ public class MessageEvent {
     private Integer messageClass;
     private Integer eventType;
     private Boolean onlineUserOnly;
+    private Date createdOnUtc;
 
     public enum EventTypeEnum implements IntegerEnum {
         SEND(1),

@@ -26,4 +26,10 @@ public class ApplicationConfig {
     private Integer messageExpireDays;
 
     private int verificationCodeExpireMinute = 5;
+
+    @Value("${x.web.socket.url:null}")
+    private String xWebSocketUrl;
+
+    @Value("${x.web.socket.token.secret:null}")
+    private String xWebSocketTokenSecret;
 }

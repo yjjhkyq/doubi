@@ -3,7 +3,7 @@ package com.x.provider.oss.service.impl;
 import com.baidu.aip.contentcensor.AipContentCensor;
 import com.baidu.aip.contentcensor.EImgType;
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
-import com.x.provider.api.oss.enums.SuggestionTypeEnum;
+import com.x.core.domain.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.ao.GreenRpcAO;
 import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
 import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;

@@ -2,7 +2,7 @@ package com.x.provider.oss.service.impl;
 
 import com.x.core.utils.JsonUtil;
 import com.x.core.web.api.R;
-import com.x.provider.api.oss.enums.SuggestionTypeEnum;
+import com.x.core.domain.SuggestionTypeEnum;
 import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
 import com.x.provider.api.oss.model.ao.GreenRpcAO;
 import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
@@ -45,7 +45,7 @@ public class TencentGreenServiceImpl implements GreenService {
             SuggestionTypeEnum suggestionTypeEnum = prepare((Integer) data.get("result"));
             String objectKey = url.substring(url.lastIndexOf(TencentOssConfig.DOMAIN_QCLOUD) + TencentOssConfig.DOMAIN_QCLOUD.length());
             try(DistributeRedisLock lock = new DistributeRedisLock(objectKey)) {
-                Optional<AttributeGreenRpcAO> attributeGreenRpcAO = redisService.getOptionalCacheObject(redisKeyService.getAttributeGreenRpcAOKey(objectKey));
+                Optional<AttributeGreenRpcAO> attributeGreenRpcAO = redisService.getOptionalCacheObject(redisKeyService.getAttributeGreenRpcAOKey(objectKey), AttributeGreenRpcAO.class);
                 if (attributeGreenRpcAO.isPresent()) {
                     onGreenAttribute(attributeGreenRpcAO.get(), suggestionTypeEnum);
                 } else {
@@ -66,7 +66,7 @@ public class TencentGreenServiceImpl implements GreenService {
     public void greenAttributeAsync(AttributeGreenRpcAO attributeGreenRpcAO) {
         Optional<String> suggestionType = Optional.empty();
         try(DistributeRedisLock lock = new DistributeRedisLock(attributeGreenRpcAO.getValue())) {
-            suggestionType = redisService.getOptionalCacheObject(redisKeyService.getAttributeGreenResultKey(attributeGreenRpcAO.getValue()));
+            suggestionType = redisService.getOptionalCacheObject(redisKeyService.getAttributeGreenResultKey(attributeGreenRpcAO.getValue()), String.class);
             if (!suggestionType.isPresent()) {
                 redisService.setCacheObject(redisKeyService.getAttributeGreenRpcAOKey(attributeGreenRpcAO.getValue()), attributeGreenRpcAO, Duration.ofMinutes(2));
                 return;
