@@ -1,8 +1,10 @@
 package com.x.core.web.page;
 
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.x.core.utils.CompareUtils;
 import com.x.core.utils.ServletUtils;
 import com.x.core.web.api.R;
 import org.springframework.data.domain.PageRequest;
@@ -105,5 +107,18 @@ public class PageHelper
 
     public static <R> PageList<R> buildPageList(PageDomain pageDomain, List<R> source, boolean hasMore){
         return new PageList<R>(source, pageDomain.getPageSize(), hasMore, pageDomain.getCursor() + pageDomain.getPageSize());
+    }
+
+    public static String toPageLimitSql(PageLimit pageLimit){
+        if (pageLimit == null){
+            return "";
+        }
+        if (pageLimit.getOffset() != null && pageLimit.getRows() != null){
+            return StrUtil.format(" limit {} , {} ", pageLimit.getOffset(), pageLimit.getRows());
+        }
+        if (pageLimit.getRows() != null){
+            return StrUtil.format(" limit {} ", pageLimit.getRows());
+        }
+        return "";
     }
 }

@@ -36,4 +36,17 @@ public class BeanUtil {
             throw new IllegalStateException("prepare model error: " + destCls.getSimpleName(), e);
         }
     }
+
+    public static <T, R> R prepare(T source, R dest){
+        try {
+            if (source == null){
+                return null;
+            }
+            BeanUtils.copyProperties(source, dest);
+            return dest;
+        }
+        catch (Exception e){
+            throw new IllegalStateException("prepare model error: " + dest.getClass(), e);
+        }
+    }
 }

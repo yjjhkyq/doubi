@@ -1,14 +1,14 @@
 package com.x.provider.mc.service;
 
-import com.x.provider.api.mc.model.ao.SendMessageRawAO;
-import com.x.provider.mc.model.dto.ConnectInfoDTO;
-import com.x.provider.mc.model.dto.ConversationDTO;
-import com.x.provider.mc.model.dto.MessageDTO;
+import com.x.provider.api.mc.model.dto.SendMessageRawDTO;
+import com.x.provider.mc.model.bo.ConnectInfoBO;
+import com.x.provider.mc.model.bo.ConversationBO;
+import com.x.provider.mc.model.bo.MessageBO;
 
 import java.util.List;
 
 public interface MessageEngineService {
-    void sendMessage(ConversationDTO conversation, MessageDTO message);
-    void sendMessage(SendMessageRawAO sendMessageRawAO);
-    List<ConnectInfoDTO> listConnectionInfo(Long customerId);
+    void sendMessage(ConversationBO conversation, MessageBO message);
+    void sendMessage(SendMessageRawDTO sendMessageRawAO);
+    List<ConnectInfoBO> listConnectionInfo(Long customerId);
 }

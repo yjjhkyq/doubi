@@ -3,9 +3,9 @@ package com.x.provider.oss.service.impl;
 import com.x.core.utils.JsonUtil;
 import com.x.core.web.api.R;
 import com.x.core.domain.SuggestionTypeEnum;
-import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
-import com.x.provider.api.oss.model.ao.GreenRpcAO;
-import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
+import com.x.provider.api.oss.model.dto.oss.AttributeGreenRequestDTO;
+import com.x.provider.api.oss.model.dto.oss.GreenRequestDTO;
+import com.x.provider.api.oss.model.dto.oss.AttributeGreenResultDTO;
 import com.x.provider.oss.configure.TencentOssConfig;
 import com.x.provider.oss.service.GreenService;
 import com.x.provider.oss.service.RedisKeyService;
@@ -45,7 +45,7 @@ public class TencentGreenServiceImpl implements GreenService {
             SuggestionTypeEnum suggestionTypeEnum = prepare((Integer) data.get("result"));
             String objectKey = url.substring(url.lastIndexOf(TencentOssConfig.DOMAIN_QCLOUD) + TencentOssConfig.DOMAIN_QCLOUD.length());
             try(DistributeRedisLock lock = new DistributeRedisLock(objectKey)) {
-                Optional<AttributeGreenRpcAO> attributeGreenRpcAO = redisService.getOptionalCacheObject(redisKeyService.getAttributeGreenRpcAOKey(objectKey), AttributeGreenRpcAO.class);
+                Optional<AttributeGreenRequestDTO> attributeGreenRpcAO = redisService.getOptionalCacheObject(redisKeyService.getAttributeGreenRpcAOKey(objectKey), AttributeGreenRequestDTO.class);
                 if (attributeGreenRpcAO.isPresent()) {
                     onGreenAttribute(attributeGreenRpcAO.get(), suggestionTypeEnum);
                 } else {
@@ -58,12 +58,12 @@ public class TencentGreenServiceImpl implements GreenService {
     }
 
     @Override
-    public SuggestionTypeEnum green(GreenRpcAO greenRpcAO) {
+    public SuggestionTypeEnum green(GreenRequestDTO greenRpcAO) {
         return null;
     }
 
     @Override
-    public void greenAttributeAsync(AttributeGreenRpcAO attributeGreenRpcAO) {
+    public void greenAttributeAsync(AttributeGreenRequestDTO attributeGreenRpcAO) {
         Optional<String> suggestionType = Optional.empty();
         try(DistributeRedisLock lock = new DistributeRedisLock(attributeGreenRpcAO.getValue())) {
             suggestionType = redisService.getOptionalCacheObject(redisKeyService.getAttributeGreenResultKey(attributeGreenRpcAO.getValue()), String.class);
@@ -76,7 +76,7 @@ public class TencentGreenServiceImpl implements GreenService {
     }
 
     @Override
-    public AttributeGreenResultDTO greenAttributeSync(AttributeGreenRpcAO attributeGreenRpcAO) {
+    public AttributeGreenResultDTO greenAttributeSync(AttributeGreenRequestDTO attributeGreenRpcAO) {
         return null;
     }
 
@@ -84,7 +84,7 @@ public class TencentGreenServiceImpl implements GreenService {
         return greenResult == 0 ? SuggestionTypeEnum.PASS : SuggestionTypeEnum.BLOCK;
     }
 
-    private void onGreenAttribute(AttributeGreenRpcAO attributeGreenRpcAO, SuggestionTypeEnum suggestionType) {
+    private void onGreenAttribute(AttributeGreenRequestDTO attributeGreenRpcAO, SuggestionTypeEnum suggestionType) {
         AttributeGreenResultDTO attributeGreenResultRpcVO = new AttributeGreenResultDTO();
         BeanUtils.copyProperties(attributeGreenRpcAO, attributeGreenResultRpcVO);
         attributeGreenResultRpcVO.setSuggestionType(suggestionType.toString());

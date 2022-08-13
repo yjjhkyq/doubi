@@ -5,12 +5,13 @@ import lombok.Getter;
 
 @Getter
 public enum PaymentStatusEnum implements IntegerEnum {
-    PENDING(10),
-    AUTHORIZED(20),
-    PAID(30),
-    PARTIALLY_REFUNDED(35),
+    NOTPAY(10),
+    REVOKED(20),
+    SUCCESS(30),
+    USERPAYING(35),
     REFUNDED(40),
-    VOIDED(50)
+    CLOSED(50),
+    PAYERROR(60)
     ;
 
     private Integer value;

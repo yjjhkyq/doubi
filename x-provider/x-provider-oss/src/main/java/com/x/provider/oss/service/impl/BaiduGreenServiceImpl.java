@@ -4,9 +4,9 @@ import com.baidu.aip.contentcensor.AipContentCensor;
 import com.baidu.aip.contentcensor.EImgType;
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
 import com.x.core.domain.SuggestionTypeEnum;
-import com.x.provider.api.oss.model.ao.GreenRpcAO;
-import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
-import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
+import com.x.provider.api.oss.model.dto.oss.GreenRequestDTO;
+import com.x.provider.api.oss.model.dto.oss.AttributeGreenResultDTO;
+import com.x.provider.api.oss.model.dto.oss.AttributeGreenRequestDTO;
 import com.x.provider.oss.configure.BaiduConfig;
 import com.x.provider.oss.service.GreenService;
 import lombok.extern.slf4j.Slf4j;
@@ -27,12 +27,12 @@ public class BaiduGreenServiceImpl implements GreenService {
     }
 
     @Override
-    public void greenAttributeAsync(AttributeGreenRpcAO attributeGreenRpcAO) {
+    public void greenAttributeAsync(AttributeGreenRequestDTO attributeGreenRpcAO) {
         throw new IllegalStateException("not supported");
     }
 
     @Override
-    public AttributeGreenResultDTO greenAttributeSync(AttributeGreenRpcAO attributeGreenRpcAO) {
+    public AttributeGreenResultDTO greenAttributeSync(AttributeGreenRequestDTO attributeGreenRpcAO) {
         AttributeGreenResultDTO greenResultRpcAO = new AttributeGreenResultDTO();
         BeanUtils.copyProperties(attributeGreenRpcAO, greenResultRpcAO);
         GreenDataTypeEnum greenDataType = GreenDataTypeEnum.valueOf(attributeGreenRpcAO.getDataType());
@@ -56,7 +56,7 @@ public class BaiduGreenServiceImpl implements GreenService {
     }
 
     @Override
-    public SuggestionTypeEnum green(GreenRpcAO greenRpcAO) {
+    public SuggestionTypeEnum green(GreenRequestDTO greenRpcAO) {
         AipContentCensor client = new AipContentCensor(baiduConfig.getAppId(), baiduConfig.getApiKey(), baiduConfig.getSecretKey());
         JSONObject parseResult = null;
         GreenDataTypeEnum greenDataTypeEnum = GreenDataTypeEnum.valueOf(greenRpcAO.getDataType());

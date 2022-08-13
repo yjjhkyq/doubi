@@ -85,8 +85,8 @@ public class RedisService {
      * @return 值大小
      */
     public Integer getCountObject(final String key) {
-        Object res = redisTemplate.opsForValue().get(key);
-        return res == null ? 0 : (Integer) res;
+        String res = redisTemplate.opsForValue().get(key);
+        return StringUtils.isEmpty(res) ? 0 : toBean(res, Integer.class);
     }
 
     /**
@@ -270,7 +270,11 @@ public class RedisService {
      */
     public <T> void setCacheMap(final String key, final Map<String, T> dataMap) {
         if (dataMap != null) {
-            redisTemplate.opsForHash().putAll(key, dataMap);
+            Map<String, String> strDataMap= new HashMap<>(dataMap.size());
+            dataMap.entrySet().forEach(item -> {
+                strDataMap.put(item.getKey(), toJsonStr(item.getValue()));
+            });
+            redisTemplate.opsForHash().putAll(key, strDataMap);
         }
     }
 
@@ -306,7 +310,7 @@ public class RedisService {
      * @param value 值
      */
     public <T> void setCacheMapValue(final String key, final String hKey, final T value) {
-        redisTemplate.opsForHash().put(key, hKey, value);
+        redisTemplate.opsForHash().put(key, hKey, toJsonStr(value));
     }
 
     /**
@@ -326,9 +330,9 @@ public class RedisService {
      * @param hKey Hash键
      * @return Hash中的对象
      */
-    public <T> T getCacheMapValue(final String key, final String hKey) {
-        HashOperations<String, String, T> opsForHash = redisTemplate.opsForHash();
-        return opsForHash.get(key, hKey);
+    public <T> T getCacheMapValue(final String key, final String hKey, Class<T> cls) {
+        HashOperations<String, String, String> opsForHash = redisTemplate.opsForHash();
+        return toBean(opsForHash.get(key, hKey), cls);
     }
 
     /**
@@ -338,9 +342,8 @@ public class RedisService {
      * @param hKey Hash键
      * @return Hash中的对象
      */
-    public <T> Optional<T> getCacheMapValueOptional(final String key, final String hKey) {
-        HashOperations<String, String, T> opsForHash = redisTemplate.opsForHash();
-        return Optional.ofNullable(opsForHash.get(key, hKey));
+    public <T> Optional<T> getCacheMapValueOptional(final String key, final String hKey,  Class<T> cls) {
+        return Optional.ofNullable(getCacheMapValue(key, hKey, cls));
     }
 
 
@@ -567,11 +570,14 @@ public class RedisService {
         if (cls.equals(Double.class)){
             return (T) Double.valueOf(src);
         }
+        if(cls.equals(String.class)){
+            return (T) src;
+        }
         return JSONUtil.toBean(src, cls);
     }
 
     private <T> String toJsonStr(T t){
-        if (t instanceof Number){
+        if (t instanceof Number || t instanceof String){
             return t.toString();
         }
         return JSONUtil.toJsonStr(t);

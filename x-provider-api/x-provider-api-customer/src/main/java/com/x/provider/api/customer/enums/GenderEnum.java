@@ -3,6 +3,7 @@ package com.x.provider.api.customer.enums;
 import com.x.core.enums.IntegerEnum;
 
 public enum GenderEnum implements IntegerEnum {
+    NULL(0),
     MALE(1),
     FEMALE(2)
     ;

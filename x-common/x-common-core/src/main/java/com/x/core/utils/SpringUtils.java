@@ -12,9 +12,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+
+
+
 /**
  * spring工具类 方便在非spring管理环境中获取bean
- * 
+ *
  */
 @Component
 @ConditionalOnMissingBean(SpringUtils.class)
@@ -115,7 +118,7 @@ public final class SpringUtils implements BeanFactoryPostProcessor
 
     /**
      * 获取aop代理对象
-     * 
+     *
      * @param invoker
      * @return
      */

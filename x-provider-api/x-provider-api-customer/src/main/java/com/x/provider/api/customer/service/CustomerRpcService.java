@@ -2,9 +2,9 @@ package com.x.provider.api.customer.service;
 
 import com.x.core.web.api.R;
 import com.x.provider.api.customer.constants.ServiceNameConstants;
-import com.x.provider.api.customer.model.ao.IncCustomerStatAO;
-import com.x.provider.api.customer.model.ao.ListCustomerAO;
-import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
+import com.x.provider.api.customer.model.dto.IncCustomerStatRequestDTO;
+import com.x.provider.api.customer.model.dto.ListCustomerRequestDTO;
+import com.x.provider.api.customer.model.dto.ListSimpleCustomerRequestDTO;
 import com.x.provider.api.customer.model.dto.CustomerDTO;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.customer.service.factory.CustomerFallbackFactory;
@@ -23,7 +23,7 @@ public interface CustomerRpcService {
     R<CustomerDTO> getCustomer(@RequestParam("customerId")long customerId, @RequestParam("customerOptions")List<String> customerOptions);
 
     @PostMapping(ServiceNameConstants.CUSTOMER_URL_PREFIX + "/list")
-    R<Map<Long, CustomerDTO>> listCustomer(@RequestBody ListCustomerAO listCustomerAO);
+    R<Map<Long, CustomerDTO>> listCustomer(@RequestBody ListCustomerRequestDTO listCustomerAO);
 
     @PostMapping(ServiceNameConstants.CUSTOMER_URL_PREFIX + "/authorize")
     R<Long> authorize(@RequestParam("token") String token, @RequestParam("path") String path);
@@ -32,13 +32,8 @@ public interface CustomerRpcService {
     R<List<Long>> listFollow(@RequestParam("customerId") long customerId);
 
     @PostMapping(ServiceNameConstants.CUSTOMER_URL_PREFIX + "/simple/list")
-    R<Map<Long, SimpleCustomerDTO>> listSimpleCustomer(@RequestParam("loginCustomerId") long loginCustomerId,
-                                                       @RequestParam("customerRelation") int customerRelation,
-                                                       @RequestParam("customerIdList")String customerIdList);
-
-    @PostMapping(ServiceNameConstants.CUSTOMER_URL_PREFIX + "/simple/list/v2")
-    R<Map<Long, SimpleCustomerDTO>> listSimpleCustomerV2(@RequestBody ListSimpleCustomerAO listSimpleCustomer);
+    R<Map<Long, SimpleCustomerDTO>> listSimpleCustomer(@RequestBody ListSimpleCustomerRequestDTO listSimpleCustomer);
 
     @PostMapping(ServiceNameConstants.CUSTOMER_URL_PREFIX + "/stat/inc")
-    R<Void> incCustomerStatAO(@RequestBody IncCustomerStatAO incCustomerStatAO);
+    R<Void> incCustomerStatAO(@RequestBody IncCustomerStatRequestDTO incCustomerStatAO);
 }

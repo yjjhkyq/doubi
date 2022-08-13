@@ -1,7 +1,7 @@
 package com.x.provider.api.video.service.factory;
 
 import com.x.core.web.api.R;
-import com.x.provider.api.video.model.ao.ListTopicAO;
+import com.x.provider.api.video.model.dto.ListTopicRequestDTO;
 import com.x.provider.api.video.model.dto.TopicDTO;
 import com.x.provider.api.video.service.VideoRpcService;
 import feign.hystrix.FallbackFactory;
@@ -18,7 +18,7 @@ public class VideoFallbackFactory implements FallbackFactory<VideoRpcService> {
     public VideoRpcService create(Throwable throwable) {
         return new VideoRpcService() {
             @Override
-            public R<List<TopicDTO>> listTopic(ListTopicAO listTopicAO) {
+            public R<List<TopicDTO>> listTopic(ListTopicRequestDTO listTopicAO) {
                 return null;
             }
         };

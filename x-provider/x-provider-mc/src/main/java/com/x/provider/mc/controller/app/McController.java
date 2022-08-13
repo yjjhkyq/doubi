@@ -5,13 +5,14 @@ import com.x.core.web.api.R;
 import com.x.core.web.controller.BaseFrontendController;
 import com.x.core.web.page.PageList;
 import com.x.provider.api.customer.service.CustomerRpcService;
-import com.x.provider.api.mc.model.ao.SendMessageAO;
+import com.x.provider.api.mc.model.dto.SendMessageRequestDTO;
 import com.x.provider.api.mc.model.protocol.MessageClassEnum;
-import com.x.provider.mc.model.ao.MarkMessageAsReadAO;
-import com.x.provider.mc.model.ao.SendImAO;
+import com.x.provider.mc.model.bo.GetConversationRequestBO;
+import com.x.provider.mc.model.bo.MessageBO;
+import com.x.provider.mc.model.vo.MarkMessageAsReadRequestVO;
+import com.x.provider.mc.model.vo.SendImRequestAO;
 import com.x.provider.mc.model.domain.Conversation;
 import com.x.provider.mc.model.domain.Message;
-import com.x.provider.mc.model.dto.ConnectInfoDTO;
 import com.x.provider.mc.model.vo.ConnectInfoVO;
 import com.x.provider.mc.model.vo.ConversationVO;
 import com.x.provider.mc.model.vo.MessageVO;
@@ -23,7 +24,6 @@ import io.swagger.annotations.ApiParam;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Api(tags = "消息服務")
@@ -32,22 +32,19 @@ import java.util.List;
 public class McController extends BaseFrontendController {
 
     private final MessageService messageService;
-    private final CustomerRpcService customerRpcService;
     private final MessageEngineService messageEngineService;
 
     public McController(MessageService messageService,
-                        CustomerRpcService customerRpcService,
                         MessageEngineService messageEngineService){
         this.messageService = messageService;
-        this.customerRpcService = customerRpcService;
         this.messageEngineService = messageEngineService;
     }
 
     @ApiOperation(value = "获取连接信息,用户连接centrifugo服务器")
     @GetMapping("/connect/info")
-    public R<List<ConnectInfoVO>> getConnectInfo(){
+    public R<ConnectInfoVO> getConnectInfo(@ApiParam(value = "2 web socket x 1 centrifugo", required = true) Integer webSocketEngineType){
         Long customerId = getCurrentCustomerId();
-        return R.ok(BeanUtil.prepare(messageEngineService.listConnectionInfo(customerId), ConnectInfoVO.class));
+        return R.ok(BeanUtil.prepare(messageEngineService.listConnectionInfo(customerId).stream().filter(item -> webSocketEngineType.equals(item.getWebSocketEngineType())).findFirst().get(), ConnectInfoVO.class));
     }
 
     @ApiOperation(value = "获取会话列表")
@@ -62,8 +59,11 @@ public class McController extends BaseFrontendController {
 
     @ApiOperation(value = "获取会话列表")
     @GetMapping("/conversation/get")
-    public R<ConversationVO> getConversation(@ApiParam(value = "会话id") @RequestParam String conversationId){
-        Conversation conversation = messageService.getConversation(conversationId, getCurrentCustomerId());
+    public R<ConversationVO> getConversation(@ApiParam(value = "会话id", defaultValue = "") @RequestParam(required = false, defaultValue = "") String conversationId,
+                                             @ApiParam(value = "用户id") @RequestParam(required = false, defaultValue = "0") Long customerId,
+                                             @ApiParam(value = "群组id") @RequestParam(required = false, defaultValue = "0") Long groupId){
+        Conversation conversation = messageService.getConversation(GetConversationRequestBO.builder().conversationId(conversationId).customerId(customerId)
+                .groupId(groupId).build());
         return R.ok(BeanUtil.prepare(messageService.prepare(conversation), ConversationVO.class));
     }
 
@@ -80,18 +80,18 @@ public class McController extends BaseFrontendController {
 
     @ApiOperation(value = "发送私信,返回私信id")
     @PostMapping("/message/send")
-    public R<Long> sendMessage(@Validated @RequestBody SendImAO sendImAO){
-        SendMessageAO sendMessageAO = BeanUtil.prepare(sendImAO, SendMessageAO.class);
+    public R<MessageVO> sendMessage(@Validated @RequestBody SendImRequestAO sendImAO){
+        SendMessageRequestDTO sendMessageAO = BeanUtil.prepare(sendImAO, SendMessageRequestDTO.class);
         sendMessageAO.setFromCustomerId(getCurrentCustomerId());
         sendMessageAO.setMessageClass(MessageClassEnum.IM.getValue());
         sendMessageAO.setOnlineUserOnly(false);
-        Long id = messageService.sendMessage(sendMessageAO);
-        return R.ok(id);
+        final MessageBO messageBO = messageService.sendMessage(sendMessageAO);
+        return R.ok(BeanUtil.prepare(messageBO, MessageVO.class));
     }
 
     @ApiOperation(value = "标记会话中的所有消息为已读,每次打开会话后都应该调用此接口")
     @PostMapping("/message/mark/as/read")
-    public R<Void> markMessageAsRead(@Validated @RequestBody MarkMessageAsReadAO markMessageAsReadAO){
+    public R<Void> markMessageAsRead(@Validated @RequestBody MarkMessageAsReadRequestVO markMessageAsReadAO){
         messageService.markMessageAsRead(markMessageAsReadAO, getCurrentCustomerId());
         return R.ok();
     }

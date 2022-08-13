@@ -1,8 +1,8 @@
 package com.x.provider.api.finance.service;
 
 import com.x.provider.api.finance.constants.ServiceNameConstants;
-import com.x.provider.api.finance.model.ao.ListIndustryAO;
-import com.x.provider.api.finance.model.ao.ListSecurityAO;
+import com.x.provider.api.finance.model.dto.ListIndustryRequestDTO;
+import com.x.provider.api.finance.model.dto.ListSecurityRequestDTO;
 import com.x.provider.api.finance.model.dto.IndustryDTO;
 import com.x.provider.api.finance.model.dto.SecurityDTO;
 import com.x.provider.api.finance.service.factory.FinianceFallbackFactory;
@@ -16,8 +16,8 @@ import java.util.List;
 public interface FinanceRpcService {
 
     @PostMapping(ServiceNameConstants.RPC_URL_PREFIX + "/security/list")
-    List<SecurityDTO> listSecurity(@RequestBody ListSecurityAO listSecurityAO);
+    List<SecurityDTO> listSecurity(@RequestBody ListSecurityRequestDTO listSecurityAO);
 
     @PostMapping(ServiceNameConstants.RPC_URL_PREFIX + "/industry/list")
-    List<IndustryDTO> listIndustry(@RequestBody ListIndustryAO listIndustryAO);
+    List<IndustryDTO> listIndustry(@RequestBody ListIndustryRequestDTO listIndustryAO);
 }

@@ -1,10 +1,9 @@
 package com.x.provider.api.general.service.factory;
 
 import com.x.core.web.api.R;
-import com.x.core.web.page.PageList;
-import com.x.provider.api.general.model.ao.IsStarredAO;
-import com.x.provider.api.general.model.ao.ListStarAO;
-import com.x.provider.api.general.model.ao.StarAO;
+import com.x.provider.api.general.model.dto.IsStarredRequestDTO;
+import com.x.provider.api.general.model.dto.ListStarRequestDTO;
+import com.x.provider.api.general.model.dto.StarRequestDTO;
 import com.x.provider.api.general.model.dto.StarDTO;
 import com.x.provider.api.general.service.StarRpcService;
 import feign.hystrix.FallbackFactory;
@@ -21,17 +20,17 @@ public class StarFallbackFactory implements FallbackFactory<StarRpcService> {
         return new StarRpcService() {
 
             @Override
-            public R<Boolean> isStarred(IsStarredAO isStarred) {
+            public R<Boolean> isStarred(IsStarredRequestDTO isStarred) {
                 return R.ok(false);
             }
 
             @Override
-            public R<Boolean> star(StarAO starAO) {
+            public R<Boolean> star(StarRequestDTO starAO) {
                 return R.ok();
             }
 
             @Override
-            public R<List<StarDTO>> listStar(ListStarAO listStarAO) {
+            public R<List<StarDTO>> listStar(ListStarRequestDTO listStarAO) {
                 return R.ok(new ArrayList<>());
             }
         };

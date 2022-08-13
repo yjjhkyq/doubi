@@ -2,9 +2,9 @@ package com.x.provider.general.controller.rpc;
 
 import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
-import com.x.provider.api.general.model.ao.IsStarredAO;
-import com.x.provider.api.general.model.ao.ListStarAO;
-import com.x.provider.api.general.model.ao.StarAO;
+import com.x.provider.api.general.model.dto.IsStarredRequestDTO;
+import com.x.provider.api.general.model.dto.ListStarRequestDTO;
+import com.x.provider.api.general.model.dto.StarRequestDTO;
 import com.x.provider.api.general.model.dto.StarDTO;
 import com.x.provider.api.general.service.StarRpcService;
 import com.x.provider.general.model.domain.Star;
@@ -29,20 +29,20 @@ public class StarRpcController implements StarRpcService {
 
     @PostMapping("is/starred")
     @Override
-    public R<Boolean> isStarred(@RequestBody IsStarredAO isStarred) {
+    public R<Boolean> isStarred(@RequestBody IsStarredRequestDTO isStarred) {
         return R.ok(starService.isStarred(isStarred.getItemType(), isStarred.getItemId(), isStarred.getCustomerId()));
     }
 
     @PostMapping("create")
     @Override
-    public R<Boolean> star(@RequestBody StarAO starAO) {
+    public R<Boolean> star(@RequestBody StarRequestDTO starAO) {
         starService.star(starAO);
         return R.ok();
     }
 
     @PostMapping("list")
     @Override
-    public R<List<StarDTO>> listStar(@RequestBody ListStarAO listStarAO) {
+    public R<List<StarDTO>> listStar(@RequestBody ListStarRequestDTO listStarAO) {
         List<Star> starList = starService.listStar(listStarAO);
         return R.ok(prepare(starList));
     }

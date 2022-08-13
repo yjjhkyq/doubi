@@ -135,6 +135,28 @@ public class CustomerRelationServiceImpl implements CustomerRelationService {
         return listCustomerRelation(fromCustomerId, toCustomerIdList, CustomerRelationEnum.FOLLOW).stream().map(CustomerRelation::getToCustomerId).collect(Collectors.toSet());
     }
 
+    @Override
+    public PageList<CustomerRelation> listCustomerRelation(Long customerId, CustomerRelationEnum customerRelation, PageDomain page) {
+        final ListCustomerRelationQuery query = ListCustomerRelationQuery.builder().build();
+        switch (customerRelation){
+            case FRIEND:
+                query.setFriend(true);
+                query.setFromCustomerId(customerId);
+                break;
+            case FANS:
+                query.setFollow(true);
+                query.setToCustomerId(customerId);
+                break;
+            case FOLLOW:
+                query.setFollow(true);
+                query.setFromCustomerId(customerId);
+                break;
+            case NO_RELATION:
+                throw new IllegalArgumentException(String.valueOf(customerRelation.getValue()));
+        }
+        return listCustomerRelationPage(query, page);
+    }
+
     public List<CustomerRelation> listCustomerRelation(Long customerId, List<Long> customerIdList, CustomerRelationEnum customerRelation){
         ListCustomerRelationQuery query = new ListCustomerRelationQuery();
         switch (customerRelation){
@@ -144,6 +166,10 @@ public class CustomerRelationServiceImpl implements CustomerRelationService {
             case FOLLOW:
                 query.setFromCustomerId(customerId);
                 query.setToCustomerIdList(customerIdList);
+            case FRIEND:
+                query.setFromCustomerId(customerId);
+                query.setToCustomerIdList(customerIdList);
+                query.setFriend(true);
             default:
         }
         return customerRelationMapper.selectList(buildQuery(query));

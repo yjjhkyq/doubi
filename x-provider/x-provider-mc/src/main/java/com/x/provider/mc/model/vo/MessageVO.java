@@ -1,6 +1,7 @@
 package com.x.provider.mc.model.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.x.provider.api.mc.model.protocol.CommonMessageBodyDTO;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
@@ -31,7 +32,6 @@ public class MessageVO {
     @ApiModelProperty(value = "消息体")
     private String msgBody;
     @ApiModelProperty(value = "消息创建日期")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createdOnUtc;
     @ApiModelProperty(value = "消息创建日期, 毫秒")
     private Long createdTimestamp;
@@ -39,4 +39,13 @@ public class MessageVO {
     private String fromCustomerAvatarUrl;
     @ApiModelProperty(value = "消息发送人昵称")
     private String fromCustomerNickName;
+
+    @ApiModelProperty(value = "文本消息内容")
+    private CommonMessageBodyDTO textBody;
+    @ApiModelProperty(value = "图片消息内容")
+    private CommonMessageBodyDTO imageBody;
+    @ApiModelProperty(value = "视频消息内容")
+    private CommonMessageBodyDTO videoBody;
+    @ApiModelProperty(value = "声音消息内容")
+    private CommonMessageBodyDTO voiceBody;
 }

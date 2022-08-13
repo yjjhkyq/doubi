@@ -1,5 +1,6 @@
 package com.x.provider.general.model.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -27,6 +28,7 @@ public class CommentVO {
   private boolean authorComment;
   @ApiModelProperty(value = "评论创建日期")
   private Date createdOnUtc;
+  private String createdOnUtcShowText;
   @ApiModelProperty(value = "评论统计信息")
   private CommentStatisticVO statistic;
 }

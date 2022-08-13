@@ -6,17 +6,14 @@ import com.x.core.web.controller.BaseFrontendController;
 import com.x.core.web.page.PageList;
 import com.x.core.web.page.PageHelper;
 import com.x.provider.api.customer.enums.CustomerOptions;
-import com.x.provider.api.customer.enums.CustomerRelationEnum;
-import com.x.provider.api.customer.model.ao.ListCustomerAO;
-import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
-import com.x.provider.api.customer.model.dto.CustomerDTO;
+import com.x.provider.api.customer.model.dto.ListSimpleCustomerRequestDTO;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
-import com.x.provider.api.finance.model.ao.ListSecurityAO;
+import com.x.provider.api.finance.model.dto.ListSecurityRequestDTO;
 import com.x.provider.api.finance.model.dto.SecurityDTO;
 import com.x.provider.api.finance.service.FinanceRpcService;
 import com.x.provider.api.oss.enums.MediaTypeEnum;
-import com.x.provider.api.oss.model.ao.vod.ListMediaUrlAO;
+import com.x.provider.api.oss.model.dto.vod.ListMediaUrlRequestDTO;
 import com.x.provider.api.oss.service.VodRpcService;
 import com.x.provider.api.video.enums.TopicSourceTypeEnum;
 import com.x.provider.cms.model.domain.CustomerDocument;
@@ -77,7 +74,7 @@ public class SearchController extends BaseFrontendController {
         PageList<TopicDocumentVO> result = PageList.map(securityDocuments, (t) -> BeanUtil.prepare(t, TopicDocumentVO.class));
         Set<Long> securityIdList = result.getList().stream().filter(item -> item.getSourceType().equals(TopicSourceTypeEnum.SECURITY.ordinal())).map(TopicDocumentVO::getSourceId).filter(item -> StringUtils.hasText(item))
                 .map(Long::valueOf).collect(Collectors.toSet());
-        Map<Long, SecurityDTO> securityMap = financeRpcService.listSecurity(ListSecurityAO.builder().ids(new ArrayList<>(securityIdList)).build()).stream().collect(Collectors.toMap(SecurityDTO::getId, item -> item));
+        Map<Long, SecurityDTO> securityMap = financeRpcService.listSecurity(ListSecurityRequestDTO.builder().ids(new ArrayList<>(securityIdList)).build()).stream().collect(Collectors.toMap(SecurityDTO::getId, item -> item));
         result.getList().forEach(item -> {
             if (Objects.equals(item.getSourceType(), TopicSourceTypeEnum.SECURITY.ordinal())){
                 SecurityDTO security = securityMap.get(Long.valueOf(item.getSourceId()));
@@ -96,15 +93,15 @@ public class SearchController extends BaseFrontendController {
         PageList<VideoDocumentVO> result = PageList.map(securityDocuments, (t) -> BeanUtil.prepare(t, VideoDocumentVO.class));
         Set<Long> customerIdList = result.getList().stream().map(VideoDocumentVO::getCustomerId).collect(Collectors.toSet());
         Set<String> videoFileIds = result.getList().stream().map(VideoDocumentVO::getFileId).collect(Collectors.toSet());
-        Map<Long, CustomerDTO> customerMap = customerRpcService.listCustomer(ListCustomerAO.builder().customerIds(new ArrayList<>(customerIdList))
-                .customerOptions(Arrays.asList(CustomerOptions.CUSTOMER_ATTRIBUTE.name())).build()).getData();
-        Map<String, String> mediaMap = vodRpcService.listMediaUrl(ListMediaUrlAO.builder().fileIds(new ArrayList<>(videoFileIds)).mediaType(MediaTypeEnum.COVER).build());
+        Map<Long, SimpleCustomerDTO> customerMap = customerRpcService.listSimpleCustomer(ListSimpleCustomerRequestDTO.builder().customerIds(new ArrayList<>(customerIdList))
+                .customerOptions(Arrays.asList(CustomerOptions.CUSTOMER_ATTRIBUTE.name(), CustomerOptions.CUSTOMER_RELATION.name())).build()).getData();
+        Map<String, String> mediaMap = vodRpcService.listMediaUrl(ListMediaUrlRequestDTO.builder().fileIds(new ArrayList<>(videoFileIds)).mediaType(MediaTypeEnum.COVER).build());
         result.getList().forEach(item -> {
             item.setCoverUrl(mediaMap.getOrDefault(item.getFileId(), ""));
-            CustomerDTO customer = customerMap.get(item.getCustomerId());
+            SimpleCustomerDTO customer = customerMap.get(item.getCustomerId());
             if (customer != null){
-                item.setNickname(customer.getCustomerAttribute().getNickName());
-                item.setAvatarUrl(customer.getCustomerAttribute().getAvatarUrl());
+                item.setNickname(customer.getNickName());
+                item.setAvatarUrl(customer.getAvatarUrl());
             }
         });
         return R.ok(result);
@@ -119,10 +116,9 @@ public class SearchController extends BaseFrontendController {
         if (securityDocuments.isEmpty()){
             return R.ok(new PageList<>());
         }
-        Map<Long, SimpleCustomerDTO> customerMap = customerRpcService.listSimpleCustomerV2(ListSimpleCustomerAO.builder().customerOptions(
+        Map<Long, SimpleCustomerDTO> customerMap = customerRpcService.listSimpleCustomer(ListSimpleCustomerRequestDTO.builder().customerOptions(
                 Arrays.asList(CustomerOptions.CUSTOMER_RELATION.name(), CustomerOptions.CUSTOMER_STAT.name()))
-                .loginCustomerId(getCurrentCustomerId())
-                .customerRelation(CustomerRelationEnum.FOLLOW.getValue())
+                .sessionCustomerId(getCurrentCustomerId())
                 .customerIds(securityDocuments.get().map(CustomerDocument::getId).collect(Collectors.toList()))
                 .build()).getData();
         return R.ok(PageList.map(securityDocuments, (t) -> {

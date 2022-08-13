@@ -2,9 +2,9 @@ package com.x.provider.oss.service.impl;
 
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
 import com.x.core.domain.SuggestionTypeEnum;
-import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
-import com.x.provider.api.oss.model.ao.GreenRpcAO;
-import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
+import com.x.provider.api.oss.model.dto.oss.AttributeGreenRequestDTO;
+import com.x.provider.api.oss.model.dto.oss.GreenRequestDTO;
+import com.x.provider.api.oss.model.dto.oss.AttributeGreenResultDTO;
 import com.x.provider.oss.service.GreenService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -30,12 +30,12 @@ public class GreenServiceImpl implements GreenService {
     }
 
     @Override
-    public void greenAttributeAsync(AttributeGreenRpcAO attributeGreen) {
+    public void greenAttributeAsync(AttributeGreenRequestDTO attributeGreen) {
         getGreenService(GreenDataTypeEnum.valueOf(attributeGreen.getDataType())).greenAttributeAsync(attributeGreen);
     }
 
     @Override
-    public AttributeGreenResultDTO greenAttributeSync(AttributeGreenRpcAO attributeGreenRpcAO) {
+    public AttributeGreenResultDTO greenAttributeSync(AttributeGreenRequestDTO attributeGreenRpcAO) {
         return getGreenService(GreenDataTypeEnum.valueOf(attributeGreenRpcAO.getDataType())).greenAttributeSync(attributeGreenRpcAO);
     }
 
@@ -46,7 +46,7 @@ public class GreenServiceImpl implements GreenService {
     }
 
     @Override
-    public SuggestionTypeEnum green(GreenRpcAO greenRpcAO) {
+    public SuggestionTypeEnum green(GreenRequestDTO greenRpcAO) {
         return getGreenService(GreenDataTypeEnum.valueOf(greenRpcAO.getDataType())).green(greenRpcAO);
     }
 

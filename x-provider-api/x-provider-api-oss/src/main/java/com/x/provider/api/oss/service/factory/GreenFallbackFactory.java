@@ -1,9 +1,9 @@
 package com.x.provider.api.oss.service.factory;
 
 import com.x.core.web.api.R;
-import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
-import com.x.provider.api.oss.model.ao.GreenRpcAO;
-import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
+import com.x.provider.api.oss.model.dto.oss.AttributeGreenRequestDTO;
+import com.x.provider.api.oss.model.dto.oss.GreenRequestDTO;
+import com.x.provider.api.oss.model.dto.oss.AttributeGreenResultDTO;
 import com.x.provider.api.oss.service.GreenRpcService;
 import feign.hystrix.FallbackFactory;
 import org.springframework.stereotype.Component;
@@ -14,17 +14,17 @@ public class GreenFallbackFactory implements FallbackFactory<GreenRpcService> {
     public GreenRpcService create(Throwable throwable) {
         return new GreenRpcService() {
             @Override
-            public R<Void> greenAttributeAsync(AttributeGreenRpcAO attribute) {
+            public R<Void> greenAttributeAsync(AttributeGreenRequestDTO attribute) {
                 return null;
             }
 
             @Override
-            public R<AttributeGreenResultDTO> greenAttributeSync(AttributeGreenRpcAO attribute) {
+            public R<AttributeGreenResultDTO> greenAttributeSync(AttributeGreenRequestDTO attribute) {
                 return null;
             }
 
             @Override
-            public R<String> greenSync(GreenRpcAO greenAO) {
+            public R<String> greenSync(GreenRequestDTO greenAO) {
                 return null;
             }
         };

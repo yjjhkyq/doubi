@@ -1,8 +1,7 @@
 package com.x.provider.api.finance.service.factory;
 
-import com.x.core.web.api.R;
-import com.x.provider.api.finance.model.ao.ListIndustryAO;
-import com.x.provider.api.finance.model.ao.ListSecurityAO;
+import com.x.provider.api.finance.model.dto.ListIndustryRequestDTO;
+import com.x.provider.api.finance.model.dto.ListSecurityRequestDTO;
 import com.x.provider.api.finance.model.dto.IndustryDTO;
 import com.x.provider.api.finance.model.dto.SecurityDTO;
 import com.x.provider.api.finance.service.FinanceRpcService;
@@ -18,12 +17,12 @@ public class FinianceFallbackFactory implements FallbackFactory<FinanceRpcServic
     public FinanceRpcService create(Throwable throwable) {
         return new FinanceRpcService() {
             @Override
-            public List<SecurityDTO> listSecurity(ListSecurityAO listSecurityAO) {
+            public List<SecurityDTO> listSecurity(ListSecurityRequestDTO listSecurityAO) {
                 return null;
             }
 
             @Override
-            public List<IndustryDTO> listIndustry(ListIndustryAO listIndustryAO) {
+            public List<IndustryDTO> listIndustry(ListIndustryRequestDTO listIndustryAO) {
                 return null;
             }
         };

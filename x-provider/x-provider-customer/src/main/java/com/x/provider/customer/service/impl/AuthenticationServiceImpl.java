@@ -45,7 +45,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         if (customerId != null){
             redisService.expire(redisKeyService.getCustomerLoginInfoKey(token), TOKEN_EXPIRED_DURATION);
         }
-        ApiAssetUtil.notNull(customerId, ResultCode.UNAUTHORIZED);
-        return customerId;
+        return customerId == null ? 0L : customerId;
     }
 }

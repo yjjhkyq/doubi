@@ -18,4 +18,5 @@ public interface CustomerRelationService {
     PageList<CustomerRelation> listFans(Long customerId, PageDomain page);
     Map<Long, CustomerRelation> listRelationMap(Long customerId, List<Long> toCustomerIdList, CustomerRelationEnum relationEnum);
     Set<Long> listFollowCustomer(Long fromCustomerId, List<Long> toCustomerIdList);
+    PageList<CustomerRelation> listCustomerRelation(Long customerId, CustomerRelationEnum customerRelationEnum, PageDomain page);
 }

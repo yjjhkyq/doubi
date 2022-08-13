@@ -3,10 +3,10 @@ package com.x.provider.mc.service.impl;
 import com.x.core.utils.JsonUtil;
 import com.x.core.utils.SpringUtils;
 import com.x.provider.api.mc.enums.ConversationType;
-import com.x.provider.api.mc.model.ao.SendMessageRawAO;
-import com.x.provider.mc.model.dto.ConnectInfoDTO;
-import com.x.provider.mc.model.dto.ConversationDTO;
-import com.x.provider.mc.model.dto.MessageDTO;
+import com.x.provider.api.mc.model.dto.SendMessageRawDTO;
+import com.x.provider.mc.model.bo.ConnectInfoBO;
+import com.x.provider.mc.model.bo.ConversationBO;
+import com.x.provider.mc.model.bo.MessageBO;
 import com.x.provider.mc.service.MessageEngineService;
 import com.x.provider.mc.service.WebSocketEngineService;
 import org.springframework.stereotype.Service;
@@ -28,9 +28,9 @@ public class MessageEngineServiceImpl implements MessageEngineService {
             .collect(Collectors.toMap(item -> item.getWebSocketEngineType(), item -> item));
 
     @Override
-    public void sendMessage(ConversationDTO conversation, MessageDTO message) {
+    public void sendMessage(ConversationBO conversation, MessageBO message) {
         Map<String, Object> data = Map.of("conversation", conversation, "message", message);
-        SendMessageRawAO sendMessageRawAO = SendMessageRawAO.builder()
+        SendMessageRawDTO sendMessageRawAO = SendMessageRawDTO.builder()
                 .jsonData(JsonUtil.toJSONString(data))
                 .messageClass(message.getMessageClass())
                 .messageType(message.getMessageType())
@@ -41,7 +41,7 @@ public class MessageEngineServiceImpl implements MessageEngineService {
     }
 
     @Override
-    public void sendMessage(SendMessageRawAO sendMessageRawAO){
+    public void sendMessage(SendMessageRawDTO sendMessageRawAO){
         Map<String, Object> msg = new HashMap<>();
         msg.put("messageClass", sendMessageRawAO.getMessageClass());
         msg.put("messageType", sendMessageRawAO.getMessageType());
@@ -53,11 +53,11 @@ public class MessageEngineServiceImpl implements MessageEngineService {
     }
 
     @Override
-    public List<ConnectInfoDTO> listConnectionInfo(Long customerId) {
-        List<ConnectInfoDTO> result = new ArrayList<>();
+    public List<ConnectInfoBO> listConnectionInfo(Long customerId) {
+        List<ConnectInfoBO> result = new ArrayList<>();
         Long tokenExpireTime = System.currentTimeMillis() + Duration.ofDays(TOKEN_LIVE_DAYS).getSeconds() * 1000;
         WEB_SOCKET_ENGINE_MAP.values().forEach(item -> {
-            ConnectInfoDTO connectInfoDTO = new ConnectInfoDTO();
+            ConnectInfoBO connectInfoDTO = new ConnectInfoBO();
             connectInfoDTO.setAuthenticationToken(item.authenticationToken(customerId.toString(), tokenExpireTime));
             connectInfoDTO.setWebSocketEngineType(item.getWebSocketEngineType());
             connectInfoDTO.setWebSocketUrl(item.getWebSocketUrl());

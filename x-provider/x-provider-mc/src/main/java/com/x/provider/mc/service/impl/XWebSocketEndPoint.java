@@ -13,12 +13,10 @@ import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
-import javax.websocket.OnClose;
-import javax.websocket.OnError;
-import javax.websocket.OnOpen;
-import javax.websocket.Session;
+import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
+import java.io.IOException;
 
 /**
  * @author: liushenyi
@@ -70,6 +68,13 @@ public class XWebSocketEndPoint {
     public void onError(Session session, Throwable error) {
         xWebSocketEndPointCore.onError(session, error);
     }
+
+    @OnMessage
+    public void onMessage(String message, Session session) throws IOException {
+        log.debug("on message");
+        xWebSocketEndPointCore.onMessage(message, session);
+    }
+
 
     public void sendMessage(SendMessageEvent sendMessageEvent){
         redisService.convertAndSend(XWebSocketEndPointCore.PATTERN_SEND_MESSAGE, JSONUtil.toJsonStr(sendMessageEvent));

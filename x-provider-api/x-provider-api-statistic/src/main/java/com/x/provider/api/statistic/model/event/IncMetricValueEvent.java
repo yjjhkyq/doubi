@@ -12,8 +12,8 @@ import lombok.NoArgsConstructor;
 public class IncMetricValueEvent {
     private Long longValue;
     private Double doubleValue;
-    private int periodEnum;
-    private int metricEnum;
+    private int period;
+    private int metric;
     private String itemId;
     private int itemType;
 }

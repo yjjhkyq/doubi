@@ -2,7 +2,7 @@ package com.x.provider.api.video.service;
 
 import com.x.core.web.api.R;
 import com.x.provider.api.video.constants.ServiceNameConstants;
-import com.x.provider.api.video.model.ao.ListTopicAO;
+import com.x.provider.api.video.model.dto.ListTopicRequestDTO;
 import com.x.provider.api.video.model.dto.TopicDTO;
 import com.x.provider.api.video.service.factory.VideoFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -15,5 +15,5 @@ import java.util.List;
 public interface VideoRpcService {
 
     @PostMapping(ServiceNameConstants.RPC_URL_PREFIX + "/topic/list")
-    R<List<TopicDTO>> listTopic(@RequestBody ListTopicAO listTopicAO);
+    R<List<TopicDTO>> listTopic(@RequestBody ListTopicRequestDTO listTopicAO);
 }

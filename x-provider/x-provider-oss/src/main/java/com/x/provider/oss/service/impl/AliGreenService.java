@@ -12,9 +12,9 @@ import com.aliyuncs.profile.DefaultProfile;
 import com.aliyuncs.profile.IClientProfile;
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
 import com.x.core.domain.SuggestionTypeEnum;
-import com.x.provider.api.oss.model.ao.AttributeGreenRpcAO;
-import com.x.provider.api.oss.model.ao.GreenRpcAO;
-import com.x.provider.api.oss.model.dto.AttributeGreenResultDTO;
+import com.x.provider.api.oss.model.dto.oss.AttributeGreenRequestDTO;
+import com.x.provider.api.oss.model.dto.oss.GreenRequestDTO;
+import com.x.provider.api.oss.model.dto.oss.AttributeGreenResultDTO;
 import com.x.provider.oss.configure.AliConfig;
 import com.x.provider.oss.service.GreenService;
 import lombok.extern.slf4j.Slf4j;
@@ -37,12 +37,12 @@ public class AliGreenService implements GreenService {
     }
 
     @Override
-    public void greenAttributeAsync(AttributeGreenRpcAO attributeGreenRpcAO) {
+    public void greenAttributeAsync(AttributeGreenRequestDTO attributeGreenRpcAO) {
 
     }
 
     @Override
-    public AttributeGreenResultDTO greenAttributeSync(AttributeGreenRpcAO attributeGreenRpcAO) {
+    public AttributeGreenResultDTO greenAttributeSync(AttributeGreenRequestDTO attributeGreenRpcAO) {
         return null;
     }
 
@@ -52,7 +52,7 @@ public class AliGreenService implements GreenService {
     }
 
     @Override
-    public SuggestionTypeEnum green(GreenRpcAO greenRpcAO) {
+    public SuggestionTypeEnum green(GreenRequestDTO greenRpcAO) {
         if (greenRpcAO.getDataType().equals(GreenDataTypeEnum.TEXT.name())){
             return greenText(greenRpcAO.getValue());
         }

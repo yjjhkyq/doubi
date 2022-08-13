@@ -4,13 +4,13 @@ import com.x.core.utils.BeanUtil;
 import com.x.core.utils.JsonUtil;
 import com.x.provider.api.customer.model.event.CustomerEvent;
 import com.x.provider.api.customer.service.CustomerRpcService;
-import com.x.provider.api.finance.model.ao.ListSecurityAO;
+import com.x.provider.api.finance.model.dto.ListSecurityRequestDTO;
 import com.x.provider.api.finance.model.dto.SecurityDTO;
 import com.x.provider.api.finance.model.event.SecurityChangedBatchEvent;
 import com.x.provider.api.finance.service.FinanceRpcService;
 import com.x.provider.api.oss.service.VodRpcService;
 import com.x.provider.api.video.enums.TopicSourceTypeEnum;
-import com.x.provider.api.video.model.ao.ListTopicAO;
+import com.x.provider.api.video.model.dto.ListTopicRequestDTO;
 import com.x.provider.api.video.model.dto.TopicDTO;
 import com.x.provider.api.video.model.event.TopicBatchEvent;
 import com.x.provider.api.video.model.event.TopicEvent;
@@ -136,7 +136,7 @@ public class SearchServiceImpl implements SearchService {
 
     @Override
     public void initSecurityList(){
-        List<SecurityDTO> securityList = financeRpcService.listSecurity(ListSecurityAO.builder().build());
+        List<SecurityDTO> securityList = financeRpcService.listSecurity(ListSecurityRequestDTO.builder().build());
         addOrUpdateSecurity(securityList);
     }
 
@@ -157,7 +157,7 @@ public class SearchServiceImpl implements SearchService {
 
     @Override
     public void initTopicList() {
-        List<TopicDTO> topicList = videoRpcService.listTopic(ListTopicAO.builder().build()).getData();
+        List<TopicDTO> topicList = videoRpcService.listTopic(ListTopicRequestDTO.builder().build()).getData();
         List<TopicDocument> topicDocumentList = BeanUtil.prepare(topicList, TopicDocument.class);
         prepare(topicDocumentList);
         topicDocumentRepository.saveAll(topicDocumentList);
@@ -193,9 +193,6 @@ public class SearchServiceImpl implements SearchService {
                 if (!StringUtils.isEmpty(customerEvent.getCustomerAttributeEvent().getAvatarId())){
                     customerDocument.setAvatarId(customerEvent.getCustomerAttributeEvent().getAvatarId());
                 }
-                if (!StringUtils.isEmpty(customerEvent.getCustomerAttributeEvent().getAvatarUrl())){
-                    customerDocument.setAvatarUrl(customerEvent.getCustomerAttributeEvent().getAvatarUrl());
-                }
                 if (!StringUtils.isEmpty(customerEvent.getCustomerAttributeEvent().getNickName())){
                     customerDocument.setNickName(customerEvent.getCustomerAttributeEvent().getNickName());
                 }
@@ -215,7 +212,7 @@ public class SearchServiceImpl implements SearchService {
     public void prepare(List<TopicDocument> topicDocumentList){
         Set<Long> securityIdList = topicDocumentList.stream().filter(item -> item.getSourceType().equals(TopicSourceTypeEnum.SECURITY.ordinal())).map(TopicDocument::getSourceId).filter(item -> StringUtils.hasText(item))
                 .map(Long::valueOf).collect(Collectors.toSet());
-        Map<Long, SecurityDTO> securityMap = financeRpcService.listSecurity(ListSecurityAO.builder().ids(new ArrayList<>(securityIdList)).build()).stream().collect(Collectors.toMap(SecurityDTO::getId, item -> item));
+        Map<Long, SecurityDTO> securityMap = financeRpcService.listSecurity(ListSecurityRequestDTO.builder().ids(new ArrayList<>(securityIdList)).build()).stream().collect(Collectors.toMap(SecurityDTO::getId, item -> item));
         topicDocumentList.forEach(item -> {
             try {
                 item.setTitleCnSpell(ChineseCharToEnUtils.getAllFirstLetter(item.getTitle()));

@@ -1,7 +1,7 @@
 package com.x.provider.finance.service;
 
-import com.x.provider.api.finance.model.ao.ListIndustryAO;
-import com.x.provider.api.finance.model.ao.ListSecurityAO;
+import com.x.provider.api.finance.model.dto.ListIndustryRequestDTO;
+import com.x.provider.api.finance.model.dto.ListSecurityRequestDTO;
 import com.x.provider.finance.model.domain.Industry;
 import com.x.provider.finance.model.domain.Security;
 
@@ -13,6 +13,6 @@ public interface FinanceDataService {
     void fillIndustryCnSpell();
     List<Industry> listIndustry(List<Long> ids, Date updateOnUtcAfter);
     List<Security> listSecurity(List<Long> ids, Date updateOnUtcAfter);
-    List<Security> listSecurity(ListSecurityAO listSecurityAO);
-    List<Industry> listIndustry(ListIndustryAO listIndustryAO);
+    List<Security> listSecurity(ListSecurityRequestDTO listSecurityAO);
+    List<Industry> listIndustry(ListIndustryRequestDTO listIndustryAO);
 }

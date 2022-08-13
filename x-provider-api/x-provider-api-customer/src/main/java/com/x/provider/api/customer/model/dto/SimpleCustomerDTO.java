@@ -1,5 +1,6 @@
 package com.x.provider.api.customer.model.dto;
 
+import com.x.provider.api.customer.enums.CustomerRelationEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,7 +15,9 @@ public class SimpleCustomerDTO {
     private String userName;
     private String nickName;
     private String avatarUrl;
-    private CustomerRelationDTO customerRelation;
+    private Integer gender;
     private CustomerStatDTO statistic;
-    private Boolean canFollow;
+    private Integer customerRelation = CustomerRelationEnum.NO_RELATION.getValue();
+    @Builder.Default
+    private Boolean canFollow = false;
 }

@@ -6,23 +6,29 @@ import com.x.core.utils.BeanUtil;
 import com.x.core.utils.CompareUtils;
 import com.x.core.utils.JsonUtil;
 import com.x.core.web.page.PageDomain;
+import com.x.core.web.page.PageHelper;
+import com.x.core.web.page.PageLimit;
 import com.x.core.web.page.PageList;
-import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
+import com.x.provider.api.customer.enums.CustomerOptions;
+import com.x.provider.api.customer.model.dto.ListSimpleCustomerRequestDTO;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
 import com.x.provider.api.mc.constants.McEventTopic;
 import com.x.provider.api.mc.enums.ConversationType;
 import com.x.provider.api.mc.enums.GroupType;
-import com.x.provider.api.mc.model.ao.SendMessageAO;
+import com.x.provider.api.mc.model.dto.SendMessageRequestDTO;
 import com.x.provider.api.mc.model.event.MessageEvent;
+import com.x.provider.api.mc.model.protocol.CommonMessageBodyDTO;
+import com.x.provider.api.mc.model.protocol.MessageType;
 import com.x.provider.mc.configure.ApplicationConfig;
 import com.x.provider.mc.mapper.*;
-import com.x.provider.mc.model.ao.MarkMessageAsReadAO;
+import com.x.provider.mc.model.bo.GetConversationRequestBO;
+import com.x.provider.mc.model.query.MessageConversationQuery;
+import com.x.provider.mc.model.vo.MarkMessageAsReadRequestVO;
 import com.x.provider.mc.model.domain.ConversationId;
 import com.x.provider.mc.model.domain.*;
-import com.x.provider.mc.model.dto.ConnectInfoDTO;
-import com.x.provider.mc.model.dto.ConversationDTO;
-import com.x.provider.mc.model.dto.MessageDTO;
+import com.x.provider.mc.model.bo.ConversationBO;
+import com.x.provider.mc.model.bo.MessageBO;
 import com.x.provider.mc.model.query.ConversationQuery;
 import com.x.provider.mc.model.query.GroupQuery;
 import com.x.provider.mc.model.query.MessageQuery;
@@ -85,18 +91,34 @@ public class MessageServiceImpl implements MessageService {
     @Override
     public PageList<Message> listMessage(String conversationIdStr, Long sessionCustomerId, PageDomain pageDomain) {
         ConversationId conversationId = toConversationId(conversationIdStr);
-        LambdaQueryWrapper<Message> queryWrapper = buildQuery(MessageQuery.builder().toGroupId(conversationId.getGroupId()).toCustomerId(conversationId.getCustomerId())
-                .gtId(pageDomain.getCursor()).build());
-        queryWrapper = queryWrapper.orderByDesc(Message::getId);
-        List<Message> records = messageMapper.selectList(queryWrapper);
-        if (CollectionUtils.isEmpty(records)){
+        MessageConversationQuery messageConversationQuery = MessageConversationQuery.builder()
+                .conversationId(conversationIdStr)
+                .ownerCustomerId(sessionCustomerId)
+                .ltId(pageDomain.getCursor())
+                .pageLimit(new PageLimit(null, pageDomain.getPageSize()))
+                .build();
+        List<MessageConversation> messageConversations = listMessageConversation(messageConversationQuery);
+        if (messageConversations.isEmpty()){
             return new PageList<>();
         }
-        return new PageList<>(records, pageDomain.getPageSize(), CollectionUtils.lastElement(records).getId());
+        messageConversations.sort(Comparator.comparing(MessageConversation::getId));
+        final Map<Long, Message> messageMap = listMessage(MessageQuery.builder().idList(messageConversations.stream().map(item -> item.getMessageId()).collect(Collectors.toList())).build()).stream()
+                .collect(Collectors.toMap(item -> item.getId(), item -> item));
+        List<Message> messageList = new ArrayList<>(messageMap.size());
+        messageConversations.forEach(item -> {
+            final Message message = messageMap.get(item.getMessageId());
+            if (message != null){
+                messageList.add(message);
+            }
+        });
+        if (CollectionUtils.isEmpty(messageList)){
+            return new PageList<>();
+        }
+        return new PageList<>(messageList, pageDomain.getPageSize(), CollectionUtils.firstElement(messageConversations).getId());
     }
 
     @Override
-    public Long sendMessage(SendMessageAO sendMessageAO) {
+    public MessageBO sendMessage(SendMessageRequestDTO sendMessageAO) {
         Message message = BeanUtil.prepare(sendMessageAO, Message.class);
         message.setCreatedOnUtc(new Date());
         if (!sendMessageAO.getOnlineUserOnly()){
@@ -106,7 +128,7 @@ public class MessageServiceImpl implements MessageService {
         messageEvent.setEventType(MessageEvent.EventTypeEnum.SEND.getValue());
         messageEvent.setOnlineUserOnly(sendMessageAO.getOnlineUserOnly());
         this.kafkaTemplate.send(McEventTopic.TOPIC_NAME_SEND_MESSAGE, StrUtil.format("{}:{}",sendMessageAO.getToCustomerId() + sendMessageAO.getToGroupId()), messageEvent);
-        return message.getId() == null ?0 : message.getId();
+        return buildQuery(message);
     }
 
     @Override
@@ -116,18 +138,18 @@ public class MessageServiceImpl implements MessageService {
         }
         Message message = BeanUtil.prepare(messageEvent, Message.class);
         if (messageEvent.getOnlineUserOnly() != null && messageEvent.getOnlineUserOnly()){
-            messageEngineService.sendMessage(null, prepare(message));
+            messageEngineService.sendMessage(null, buildQuery(message));
             return;
         }
         saveMessageConversation(message);
-        ConversationType conversationType = prepare(message.getToCustomerId(), message.getToGroupId());
+        ConversationType conversationType = buildQuery(message.getToCustomerId(), message.getToGroupId());
         List<Conversation> conversationList = saveConversation(message, conversationType.getValue()).stream()
                 .filter(item -> !item.getOwnerCustomerId().equals(message.getFromCustomerId())).collect(Collectors.toList());
         if (conversationList.isEmpty()){
             return;
         }
-        List<ConversationDTO> conversationDTO = prepare(conversationList);
-        MessageDTO messageDTO = prepare(message);
+        List<ConversationBO> conversationDTO = prepare(conversationList);
+        MessageBO messageDTO = buildQuery(message);
         conversationDTO.forEach(item -> {
             messageEngineService.sendMessage(item, messageDTO);
         });
@@ -149,8 +171,10 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public void markMessageAsRead(MarkMessageAsReadAO markMessageAsReadAO, Long ownerCustomerId){
-        Conversation conversation = getConversation(markMessageAsReadAO.getConversationId(), ownerCustomerId);
+    public void markMessageAsRead(MarkMessageAsReadRequestVO markMessageAsReadAO, Long ownerCustomerId){
+        Conversation conversation = getConversation(ConversationQuery.builder()
+                .conversationId(markMessageAsReadAO.getConversationId())
+                .ownerCustomerId(ownerCustomerId).build());
         if (conversation == null){
             return;
         }
@@ -165,9 +189,14 @@ public class MessageServiceImpl implements MessageService {
     }
 
     private void saveMessageConversation(Message message){
-        messageConversationMapper.insert(MessageConversation.builder().messageId(message.getId()).customerId(message.getToCustomerId()).groupId(message.getToGroupId()).build());
         if (message.getToCustomerId() > 0){
-            messageConversationMapper.insert(MessageConversation.builder().messageId(message.getId()).customerId(message.getFromCustomerId()).groupId(message.getToGroupId()).build());
+            messageConversationMapper.insert(MessageConversation.builder().messageId(message.getId())
+                    .conversationId(toConversationId(ConversationId.builder().groupId(null).customerId(message.getToCustomerId()).build()))
+                    .ownerCustomerId(message.getFromCustomerId()).build());
+            messageConversationMapper.insert(MessageConversation.builder().messageId(message.getId())
+                    .conversationId(toConversationId(ConversationId.builder().groupId(null).customerId(message.getFromCustomerId()).build()))
+                    .ownerCustomerId(message.getToCustomerId())
+                    .build());
         }
         else{
             Group group = groupMapper.selectById(message.getToGroupId());
@@ -196,7 +225,7 @@ public class MessageServiceImpl implements MessageService {
     }
 
     private List<Conversation> prepareConversation(Message message){
-        Integer conversationType = prepare(message.getToCustomerId(), message.getToGroupId()).getValue();
+        Integer conversationType = buildQuery(message.getToCustomerId(), message.getToGroupId()).getValue();
         if (message.getToCustomerId() > 0){
             List<Conversation> result = new ArrayList<>(2);
             result.add(prepareConversation(message, conversationType, message.getFromCustomerId(), message.getToCustomerId()));
@@ -215,10 +244,10 @@ public class MessageServiceImpl implements MessageService {
 
     private Conversation prepareConversation(Message message, Integer conversationType, Long ownerCustomerId, Long customerId){
         Conversation conversation = get(ConversationQuery.builder().ownerCustomerId(ownerCustomerId).customerId(customerId).groupId(message.getToGroupId()).build());
-        return prepare(conversation, conversationType, message, ownerCustomerId, customerId);
+        return buildQuery(conversation, conversationType, message, ownerCustomerId, customerId);
     }
 
-    private Conversation prepare(Conversation conversation, Integer conversationType,  Message message, Long ownerCustomerId, Long customerId){
+    private Conversation buildQuery(Conversation conversation, Integer conversationType, Message message, Long ownerCustomerId, Long customerId){
         Long unReadCount = !Objects.equals(ownerCustomerId, message.getFromCustomerId()) ? 1L : 0L;
         if (conversation == null){
             conversation = Conversation.builder()
@@ -232,7 +261,7 @@ public class MessageServiceImpl implements MessageService {
         }
         conversation.setAlertMessage(message.getAlertMsg());
         conversation.setUnreadCount(conversation.getUnreadCount() + unReadCount);
-        conversation.setDisplayOrder(System.currentTimeMillis());
+        conversation.setDisplayOrder(com.x.core.utils.DateUtils.today().getTime());
         return conversation;
     }
 
@@ -299,16 +328,22 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public Conversation getConversation(String conversationId, Long ownerCustomerId){
-        Conversation conversation = getConversation(ConversationQuery.builder().conversationId(conversationId).ownerCustomerId(ownerCustomerId).build());
-        final ConversationId conversationIdObject = toConversationId(conversationId);
+    public Conversation getConversation(GetConversationRequestBO getConversationRequestBO){
+        Conversation conversation = getConversation(ConversationQuery.builder()
+                .conversationId(getConversationRequestBO.getConversationId())
+                .customerId(getConversationRequestBO.getCustomerId())
+                .groupId(getConversationRequestBO.getGroupId())
+                .ownerCustomerId(getConversationRequestBO.getOwnerCustomerId()).build());
+
         if (conversation == null){
+            final ConversationId conversationIdObject = !StringUtils.isEmpty(getConversationRequestBO.getConversationId()) ? toConversationId(getConversationRequestBO.getConversationId())
+                    : ConversationId.builder().customerId(getConversationRequestBO.getCustomerId()).groupId(getConversationRequestBO.getGroupId()).build();
             conversation = Conversation.builder()
                     .conversationId(toConversationId(ConversationId.builder().customerId(conversationIdObject.getCustomerId()).groupId(conversationIdObject.getGroupId()).build()))
                     .customerId(conversationIdObject.getCustomerId())
                     .groupId(conversationIdObject.getGroupId())
                     .displayOrder(System.currentTimeMillis())
-                    .ownerCustomerId(ownerCustomerId)
+                    .ownerCustomerId(getConversationRequestBO.getOwnerCustomerId())
                     .conversationType(CompareUtils.gtZero(conversationIdObject.getCustomerId()) ? ConversationType.C2C.getValue() : ConversationType.GROUP.getValue())
                     .unreadCount(0L)
                     .alertMessage("")
@@ -353,6 +388,9 @@ public class MessageServiceImpl implements MessageService {
         }
         if (CompareUtils.gtZero(messageQuery.getLtId())){
             query = query.lt(Message::getId, messageQuery.getLtId());
+        }
+        if (!CollectionUtils.isEmpty(messageQuery.getIdList())){
+            query = query.in(Message::getId, messageQuery.getIdList());
         }
         return query;
     }
@@ -416,30 +454,43 @@ public class MessageServiceImpl implements MessageService {
         return conversationIdBO;
     }
 
-    private MessageDTO prepare(Message message){
+    private MessageBO buildQuery(Message message){
         return prepareMessage(Arrays.asList(message)).get(0);
     }
 
     @Override
-    public List<MessageDTO> prepareMessage(List<Message> messageList){
-        List<MessageDTO> result = BeanUtil.prepare(messageList, MessageDTO.class);
-        Map<Long, SimpleCustomerDTO> senderMap = customerRpcService.listSimpleCustomerV2(ListSimpleCustomerAO.builder()
+    public List<MessageBO> prepareMessage(List<Message> messageList){
+        List<MessageBO> result = BeanUtil.prepare(messageList, MessageBO.class);
+        Map<Long, SimpleCustomerDTO> senderMap = customerRpcService.listSimpleCustomer(ListSimpleCustomerRequestDTO.builder()
+                .customerOptions(Arrays.asList(CustomerOptions.CUSTOMER.name(), CustomerOptions.CUSTOMER_ATTRIBUTE.name()))
                 .customerIds(new ArrayList<>(result.stream().map(item -> item.getFromCustomerId()).collect(Collectors.toSet()))).build()).getData();
         result.forEach(item -> {
             SimpleCustomerDTO fromCustomer = senderMap.get(item.getFromCustomerId());
             item.setFromCustomerNickName(fromCustomer.getNickName());
             item.setFromCustomerAvatarUrl(fromCustomer.getAvatarUrl());
             item.setCreatedTimestamp(item.getCreatedOnUtc().getTime());
+            if (MessageType.TEXT.name().equals(item.getMessageType())){
+                item.setTextBody(JsonUtil.parseObject(item.getMsgBody(), CommonMessageBodyDTO.class));
+            }
+            if (MessageType.IMAGE.name().equals(item.getMessageType())){
+                item.setImageBody(JsonUtil.parseObject(item.getMsgBody(), CommonMessageBodyDTO.class));
+            }
+            if (MessageType.VIDEO.name().equals(item.getMessageType())){
+                item.setVideoBody(JsonUtil.parseObject(item.getMsgBody(), CommonMessageBodyDTO.class));
+            }
+            if (MessageType.VOICE.name().equals(item.getMessageType())){
+                item.setVoiceBody(JsonUtil.parseObject(item.getMsgBody(), CommonMessageBodyDTO.class));
+            }
         });
         return result;
     }
 
-    private ConversationType prepare(Long customerId, Long groupId){
+    private ConversationType buildQuery(Long customerId, Long groupId){
         return CompareUtils.gtZero(customerId) ? ConversationType.C2C : ConversationType.GROUP;
     }
 
-    private ConversationDTO prepare(Conversation conversation, SimpleCustomerDTO showCustomer, Group group){
-        ConversationDTO result = BeanUtil.prepare(conversation, ConversationDTO.class);
+    private ConversationBO buildQuery(Conversation conversation, SimpleCustomerDTO showCustomer, Group group){
+        ConversationBO result = BeanUtil.prepare(conversation, ConversationBO.class);
         if (showCustomer != null) {
             result.setShowName(showCustomer.getNickName());
             result.setFaceUrl(showCustomer.getAvatarUrl());
@@ -451,14 +502,15 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public List<ConversationDTO> prepare(List<Conversation> conversationList){
-        List<ConversationDTO> result = new ArrayList<>(conversationList.size());
+    public List<ConversationBO> prepare(List<Conversation> conversationList){
+        List<ConversationBO> result = new ArrayList<>(conversationList.size());
         Set<Long> faceCustomerIdSet = new HashSet<>(conversationList.size());
         faceCustomerIdSet.addAll(conversationList.stream().filter(item -> item.getCustomerId() > 0).map(item -> item.getCustomerId()).collect(Collectors.toSet()));
         List<Long> groupIdList = conversationList.stream().filter(item -> item.getGroupId() > 0).map(item -> item.getGroupId()).collect(Collectors.toList());
         Map<Long, Group> groupMap = groupIdList.isEmpty() ? new HashMap<>() : groupMapper.selectBatchIds(groupIdList).stream().collect(Collectors.toMap(item -> item.getId(), item -> item));
         faceCustomerIdSet.addAll(groupMap.values().stream().map(item -> item.getCustomerId()).collect(Collectors.toSet()));
-        Map<Long, SimpleCustomerDTO> simpleCustomerMap = customerRpcService.listSimpleCustomerV2(ListSimpleCustomerAO.builder()
+        Map<Long, SimpleCustomerDTO> simpleCustomerMap = customerRpcService.listSimpleCustomer(ListSimpleCustomerRequestDTO.builder()
+                .customerOptions(Arrays.asList(CustomerOptions.CUSTOMER.name(), CustomerOptions.CUSTOMER_ATTRIBUTE.name()))
                 .customerIds(new ArrayList<>(faceCustomerIdSet))
                 .build()).getData();
         conversationList.forEach(item -> {
@@ -466,13 +518,39 @@ public class MessageServiceImpl implements MessageService {
             if (item.getGroupId() >0 && groupMap.containsKey(item.getGroupId())){
                 customerId = groupMap.get(item.getGroupId()).getCustomerId();
             }
-            result.add(prepare(item, simpleCustomerMap.get(customerId), groupMap.get(item.getGroupId())));
+            result.add(buildQuery(item, simpleCustomerMap.get(customerId), groupMap.get(item.getGroupId())));
         });
         return result;
     }
 
     @Override
-    public ConversationDTO prepare(Conversation conversation) {
+    public ConversationBO prepare(Conversation conversation) {
         return prepare(Arrays.asList(conversation)).get(0);
+    }
+
+    private List<MessageConversation> listMessageConversation(MessageConversationQuery messageConversationQuery){
+        return messageConversationMapper.selectList(buildQuery(messageConversationQuery));
+    }
+
+    private LambdaQueryWrapper<MessageConversation> buildQuery(MessageConversationQuery messageConversationQuery){
+        LambdaQueryWrapper<MessageConversation> query = new LambdaQueryWrapper<>();
+        if (!StringUtils.isEmpty(messageConversationQuery.getConversationId())){
+            query = query.eq(MessageConversation::getConversationId, messageConversationQuery.getConversationId());
+        }
+        if (messageConversationQuery.getOwnerCustomerId() != null){
+            query = query.eq(MessageConversation::getOwnerCustomerId, messageConversationQuery.getOwnerCustomerId());
+        }
+        if (CompareUtils.gtZero(messageConversationQuery.getLtId())){
+            query = query.lt(MessageConversation::getId, messageConversationQuery.getLtId());
+        }
+        final String pageLimitSql = PageHelper.toPageLimitSql(messageConversationQuery.getPageLimit());
+        if (!StringUtils.isEmpty(pageLimitSql)){
+            query = query.last(pageLimitSql);
+        }
+        return query;
+    }
+
+    private List<Message> listMessage(MessageQuery messageQuery){
+        return messageMapper.selectList(buildQuery(messageQuery));
     }
 }

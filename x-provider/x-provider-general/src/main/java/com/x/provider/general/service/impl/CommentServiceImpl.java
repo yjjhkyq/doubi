@@ -7,11 +7,11 @@ import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.page.PageList;
 import com.x.provider.api.general.constants.GeneralEventTopic;
-import com.x.provider.api.general.model.ao.CommentAO;
+import com.x.provider.api.general.model.dto.CommentRequestDTO;
 import com.x.provider.api.general.model.event.CommentEvent;
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
 import com.x.core.domain.SuggestionTypeEnum;
-import com.x.provider.api.oss.model.ao.GreenRpcAO;
+import com.x.provider.api.oss.model.dto.oss.GreenRequestDTO;
 import com.x.provider.api.oss.service.GreenRpcService;
 import com.x.provider.general.enums.GeneralErrorEnum;
 import com.x.provider.general.mapper.CommentMapper;
@@ -50,10 +50,11 @@ public class CommentServiceImpl implements CommentService {
 
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public void comment(CommentAO commentAO) {
-        R<String> greenResult = greenRpcService.greenSync(GreenRpcAO.builder().dataType(GreenDataTypeEnum.TEXT.name()).value(commentAO.getContent()).build());
+    public void comment(CommentRequestDTO commentAO) {
+        R<String> greenResult = greenRpcService.greenSync(GreenRequestDTO.builder().dataType(GreenDataTypeEnum.TEXT.name()).value(commentAO.getContent()).build());
         ApiAssetUtil.isTrue(SuggestionTypeEnum.PASS.name().equals(greenResult.getData()), GeneralErrorEnum.COMMENT_REVIEW_BLOCKED);
         Comment comment = BeanUtil.prepare(commentAO, Comment.class);
+        comment.setRootCommentId(0L);
         if (commentAO.getParentCommentId() > 0){
             Comment parentComment = getCommentById(commentAO.getParentCommentId());
             comment.setRootCommentId(parentComment.getRootCommentId());
@@ -74,15 +75,15 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public PageList<Comment> listComment(ListCommentAO listCommentAO) {
         LambdaQueryWrapper<Comment> query = buildQuery(listCommentAO.getItemId(), listCommentAO.getItemType(), 0L, listCommentAO.getRootCommentId()).orderByDesc(Comment::getId)
-                .last(StrUtil.format(" limit {} ", listCommentAO.getPageSize()));
-        if (listCommentAO.getCursor() > 0){
-            query.lt(Comment::getId, listCommentAO.getCursor());
+                .last(StrUtil.format(" limit {} ", listCommentAO.getPageDomain().getPageSize()));
+        if (listCommentAO.getPageDomain().getCursor() > 0){
+            query.lt(Comment::getId, listCommentAO.getPageDomain().getCursor());
         }
         List<Comment> comments = commentMapper.selectList(query);
         if (comments.isEmpty()){
             return new PageList<>();
         }
-        return new PageList<>(comments, listCommentAO.getPageSize(), CollectionUtils.lastElement(comments).getId());
+        return new PageList<>(comments, listCommentAO.getPageDomain().getPageSize(), CollectionUtils.lastElement(comments).getId());
     }
 
     @Override

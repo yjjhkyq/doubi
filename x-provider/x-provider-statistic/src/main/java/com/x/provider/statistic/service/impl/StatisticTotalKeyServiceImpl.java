@@ -19,8 +19,8 @@ public class StatisticTotalKeyServiceImpl implements StatisticTotalKeyService {
     private final static String DATE_KEY = DateUtils.YYYYMMDDHHMMSS;
     @Override
     public Pair<String, String> packageKey(StatisticTotal statisticTotalKeyBO) {
-        return Pair.of(StrUtil.format(KEY, statisticTotalKeyBO.getItemTypeEnum(), statisticTotalKeyBO.getItemId()),
-                StrUtil.format(FIELD, statisticTotalKeyBO.getMetricEnum(), statisticTotalKeyBO.getPeriodEnum(), getDateKey(statisticTotalKeyBO)));
+        return Pair.of(StrUtil.format(KEY, statisticTotalKeyBO.getItemType(), statisticTotalKeyBO.getItemId()),
+                StrUtil.format(FIELD, statisticTotalKeyBO.getMetric(), statisticTotalKeyBO.getPeriod(), getDateKey(statisticTotalKeyBO)));
     }
 
     @Override
@@ -29,17 +29,17 @@ public class StatisticTotalKeyServiceImpl implements StatisticTotalKeyService {
         StatisticTotal statisticTotalKeyBO = new StatisticTotal();
         int index = split.length - 1;
         statisticTotalKeyBO.setItemId(split[index--]);
-        statisticTotalKeyBO.setItemTypeEnum(Integer.parseInt(split[index--]));
+        statisticTotalKeyBO.setItemType(Integer.parseInt(split[index--]));
         String[] splitField = field.split(field);
         index = 0;
-        statisticTotalKeyBO.setMetricEnum(Integer.parseInt(splitField[index++]));
-        statisticTotalKeyBO.setPeriodEnum(Integer.parseInt(splitField[index++]));
+        statisticTotalKeyBO.setMetric(Integer.parseInt(splitField[index++]));
+        statisticTotalKeyBO.setPeriod(Integer.parseInt(splitField[index++]));
         statisticTotalKeyBO.setStartDate(DateUtils.dateTime(DATE_KEY, splitField[index++]));
         return statisticTotalKeyBO;
     }
 
     private String getDateKey(StatisticTotal statisticTotalKeyBO){
-        PeriodEnum statisticPeriodEnum = PeriodEnum.valueOf(statisticTotalKeyBO.getPeriodEnum());
+        PeriodEnum statisticPeriodEnum = PeriodEnum.valueOf(statisticTotalKeyBO.getPeriod());
         switch (statisticPeriodEnum){
             case ALL:
                 return DateUtils.parseDateToStr(DATE_KEY, DateUtils.minDate());

@@ -12,9 +12,9 @@ import com.x.core.exception.ApiException;
 import com.x.core.web.api.R;
 import com.x.provider.api.oss.enums.MediaTypeEnum;
 import com.x.core.domain.SuggestionTypeEnum;
-import com.x.provider.api.oss.model.ao.vod.GetContentReviewResultAO;
-import com.x.provider.api.oss.model.ao.vod.ListMediaAO;
-import com.x.provider.api.oss.model.ao.vod.ListMediaUrlAO;
+import com.x.provider.api.oss.model.dto.vod.GetContentReviewResultRequestDTO;
+import com.x.provider.api.oss.model.dto.vod.ListMediaRequestDTO;
+import com.x.provider.api.oss.model.dto.vod.ListMediaUrlRequestDTO;
 import com.x.provider.api.oss.model.dto.vod.ContentReviewResultDTO;
 import com.x.provider.oss.configure.TencentOssConfig;
 import com.x.provider.oss.mapper.ContentReviewResultMapper;
@@ -127,7 +127,7 @@ public class VodServiceImpl implements VodService {
     }
 
     @Override
-    public void contentReview(GetContentReviewResultAO getContentReviewResultAO) {
+    public void contentReview(GetContentReviewResultRequestDTO getContentReviewResultAO) {
         getContentReviewResultAO.getFileIds().forEach(item ->{
             contentReviewResultNotifyMapper.insert(ContentReviewResultNotify.builder().fileId(item).notifySuccess(false).notifyUrl(getContentReviewResultAO.getNotifyUrl()).retryCount(0).build());
             try(DistributeRedisLock lock = new DistributeRedisLock(redisKeyService.getContentReviewNotifyLockKey(item))) {
@@ -142,7 +142,7 @@ public class VodServiceImpl implements VodService {
     }
 
     @Override
-    public Map<String, String> listMediaUrl(ListMediaUrlAO listMediaUrlAO) {
+    public Map<String, String> listMediaUrl(ListMediaUrlRequestDTO listMediaUrlAO) {
         listMediaUrlAO.setFileIds(listMediaUrlAO.getFileIds().stream().distinct().collect(Collectors.toList()));
         if (listMediaUrlAO.getMediaType().equals(MediaTypeEnum.COVER)) {
             return getMediaInfo(listMediaUrlAO.getFileIds()).stream().filter(item -> !StringUtils.isEmpty(item.getCoverUrl())).collect(
@@ -178,7 +178,7 @@ public class VodServiceImpl implements VodService {
     }
 
     @Override
-    public List<MediaInfo> listMediaInfo(ListMediaAO listMediaAO) {
+    public List<MediaInfo> listMediaInfo(ListMediaRequestDTO listMediaAO) {
         var query = new LambdaQueryWrapper<MediaInfo>();
         if (!CollectionUtils.isEmpty(listMediaAO.getFileIdList())){
             query.in(MediaInfo::getFileId, listMediaAO.getFileIdList());

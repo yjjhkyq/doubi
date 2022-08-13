@@ -1,5 +1,6 @@
 package com.x.provider.mc.model.domain;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.x.core.domain.BaseEntity;
@@ -17,4 +18,6 @@ public class Sms extends BaseEntity {
   private String phoneNumberSet;
   private String templateId;
   private String templateParamSet;
+  @TableField("is_deleted")
+  private Boolean deleted;
 }

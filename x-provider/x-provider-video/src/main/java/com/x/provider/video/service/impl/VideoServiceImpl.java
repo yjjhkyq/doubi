@@ -8,13 +8,13 @@ import com.x.core.utils.JsonUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.page.PageDomain;
 import com.x.core.web.page.PageList;
-import com.x.provider.api.customer.model.ao.IncCustomerStatAO;
+import com.x.provider.api.customer.model.dto.IncCustomerStatRequestDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
 import com.x.provider.api.general.enums.StarItemTypeEnum;
 import com.x.provider.api.general.model.event.StarEvent;
 import com.x.provider.api.oss.enums.GreenDataTypeEnum;
 import com.x.core.domain.SuggestionTypeEnum;
-import com.x.provider.api.oss.model.ao.GreenRpcAO;
+import com.x.provider.api.oss.model.dto.oss.GreenRequestDTO;
 import com.x.provider.api.oss.model.dto.vod.ContentReviewResultDTO;
 import com.x.provider.api.oss.model.dto.vod.MediaInfoDTO;
 import com.x.provider.api.oss.service.GreenRpcService;
@@ -92,7 +92,7 @@ public class VideoServiceImpl implements VideoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public long createVideo(CreateVideoAO createVideoAO, long customerId) {
-        R<String> greenResult = greenRpcService.greenSync(GreenRpcAO.builder().dataType(GreenDataTypeEnum.TEXT.name()).value(createVideoAO.getTitle()).build());
+        R<String> greenResult = greenRpcService.greenSync(GreenRequestDTO.builder().dataType(GreenDataTypeEnum.TEXT.name()).value(createVideoAO.getTitle()).build());
         ApiAssetUtil.isTrue(SuggestionTypeEnum.PASS.name().equals(greenResult.getData()), VideoErrorEnum.VIDEO_TITLE_REVIEW_BLOCKED);
         List<ProductTitleItem> videoTitleList = BeanUtil.prepare(createVideoAO.getProductTitleItemList(), ProductTitleItem.class);
         final List<ProductTitleItem> needCreteVideoTopic = videoTitleList.stream().filter(item -> VideoTitleItemTypeEnum.TOPIC.getValue().equals(item.getVideoTitleType()) &&
@@ -216,7 +216,7 @@ public class VideoServiceImpl implements VideoService {
             if(!video.isPresent()){
               return;
             }
-            customerRpcService.incCustomerStatAO(IncCustomerStatAO.builder().starCount(starEvent.isStar() ? 1L : -1L).id(video.get().getCustomerId()).build());
+            customerRpcService.incCustomerStatAO(IncCustomerStatRequestDTO.builder().starCount(starEvent.isStar() ? 1L : -1L).id(video.get().getCustomerId()).build());
             if(starEvent.isStar()) {
                 addVideoStarList(Long.parseLong(starEvent.getItemId()), starEvent.getStarCustomerId());
                 return;

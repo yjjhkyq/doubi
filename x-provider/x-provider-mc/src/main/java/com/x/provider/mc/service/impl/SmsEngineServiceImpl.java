@@ -7,8 +7,11 @@ import com.tencentcloudapi.common.profile.HttpProfile;
 import com.tencentcloudapi.sms.v20210111.models.SendSmsResponse;
 import com.tencentcloudapi.sms.v20210111.SmsClient;
 import com.tencentcloudapi.sms.v20210111.models.SendSmsRequest;
+import com.tencentcloudapi.sms.v20210111.models.SendStatus;
 import com.x.core.exception.ApiException;
+import com.x.core.utils.ApiAssetUtil;
 import com.x.core.web.api.ResultCode;
+import com.x.provider.api.mc.enums.McErrorEnum;
 import com.x.provider.api.mc.enums.SmsSignEnum;
 import com.x.provider.api.mc.enums.SmsTemplateEnum;
 import com.x.provider.mc.configure.TencentConfig;
@@ -26,7 +29,7 @@ public class SmsEngineServiceImpl implements SmsEngineService {
         this.tencentConfig = tencentConfig;
     }
 
-    public void sendSmsActual(String templateId, String signName, String[] phoneNumberSet, String[] templateParamSet) {
+    public SendSmsResponse sendSmsActual(String templateId, String signName, String[] phoneNumberSet, String[] templateParamSet) {
 
         /* 必要步骤：
          * 实例化一个认证对象，入参需要传入腾讯云账户密钥对secretId，secretKey。
@@ -108,11 +111,7 @@ public class SmsEngineServiceImpl implements SmsEngineService {
         /* 通过 client 对象调用 SendSms 方法发起请求。注意请求方法名与请求对象是对应的
          * 返回的 res 是一个 SendSmsResponse 类的实例，与请求对象对应 */
         try {
-        SendSmsResponse res = client.SendSms(req);
-
-        // 输出json格式的字符串回包
-        System.out.println(SendSmsResponse.toJsonString(res));
-
+        return client.SendSms(req);
         // 也可以取出单个值，你可以通过官网接口文档或跳转到response对象的定义处查看返回字段的定义
         // System.out.println(res.getRequestId());
 
@@ -128,10 +127,22 @@ public class SmsEngineServiceImpl implements SmsEngineService {
             log.error(e.getErrorCode(), e);
             throw new ApiException(ResultCode.FAILED);
         }
+
+    }
+
+    public void sendSmsActual(String templateId, String signName, String phoneNumber, String[] templateParamSet){
+        SendSmsResponse sendSmsResponse = sendSmsActual(templateId, signName, new String[]{phoneNumber}, templateParamSet);
+        SendStatus sendStatus = sendSmsResponse.getSendStatusSet()[0];
+        if ("Ok".equals(sendStatus.getCode())){
+            return;
+        }
+        ApiAssetUtil.isTrue(!"LimitExceeded.PhoneNumberThirtySecondLimit".equals(sendStatus.getCode()), McErrorEnum.PHONE_NOMBER_THIRTY_SECOND_LIMIT);
+        ApiAssetUtil.isTrue(!"LimitExceeded.PhoneNumberOneHourLimit".equals(sendStatus.getCode()), McErrorEnum.PHPONE_NUMBER_HOUR_LIMIT);
+        ApiAssetUtil.isTrue(false, McErrorEnum.PHPONE_NUMBER_DAILY_LIMIT);
     }
 
     @Override
     public void sendSms(SmsTemplateEnum smsTemplate, String phone, String templateParamSet) {
-        sendSmsActual(smsTemplate.getValue(), SmsSignEnum.SIGN_CHINA.getSign(), new String[]{ phone }, new String[]{templateParamSet});
+        sendSmsActual(smsTemplate.getValue(), SmsSignEnum.SIGN_CHINA.getSign(), phone, new String[]{templateParamSet});
     }
 }

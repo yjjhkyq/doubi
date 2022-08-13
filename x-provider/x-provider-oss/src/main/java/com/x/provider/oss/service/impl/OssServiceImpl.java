@@ -17,12 +17,12 @@ public class OssServiceImpl implements OssService {
     }
 
     @Override
-    public String getOjectBrowseUrl(String objectKey) {
-        return tencentOssService.getOjectBrowseUrl(objectKey);
+    public String getObjectBrowseUrl(String objectKey) {
+        return tencentOssService.getObjectBrowseUrl(objectKey);
     }
 
     @Override
-    public Map<String, String> listOjectBrowseUrl(List<String> objectKeys) {
-        return tencentOssService.listOjectBrowseUrl(objectKeys);
+    public Map<String, String> listObjectBrowseUrl(List<String> objectKeys) {
+        return tencentOssService.listObjectBrowseUrl(objectKeys);
     }
 }

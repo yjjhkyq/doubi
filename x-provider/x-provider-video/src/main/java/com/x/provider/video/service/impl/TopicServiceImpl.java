@@ -9,13 +9,13 @@ import com.x.core.web.page.PageDomain;
 import com.x.core.web.page.PageHelper;
 import com.x.core.web.page.PageList;
 import com.x.provider.api.finance.enums.FinanceDataTypeEnum;
-import com.x.provider.api.finance.model.ao.ListIndustryAO;
-import com.x.provider.api.finance.model.ao.ListSecurityAO;
+import com.x.provider.api.finance.model.dto.ListIndustryRequestDTO;
+import com.x.provider.api.finance.model.dto.ListSecurityRequestDTO;
 import com.x.provider.api.finance.model.event.FinanceDataChangedEvent;
 import com.x.provider.api.finance.service.FinanceRpcService;
 import com.x.provider.api.video.constants.VideoEventTopic;
 import com.x.provider.api.video.enums.TopicSourceTypeEnum;
-import com.x.provider.api.video.model.ao.ListTopicAO;
+import com.x.provider.api.video.model.dto.ListTopicRequestDTO;
 import com.x.provider.api.video.model.event.TopicBatchEvent;
 import com.x.provider.api.video.model.event.TopicEvent;
 import com.x.provider.video.configure.ApplicationConfig;
@@ -188,7 +188,7 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
-    public List<Topic> listTopic(ListTopicAO listTopicAO) {
+    public List<Topic> listTopic(ListTopicRequestDTO listTopicAO) {
         LambdaQueryWrapper query = buildQuery(listTopicAO.getIdList());
         return topicMapper.selectList(query);
     }
@@ -204,7 +204,7 @@ public class TopicServiceImpl implements TopicService {
         if (topicCustomerFavorites.isEmpty()){
             return new PageList<>();
         }
-        ListTopicAO listTopicAO = ListTopicAO.builder().idList(topicCustomerFavorites.stream().map(TopicCustomerFavorite::getTopicId).collect(Collectors.toList())).build();
+        ListTopicRequestDTO listTopicAO = ListTopicRequestDTO.builder().idList(topicCustomerFavorites.stream().map(TopicCustomerFavorite::getTopicId).collect(Collectors.toList())).build();
         Map<Long, Topic> topics = listTopic(listTopicAO).stream().collect(Collectors.toMap(Topic::getId, item -> item));
         return PageHelper.buildPageList(pageDomain.getPageSize(), CollectionUtils.lastElement(topicCustomerFavorites).getId(), topicCustomerFavorites, (t) -> topics.get(t.getTopicId()));
     }
@@ -239,9 +239,9 @@ public class TopicServiceImpl implements TopicService {
         }
         switch (financeDataType){
             case SECURITY:
-                return financeRpcService.listSecurity(ListSecurityAO.builder().updateOnUtcAfter(afterDate).ids(idList).build());
+                return financeRpcService.listSecurity(ListSecurityRequestDTO.builder().updateOnUtcAfter(afterDate).ids(idList).build());
             case INDUSTRY:
-                return financeRpcService.listIndustry(ListIndustryAO.builder().updateOnUtcAfter(DateUtils.minDate()).ids(idList).build());
+                return financeRpcService.listIndustry(ListIndustryRequestDTO.builder().updateOnUtcAfter(DateUtils.minDate()).ids(idList).build());
             default:
                 log.error("no topic fill service find for topic source type:{}", financeDataType);
         }

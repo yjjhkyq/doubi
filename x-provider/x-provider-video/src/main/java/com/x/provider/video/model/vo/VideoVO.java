@@ -2,7 +2,6 @@ package com.x.provider.video.model.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
-import com.x.provider.video.model.vo.topic.TopicVO;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
@@ -10,7 +9,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 

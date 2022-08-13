@@ -10,17 +10,18 @@ import com.x.core.web.controller.BaseFrontendController;
 import com.x.core.web.page.PageHelper;
 import com.x.core.web.page.PageList;
 import com.x.provider.api.common.enums.ItemTypeEnum;
-import com.x.provider.api.customer.enums.CustomerRelationEnum;
+import com.x.provider.api.customer.enums.CustomerOptions;
+import com.x.provider.api.customer.model.dto.ListSimpleCustomerRequestDTO;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
 import com.x.provider.api.general.enums.CommentItemTypeEnum;
 import com.x.provider.api.general.enums.StarItemTypeEnum;
-import com.x.provider.api.general.model.ao.CommentAO;
-import com.x.provider.api.general.model.ao.ListStarAO;
-import com.x.provider.api.general.model.ao.StarAO;
+import com.x.provider.api.general.model.dto.CommentRequestDTO;
+import com.x.provider.api.general.model.dto.ListStarRequestDTO;
+import com.x.provider.api.general.model.dto.StarRequestDTO;
 import com.x.provider.api.general.service.CommentRpcService;
 import com.x.provider.api.general.service.StarRpcService;
-import com.x.provider.api.oss.model.ao.vod.ListMediaAO;
+import com.x.provider.api.oss.model.dto.vod.ListMediaRequestDTO;
 import com.x.provider.api.oss.model.dto.vod.MediaInfoDTO;
 import com.x.provider.api.oss.service.VodRpcService;
 import com.x.provider.api.video.enums.VideoStatusEnum;
@@ -38,7 +39,6 @@ import com.x.provider.video.model.vo.VideoVO;
 import com.x.provider.video.service.VideoMetricService;
 import com.x.provider.video.service.VideoReadService;
 import com.x.provider.video.service.VideoService;
-import com.x.util.StringUtil;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -155,13 +155,14 @@ public class VideoController extends BaseFrontendController {
         if(!video.get().getVideoStatus().equals(VideoStatusEnum.PUBLISH.ordinal())){
             return R.ok();
         }
-        return commentRpcService.comment(CommentAO.builder()
+        return commentRpcService.comment(CommentRequestDTO.builder()
                 .itemCustomerId(video.get().getCustomerId())
                 .parentCommentId(videoCommentAO.getParentCommentId())
                 .commentCustomerId(getCurrentCustomerId())
                 .content(videoCommentAO.getContent())
                 .itemType(CommentItemTypeEnum.VIDEO.getValue())
                 .itemId(videoCommentAO.getItemId())
+                .commentCustomerId(getCurrentCustomerId())
                 .build());
     }
 
@@ -173,7 +174,7 @@ public class VideoController extends BaseFrontendController {
         if(!video.get().getVideoStatus().equals(VideoStatusEnum.PUBLISH.ordinal())){
             return R.ok();
         }
-        return starRpcService.star(StarAO.builder().itemId(videoCommentStarAO.getCommentId()).itemType(StarItemTypeEnum.COMMENT.getValue())
+        return starRpcService.star(StarRequestDTO.builder().itemId(videoCommentStarAO.getCommentId()).itemType(StarItemTypeEnum.COMMENT.getValue())
                 .star(videoCommentStarAO.isStar()).starCustomerId(getCurrentCustomerId()).build());
     }
 
@@ -227,9 +228,12 @@ public class VideoController extends BaseFrontendController {
         }
         List<Long> videoIdList = videos.stream().map(Video::getId).collect(Collectors.toList());
         Map<Long, VideoStatistic> videoStatisticMap = videoMetricService.listVideoStatisticMap(videoIdList);
-        Map<Long, SimpleCustomerDTO> customers = customerRpcService.listSimpleCustomer(currentCustomerId, CustomerRelationEnum.FOLLOW.getValue()
-                , StringUtil.toString(videos.stream().map(Video::getCustomerId).collect(Collectors.toSet()))).getData();
-        Map<String, MediaInfoDTO> mediaInfoMap = vodRpcService.listMediaInfo(ListMediaAO.builder().fileIdList(videos.stream().map(Video::getFileId).collect(Collectors.toList())).build())
+        Map<Long, SimpleCustomerDTO> customers = customerRpcService.listSimpleCustomer(ListSimpleCustomerRequestDTO.builder()
+                        .sessionCustomerId(currentCustomerId)
+                        .customerOptions(List.of(CustomerOptions.CUSTOMER_RELATION.name(), CustomerOptions.CUSTOMER_ATTRIBUTE.name()))
+                        .customerIds(new ArrayList<>(videos.stream().map(Video::getCustomerId).collect(Collectors.toSet())))
+                        .build()).getData();
+        Map<String, MediaInfoDTO> mediaInfoMap = vodRpcService.listMediaInfo(ListMediaRequestDTO.builder().fileIdList(videos.stream().map(Video::getFileId).collect(Collectors.toList())).build())
                 .getData().stream().collect(Collectors.toMap(item -> item.getFileId(), item -> item));
         List<VideoVO> result = new ArrayList<>(videos.size());
         videos.forEach(item ->{
@@ -256,7 +260,7 @@ public class VideoController extends BaseFrontendController {
             return;
         }
         List<Long> videoIdList = dest.stream().map(VideoVO::getId).collect(Collectors.toList());
-        Set<Long> starIdSet = starRpcService.listStar(ListStarAO.builder().itemType(ItemTypeEnum.VIDEO.getValue()).starCustomerId(currentCustomerId).itemIdList(videoIdList).build()).getData()
+        Set<Long> starIdSet = starRpcService.listStar(ListStarRequestDTO.builder().itemType(ItemTypeEnum.VIDEO.getValue()).starCustomerId(currentCustomerId).itemIdList(videoIdList).build()).getData()
                 .stream().filter(item -> item.isStar()).map(item -> item.getId()).collect(Collectors.toSet());
         if (starIdSet.isEmpty()){
             return;

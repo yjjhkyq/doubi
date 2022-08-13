@@ -1,8 +1,8 @@
 package com.x.provider.mc.controller.rpc;
 
 import com.x.core.web.api.R;
-import com.x.provider.api.mc.model.ao.SendMessageAO;
-import com.x.provider.api.mc.model.ao.SendMessageRawAO;
+import com.x.provider.api.mc.model.dto.SendMessageRequestDTO;
+import com.x.provider.api.mc.model.dto.SendMessageRawDTO;
 import com.x.provider.api.mc.service.MessageRpcService;
 import com.x.provider.mc.service.MessageEngineService;
 import com.x.provider.mc.service.MessageService;
@@ -28,13 +28,13 @@ public class MessageRpcController implements MessageRpcService {
 
     @PostMapping("send")
     @Override
-    public R<Long> sendMessage(@RequestBody SendMessageAO sendMessageAO) {
-        return R.ok(messageService.sendMessage(sendMessageAO));
+    public R<Long> sendMessage(@RequestBody SendMessageRequestDTO sendMessageAO) {
+        return R.ok(messageService.sendMessage(sendMessageAO).getId());
     }
 
     @PostMapping("send/raw")
     @Override
-    public R<Long> sendMessageRaw(@RequestBody SendMessageRawAO sendMessageAO) {
+    public R<Long> sendMessageRaw(@RequestBody SendMessageRawDTO sendMessageAO) {
         messageEngineService.sendMessage(sendMessageAO);
         return R.ok();
     }

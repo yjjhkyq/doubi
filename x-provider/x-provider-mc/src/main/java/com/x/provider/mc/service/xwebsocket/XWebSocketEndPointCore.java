@@ -16,6 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class XWebSocketEndPointCore {
 
     public static final String PATTERN_SEND_MESSAGE = "send-message";
+    public static final String PING = "ping";
+    public static final String PONG = "pong";
 
     private static final ConcurrentHashMap<String, XWebSocketEndPointCore> CLIENT_MAP = new ConcurrentHashMap<>();
 
@@ -56,6 +58,12 @@ public class XWebSocketEndPointCore {
      * @param error
      */
     public void onError(Session session, Throwable error) {
+    }
+
+    public void onMessage(String message, Session session) throws IOException {
+        if (PING.equals(message)){
+            sendMessage(PONG);
+        }
     }
 
     /**

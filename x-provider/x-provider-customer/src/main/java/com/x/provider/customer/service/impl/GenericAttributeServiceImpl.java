@@ -2,8 +2,12 @@ package com.x.provider.customer.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.x.core.constant.Constants;
+import com.x.core.domain.SuggestionTypeEnum;
+import com.x.core.utils.BeanUtil;
 import com.x.provider.customer.mapper.GenericAttributeMapper;
+import com.x.provider.customer.model.ao.AddOrUpdateAttributeAO;
 import com.x.provider.customer.model.domain.GenericAttribute;
+import com.x.provider.customer.model.query.GenericAttributeQuery;
 import com.x.provider.customer.service.GenericAttributeService;
 import com.x.provider.customer.service.RedisKeyService;
 import com.x.redis.service.RedisService;
@@ -12,6 +16,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class GenericAttributeServiceImpl implements GenericAttributeService {
@@ -29,53 +34,57 @@ public class GenericAttributeServiceImpl implements GenericAttributeService {
     }
 
     @Override
-    public List<GenericAttribute> listAttribute(String keyGroup, long entityId) {
+    public List<GenericAttribute> listAttributeMap(String keyGroup, Long entityId) {
         throw new IllegalStateException("not supported");
     }
 
     @Override
-    public Map<String, String> listAttributeMap(String keyGroup, long entityId) {
-        Map<String, String> result = redisService.getCacheMap(redisKeyService.getGenricAttributeHashKey(entityId, keyGroup), String.class);
-        return Optional.ofNullable(result).orElse(new HashMap<>());
-    }
-
-    @Override
-    public GenericAttribute getAttribute(String keyGroup, long entityId, String key) {
+    public GenericAttribute getAttribute(String keyGroup, Long entityId, String key) {
         throw new IllegalStateException("not supported");
     }
 
     @Override
-    public String getAttributeValue(String keyGroup, long entityId, String key) {
-        return redisService.getCacheMapValue(redisKeyService.getGenricAttributeHashKey(entityId, keyGroup), key);
-    }
-
-    @Override
-    public void addOrUpdateAttribute(String keyGroup, long entityId, String key, String value) {
-        save(keyGroup, entityId, key, value);
-        redisService.setCacheMapValue(redisKeyService.getGenricAttributeHashKey(entityId, keyGroup), key, value);
-    }
-
-    @Override
-    public void addOrUpdateDraftAttribute(String keyGroup, long entityId, String key, String value) {
-        save(keyGroup, entityId, Constants.getDraftAttributeName(key), value);
-        redisService.setCacheMapValue(redisKeyService.getGenricAttributeHashKey(entityId, keyGroup), Constants.getDraftAttributeName(key), value);
-    }
-
-    @Override
-    public void deleteDraftAttribute(String keyGroup, long entityId, String key) {
-        GenericAttribute genericAttribute = getBy(keyGroup, entityId, Constants.getDraftAttributeName(key));
+    public GenericAttribute addOrUpdateAttribute(AddOrUpdateAttributeAO addOrUpdateAttributeAO) {
+        GenericAttributeQuery genericAttributeQuery = GenericAttributeQuery.builder()
+                .key(addOrUpdateAttributeAO.getKey())
+                .keyGroup(addOrUpdateAttributeAO.getKeyGroup())
+                .entityId(addOrUpdateAttributeAO.getEntityId())
+                .suggestionType(addOrUpdateAttributeAO.getSuggestionType())
+                .build();
+        GenericAttribute genericAttribute = getBy(genericAttributeQuery);
         if (genericAttribute == null){
+            genericAttribute = BeanUtil.prepare(addOrUpdateAttributeAO, GenericAttribute.class);
+        }
+        genericAttribute.setValue(addOrUpdateAttributeAO.getValue());
+        genericAttribute.setSuggestionType(addOrUpdateAttributeAO.getSuggestionType());
+        addOrUpdate(genericAttribute);
+        return genericAttribute;
+    }
+
+    @Override
+    public GenericAttribute addOrUpdateDraftAttribute(String keyGroup, Long entityId, String key, String value) {
+        return addOrUpdateAttribute(AddOrUpdateAttributeAO.builder().key(key).keyGroup(keyGroup).value(value).entityId(entityId).suggestionType(SuggestionTypeEnum.REVIEW.getValue()).build());
+    }
+
+    @Override
+    public void deleteDraftAttribute(String keyGroup, Long entityId, String key) {
+        final GenericAttribute genericAttribute = getBy(GenericAttributeQuery.builder().keyGroup(keyGroup).key(key).entityId(entityId).suggestionType(SuggestionTypeEnum.REVIEW.getValue()).build());
+        if (genericAttribute != null){
+            genericAttributeMapper.deleteById(genericAttribute.getId());
+        }
+    }
+
+    @Override
+    public List<GenericAttribute> listAttributeMap(String keyGroup, List<Long> entityIdList) {
+        return genericAttributeMapper.selectList(buildQuery(GenericAttributeQuery.builder().keyGroup(keyGroup).entityIdList(entityIdList).build()));
+    }
+
+    public void addOrUpdate(GenericAttribute genericAttribute){
+        if (genericAttribute.getId() != null){
+            genericAttributeMapper.updateById(genericAttribute);
             return;
         }
-        genericAttributeMapper.deleteById(genericAttribute.getId());
-        redisService.deleteCacheMapValue(redisKeyService.getGenricAttributeHashKey(entityId, keyGroup),  Constants.getDraftAttributeName(key));
-    }
-
-    @Override
-    public Map<Long, Map<String, String>> listAttributeMap(String keyGroup, List<Long> entityIdList) {
-        LambdaQueryWrapper<GenericAttribute> query = buildQuery(keyGroup, 0L, entityIdList, null);
-        List<GenericAttribute> genericAttributes = genericAttributeMapper.selectList(query);
-        return prepare(genericAttributes);
+        genericAttributeMapper.insert(genericAttribute);
     }
 
     private Map<Long, Map<String, String>> prepare(List<GenericAttribute> source){
@@ -92,7 +101,7 @@ public class GenericAttributeServiceImpl implements GenericAttributeService {
         return result;
     }
 
-    private void save(String keyGroup, long entityId, String key, String value){
+    private void save(String keyGroup, Long entityId, String key, String value){
         GenericAttribute genericAttribute = getBy(keyGroup, entityId, key);
         if (genericAttribute == null){
             genericAttribute = GenericAttribute.builder().entityId(entityId).key(key).keyGroup(keyGroup).value(value).build();
@@ -106,24 +115,29 @@ public class GenericAttributeServiceImpl implements GenericAttributeService {
         }
     }
 
-    private GenericAttribute getBy(String keyGroup, long entityId, String key){
-        return genericAttributeMapper.selectOne(buildQuery(keyGroup, entityId, null, key));
+    private GenericAttribute getBy(String keyGroup, Long entityId, String key){
+        return genericAttributeMapper.selectOne(buildQuery(GenericAttributeQuery.builder().keyGroup(keyGroup).entityId(entityId).key(key).build()));
     }
 
-    private LambdaQueryWrapper<GenericAttribute> buildQuery(String keyGroup, long entityId, List<Long> entityIdList, String key){
+    private GenericAttribute getBy(GenericAttributeQuery genericAttributeQuery){
+        return genericAttributeMapper.selectOne(buildQuery(genericAttributeQuery));
+    }
+
+    private LambdaQueryWrapper<GenericAttribute> buildQuery(GenericAttributeQuery genericAttributeQuery){
         LambdaQueryWrapper<GenericAttribute> result = new LambdaQueryWrapper<>();
-        if (!StringUtils.isEmpty(keyGroup)){
-            result.eq(GenericAttribute::getKeyGroup, keyGroup);
+        if (!StringUtils.isEmpty(genericAttributeQuery.getKeyGroup())){
+            result.eq(GenericAttribute::getKeyGroup, genericAttributeQuery.getKeyGroup());
         }
-        if (entityId > 0){
-            result.eq(GenericAttribute::getEntityId, entityId);
+        if (genericAttributeQuery.getEntityId() != null){
+            result.eq(GenericAttribute::getEntityId, genericAttributeQuery.getEntityId());
         }
-        if (!CollectionUtils.isEmpty(entityIdList)){
-            result.in(GenericAttribute::getEntityId, entityIdList);
+        if (!CollectionUtils.isEmpty(genericAttributeQuery.getEntityIdList())){
+            result.in(GenericAttribute::getEntityId, genericAttributeQuery.getEntityIdList());
         }
-        if (!StringUtils.isEmpty(key)){
-            result.eq(GenericAttribute::getKey, key);
+        if (!StringUtils.isEmpty(genericAttributeQuery.getKey())){
+            result.eq(GenericAttribute::getKey, genericAttributeQuery.getKey());
         }
         return result;
     }
+
 }

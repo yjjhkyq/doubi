@@ -1,10 +1,9 @@
 package com.x.provider.api.customer.service.factory;
 
 import com.x.core.web.api.R;
-import com.x.provider.api.customer.enums.CustomerRelationEnum;
-import com.x.provider.api.customer.model.ao.IncCustomerStatAO;
-import com.x.provider.api.customer.model.ao.ListCustomerAO;
-import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
+import com.x.provider.api.customer.model.dto.IncCustomerStatRequestDTO;
+import com.x.provider.api.customer.model.dto.ListCustomerRequestDTO;
+import com.x.provider.api.customer.model.dto.ListSimpleCustomerRequestDTO;
 import com.x.provider.api.customer.model.dto.CustomerDTO;
 import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.provider.api.customer.service.CustomerRpcService;
@@ -27,7 +26,7 @@ public class CustomerFallbackFactory implements FallbackFactory<CustomerRpcServi
             }
 
             @Override
-            public R<Map<Long, CustomerDTO>> listCustomer(ListCustomerAO listCustomerAO) {
+            public R<Map<Long, CustomerDTO>> listCustomer(ListCustomerRequestDTO listCustomerAO) {
                 return null;
             }
 
@@ -43,17 +42,12 @@ public class CustomerFallbackFactory implements FallbackFactory<CustomerRpcServi
             }
 
             @Override
-            public R<Map<Long, SimpleCustomerDTO>> listSimpleCustomer(long loginCustomerId, int customerRelation, String customerIdList) {
+            public R<Map<Long, SimpleCustomerDTO>> listSimpleCustomer(ListSimpleCustomerRequestDTO listSimpleCustomer) {
                 return R.ok(new HashMap<>());
             }
 
             @Override
-            public R<Map<Long, SimpleCustomerDTO>> listSimpleCustomerV2(ListSimpleCustomerAO listSimpleCustomer) {
-                return R.ok(new HashMap<>());
-            }
-
-            @Override
-            public R<Void> incCustomerStatAO(IncCustomerStatAO incCustomerStatAO) {
+            public R<Void> incCustomerStatAO(IncCustomerStatRequestDTO incCustomerStatAO) {
                 return R.ok();
             }
         };

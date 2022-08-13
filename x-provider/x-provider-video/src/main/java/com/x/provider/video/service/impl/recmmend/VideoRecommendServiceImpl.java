@@ -49,9 +49,9 @@ public class VideoRecommendServiceImpl implements VideoRecommendService {
 
     @Override
     public void onStatisticTotalChanged(MetricValueChangedEvent statTotalChangedEvent) {
-        if (statTotalChangedEvent.getItemTypeEnum().equals(ItemTypeEnum.VIDEO.getValue())
-                && statTotalChangedEvent.getMetricEnum().equals(MetricEnum.SCORE.getValue())
-                && statTotalChangedEvent.getPeriodEnum().equals(PeriodEnum.ALL.getValue())){
+        if (statTotalChangedEvent.getItemType().equals(ItemTypeEnum.VIDEO.getValue())
+                && statTotalChangedEvent.getMetric().equals(MetricEnum.SCORE.getValue())
+                && statTotalChangedEvent.getPeriod().equals(PeriodEnum.ALL.getValue())){
             Long score = statTotalChangedEvent.getLongValue();
             Long videoId = Long.parseLong(statTotalChangedEvent.getItemId());
             videoRecommendPoolServices.stream().forEach(item -> {
@@ -71,7 +71,7 @@ public class VideoRecommendServiceImpl implements VideoRecommendService {
     public void incVideoScore(Long videoId, Long score){
         kafkaTemplate.send(StatisticEventTopic.TOPIC_NAME_STAT_INC_METRIC_VALUE_EVENT, StrUtil.format("{}:{}", ItemTypeEnum.VIDEO.getValue(), videoId.toString()),
                 IncMetricValueEvent.builder().longValue(score).itemType(ItemTypeEnum.VIDEO.getValue())
-                        .itemId(String.valueOf(videoId)).periodEnum(PeriodEnum.ALL.getValue())
-                        .metricEnum(MetricEnum.SCORE.getValue()).build());
+                        .itemId(String.valueOf(videoId)).period(PeriodEnum.ALL.getValue())
+                        .metric(MetricEnum.SCORE.getValue()).build());
     }
 }

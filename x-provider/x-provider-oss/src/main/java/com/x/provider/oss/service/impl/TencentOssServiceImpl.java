@@ -142,12 +142,12 @@ public class TencentOssServiceImpl implements TencentOssService {
         }
     }
 
-    public String getOjectBrowseUrl(String key){
+    public String getObjectBrowseUrl(String key){
         return getObjectAnonymousAccessUrl(tencentOssConfig.getOssBucketCustomer(), Arrays.asList(key)).get(key);
     }
 
     @Override
-    public Map<String, String> listOjectBrowseUrl(List<String> objectKeys) {
+    public Map<String, String> listObjectBrowseUrl(List<String> objectKeys) {
         return getObjectAnonymousAccessUrl(tencentOssConfig.getOssBucketCustomer(), objectKeys);
     }
 

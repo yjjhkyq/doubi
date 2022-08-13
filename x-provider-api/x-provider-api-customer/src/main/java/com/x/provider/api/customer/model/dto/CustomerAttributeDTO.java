@@ -16,4 +16,5 @@ public class CustomerAttributeDTO {
     private String avatarUrl;
     private String personalHomePageBackgroundId;
     private String personalHomePageBackgroundUrl;
+    private Integer gender;
 }

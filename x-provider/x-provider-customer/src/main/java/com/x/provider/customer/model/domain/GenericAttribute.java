@@ -16,11 +16,12 @@ import lombok.*;
 public class GenericAttribute  extends BaseEntity {
 
   @TableId
-  private long id;
-  private long entityId;
+  private Long id;
+  private Long entityId;
   private String keyGroup;
   @TableField("`key`")
   private String key;
   @TableField("`value`")
   private String value;
+  private Integer suggestionType;
 }

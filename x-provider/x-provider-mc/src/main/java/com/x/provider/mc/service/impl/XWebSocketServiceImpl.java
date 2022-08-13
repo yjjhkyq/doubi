@@ -1,15 +1,10 @@
 package com.x.provider.mc.service.impl;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
 import com.x.provider.mc.configure.ApplicationConfig;
 import com.x.provider.mc.enums.WebSocketEngineTypeEnum;
-import com.x.provider.mc.model.dto.ConnectInfoDTO;
 import com.x.provider.mc.model.event.SendMessageEvent;
 import com.x.provider.mc.service.WebSocketEngineService;
 import org.springframework.stereotype.Service;
-
-import java.util.Date;
 
 /**
  * @author: liushenyi

@@ -4,8 +4,8 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.x.core.utils.BeanUtil;
 import com.x.provider.api.common.enums.ItemTypeEnum;
-import com.x.provider.api.general.model.ao.ListStarAO;
-import com.x.provider.api.general.model.ao.StarAO;
+import com.x.provider.api.general.model.dto.ListStarRequestDTO;
+import com.x.provider.api.general.model.dto.StarRequestDTO;
 import com.x.provider.api.general.model.dto.CommentDTO;
 import com.x.provider.api.general.model.event.StarEvent;
 import com.x.provider.general.comstant.GeneralEventTopic;
@@ -46,7 +46,7 @@ public class StarServiceImpl implements StarService {
 
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public boolean star(StarAO starAO) {
+    public boolean star(StarRequestDTO starAO) {
         Comment comment = null;
         if (starAO.getItemType() == ItemTypeEnum.COMMENT.getValue()){
             comment = commentService.getById(starAO.getItemId());
@@ -84,7 +84,7 @@ public class StarServiceImpl implements StarService {
     }
 
     @Override
-    public List<Star> listStar(ListStarAO listStarAO) {
+    public List<Star> listStar(ListStarRequestDTO listStarAO) {
         LambdaQueryWrapper<Star> query = buildQuery(0L, listStarAO.getStarCustomerId(), listStarAO.getItemType(), listStarAO.getItemIdList());
         return starMapper.selectList(query);
     }

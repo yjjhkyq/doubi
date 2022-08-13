@@ -1,10 +1,10 @@
 package com.x.provider.api.oss.service.factory;
 
 import com.x.core.web.api.R;
-import com.x.provider.api.oss.model.ao.vod.DeleteMediaAO;
-import com.x.provider.api.oss.model.ao.vod.GetContentReviewResultAO;
-import com.x.provider.api.oss.model.ao.vod.ListMediaAO;
-import com.x.provider.api.oss.model.ao.vod.ListMediaUrlAO;
+import com.x.provider.api.oss.model.dto.vod.DeleteMediaRequestDTO;
+import com.x.provider.api.oss.model.dto.vod.GetContentReviewResultRequestDTO;
+import com.x.provider.api.oss.model.dto.vod.ListMediaRequestDTO;
+import com.x.provider.api.oss.model.dto.vod.ListMediaUrlRequestDTO;
 import com.x.provider.api.oss.model.dto.vod.MediaInfoDTO;
 import com.x.provider.api.oss.service.VodRpcService;
 import feign.hystrix.FallbackFactory;
@@ -22,17 +22,17 @@ public class VodFallbackFactory implements FallbackFactory<VodRpcService> {
         return new VodRpcService() {
 
             @Override
-            public R<Void> contentReview(GetContentReviewResultAO getContentReviewResultAO) {
+            public R<Void> contentReview(GetContentReviewResultRequestDTO getContentReviewResultAO) {
                 return null;
             }
 
             @Override
-            public Map<String, String> listMediaUrl(ListMediaUrlAO listMediaUrlAO) {
+            public Map<String, String> listMediaUrl(ListMediaUrlRequestDTO listMediaUrlAO) {
                 return null;
             }
 
             @Override
-            public R<Void> deleteMedia(DeleteMediaAO deleteMediaAO) {
+            public R<Void> deleteMedia(DeleteMediaRequestDTO deleteMediaAO) {
                 return null;
             }
 
@@ -42,7 +42,7 @@ public class VodFallbackFactory implements FallbackFactory<VodRpcService> {
             }
 
             @Override
-            public R<List<MediaInfoDTO>> listMediaInfo(ListMediaAO listMediaAO) {
+            public R<List<MediaInfoDTO>> listMediaInfo(ListMediaRequestDTO listMediaAO) {
                 return R.ok(new ArrayList<>());
             }
         };

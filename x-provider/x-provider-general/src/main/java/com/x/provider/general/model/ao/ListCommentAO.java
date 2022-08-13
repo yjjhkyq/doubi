@@ -10,8 +10,9 @@ import lombok.*;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
 @ApiModel
-public class ListCommentAO extends PageDomain{
+public class ListCommentAO{
     private long itemId;
     private int itemType;
-    Long rootCommentId;
+    private Long rootCommentId;
+    private PageDomain pageDomain;
 }

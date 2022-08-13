@@ -6,19 +6,19 @@ import lombok.Data;
 public class MetricValueChangedEvent {
     private Long longValue;
     private Double doubleValue;
-    private Integer periodEnum;
-    private Integer metricEnum;
+    private Integer period;
+    private Integer metric;
     private String itemId;
-    private Integer itemTypeEnum;
+    private Integer itemType;
 
     public MetricValueChangedEvent(){
 
     }
 
-    public MetricValueChangedEvent(Integer metricEnum, Integer periodEnum, Integer itemTypeEnum, String itemId, Double doubleValue, Long longValue){
-        this.metricEnum = metricEnum;
-        this.periodEnum = periodEnum;
-        this.itemTypeEnum = itemTypeEnum;
+    public MetricValueChangedEvent(Integer metric, Integer period, Integer itemType, String itemId, Double doubleValue, Long longValue){
+        this.metric = metric;
+        this.period = period;
+        this.itemType = itemType;
         this.itemId = itemId;
         this.doubleValue = doubleValue;
         this.longValue = longValue;

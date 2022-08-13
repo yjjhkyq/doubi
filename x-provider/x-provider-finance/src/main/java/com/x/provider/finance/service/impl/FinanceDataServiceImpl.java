@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.x.core.utils.BeanUtil;
 import com.x.provider.api.finance.constants.FinanceEventTopic;
 import com.x.provider.api.finance.enums.FinanceDataTypeEnum;
-import com.x.provider.api.finance.model.ao.ListIndustryAO;
-import com.x.provider.api.finance.model.ao.ListSecurityAO;
+import com.x.provider.api.finance.model.dto.ListIndustryRequestDTO;
+import com.x.provider.api.finance.model.dto.ListSecurityRequestDTO;
 import com.x.provider.api.finance.model.event.FinanceDataChangedEvent;
 import com.x.provider.api.finance.model.event.FinanceDataChangedEventEnum;
 import com.x.provider.api.finance.model.event.SecurityChangedBatchEvent;
@@ -138,12 +138,12 @@ public class FinanceDataServiceImpl implements FinanceDataService {
     }
 
     @Override
-    public List<Security> listSecurity(ListSecurityAO listSecurityAO) {
+    public List<Security> listSecurity(ListSecurityRequestDTO listSecurityAO) {
         return listSecurity(listSecurityAO.getIds(), listSecurityAO.getUpdateOnUtcAfter());
     }
 
     @Override
-    public List<Industry> listIndustry(ListIndustryAO listIndustryAO) {
+    public List<Industry> listIndustry(ListIndustryRequestDTO listIndustryAO) {
         return listIndustry(listIndustryAO.getIds(), listIndustryAO.getUpdateOnUtcAfter());
     }
 

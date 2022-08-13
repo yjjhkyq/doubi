@@ -33,7 +33,7 @@ public class OssController extends BaseFrontendController {
     @ApiOperation(value = "获取对象访问url")
     @GetMapping("/browser/url")
     public R<String> getOjectBrowseUrl(@RequestParam @ApiParam(value = "对象key") String objectKey){
-        return R.ok(ossService.getOjectBrowseUrl(objectKey));
+        return R.ok(ossService.getObjectBrowseUrl(objectKey));
     }
 
     @ApiOperation(value = "获取对象上传参数")

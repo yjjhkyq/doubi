@@ -1,5 +1,7 @@
 package com.x.provider.statistic.model.domain;
 
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,12 +13,15 @@ import java.util.Date;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@TableName("stat_total")
 public class StatisticTotal {
+    @TableId
+    private Long id;
     private Long longValue;
     private Double doubleValue;
     private Date startDate;
-    private Integer periodEnum;
-    private Integer metricEnum;
+    private Integer period;
+    private Integer metric;
     private String itemId;
-    private Integer itemTypeEnum;
+    private Integer itemType;
 }

@@ -1,8 +1,8 @@
 package com.x.provider.finance.controller.rpc;
 
 import com.x.core.utils.BeanUtil;
-import com.x.provider.api.finance.model.ao.ListIndustryAO;
-import com.x.provider.api.finance.model.ao.ListSecurityAO;
+import com.x.provider.api.finance.model.dto.ListIndustryRequestDTO;
+import com.x.provider.api.finance.model.dto.ListSecurityRequestDTO;
 import com.x.provider.api.finance.model.dto.IndustryDTO;
 import com.x.provider.api.finance.model.dto.SecurityDTO;
 import com.x.provider.api.finance.service.FinanceRpcService;
@@ -29,14 +29,14 @@ public class FinanceRpcController implements FinanceRpcService {
 
     @Override
     @PostMapping("/security/list")
-    public List<SecurityDTO> listSecurity(@RequestBody ListSecurityAO listSecurityAO) {
+    public List<SecurityDTO> listSecurity(@RequestBody ListSecurityRequestDTO listSecurityAO) {
         var securityList = financeDataService.listSecurity(listSecurityAO);
         return BeanUtil.prepare(securityList, SecurityDTO.class);
     }
 
     @Override
     @PostMapping("/industry/list")
-    public List<IndustryDTO> listIndustry(@RequestBody ListIndustryAO listIndustryAO) {
+    public List<IndustryDTO> listIndustry(@RequestBody ListIndustryRequestDTO listIndustryAO) {
         var industryList = financeDataService.listIndustry(listIndustryAO);
         return BeanUtil.prepare(industryList, IndustryDTO.class);
     }

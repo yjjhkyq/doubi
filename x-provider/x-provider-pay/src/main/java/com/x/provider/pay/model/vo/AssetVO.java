@@ -13,16 +13,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AssetVO {
-    private Long id;
-    @ApiModelProperty(value = "用户id")
-    private Long customerId;
-    @ApiModelProperty(value = "金币")
-    private Long coin;
-    @ApiModelProperty(value = "消费金币")
-    private Long costCoin;
-    @ApiModelProperty(value = "大米")
-    private Long rice;
-    @ApiModelProperty(value = "提现大米")
-    private Long withdrawRice;
+    @ApiModelProperty(value = "金币资产")
+    private AssetCoinVO assetCoin;
+
+    @ApiModelProperty(value = "vip资产")
+    private AssetVipVO assetVip;
 }
 

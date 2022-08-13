@@ -1,8 +1,8 @@
 package com.x.provider.mc.controller.rpc;
 
 import com.x.core.web.api.R;
-import com.x.provider.api.mc.model.ao.SendVerificationCodeAO;
-import com.x.provider.api.mc.model.ao.ValidateVerificationCodeAO;
+import com.x.provider.api.mc.model.dto.SendVerificationCodeDTO;
+import com.x.provider.api.mc.model.dto.ValidateVerificationCodeDTO;
 import com.x.provider.api.mc.service.SmsRpcService;
 import com.x.provider.mc.service.SmsService;
 import lombok.extern.slf4j.Slf4j;
@@ -23,14 +23,14 @@ public class SmsRpcController implements SmsRpcService {
 
     @PostMapping("/verification/code/send")
     @Override
-    public R<Void> sendVerificationCode( @RequestBody SendVerificationCodeAO sendVerificationCodeAO) {
+    public R<Void> sendVerificationCode( @RequestBody SendVerificationCodeDTO sendVerificationCodeAO) {
         smsService.sendVerificationCode(sendVerificationCodeAO.getPhoneNumber());
         return R.ok();
     }
 
     @PostMapping("/verification/code/validate")
     @Override
-    public R<Void> validateVerificationCode(@RequestBody ValidateVerificationCodeAO validateVerificationCodeAO) {
+    public R<Void> validateVerificationCode(@RequestBody ValidateVerificationCodeDTO validateVerificationCodeAO) {
         smsService.validateVerificationCode(validateVerificationCodeAO.getPhoneNumber(), validateVerificationCodeAO.getSms());
         return R.ok();
     }

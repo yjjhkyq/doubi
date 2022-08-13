@@ -1,21 +1,20 @@
 package com.x.provider.customer.service;
 
-import com.x.provider.api.customer.model.ao.ListSimpleCustomerAO;
-import com.x.provider.api.customer.model.dto.SimpleCustomerDTO;
 import com.x.core.domain.SuggestionTypeEnum;
 import com.x.provider.customer.enums.SystemCustomerAttributeName;
 import com.x.provider.customer.model.ao.*;
 import com.x.provider.customer.model.domain.Customer;
 import com.x.provider.customer.model.domain.CustomerPassword;
-import com.x.provider.customer.model.domain.CustomerRelation;
+import com.x.provider.customer.model.domain.GenericAttribute;
 import com.x.provider.customer.model.domain.Role;
+import com.x.provider.customer.model.query.CustomerAttributeQuery;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 public interface CustomerService {
-    List<String> MEDIA_CUSTOMER_ATTRIBUTE_NAME = Arrays.asList(SystemCustomerAttributeName.AVATAR_ID.toString(), SystemCustomerAttributeName.PERSONAL_HOMEPAGE_BACKGROUND_ID.toString());
+    List<String> CUSTOMER_ATTRIBUTE_NAME_OSS = Arrays.asList(SystemCustomerAttributeName.AVATAR_ID.toString(), SystemCustomerAttributeName.PERSONAL_HOMEPAGE_BACKGROUND_ID.toString());
     void register(UserNamePasswordRegisterAO userNamePasswordRegisterAO);
     String loginByPassword(LoginByPasswordAO userNamePasswordLoginAO);
     String loginOrRegisterBySms(LoginOrRegBySmsAO loginOrRegByPhoneAO);
@@ -29,12 +28,11 @@ public interface CustomerService {
     Customer getCustomer(long id);
     CustomerPassword getCustomerPassword(long customerId);
     List<Role> listCustomerRole(long customerId);
-    void setCustomerDraftAttribute(long customerId, SystemCustomerAttributeName systemCustomerAttributeName, String value);
-    Map<String, String> listCustomerAttribute(long customerId);
-    Map<String, String> listCustomerAttribute(long customerId, List<SystemCustomerAttributeName> attributeNames);
-    void onCustomerDraftAttributeGreenFinished(long customerId, SystemCustomerAttributeName attributeName, String value, SuggestionTypeEnum suggestionTypeEnum);
-    Map<Long, SimpleCustomerDTO> listCustomer(ListSimpleCustomerAO listCustomerAO);
-    void prepareRelation(long loginCustomerId, List<SimpleCustomerDTO> source, Map<Long, CustomerRelation> customerRelations);
-    Customer registerCustomer(Customer customer);
+    void setCustomerAttribute(long customerId, SystemCustomerAttributeName systemCustomerAttributeName, String value);
 
+    void onCustomerDraftAttributeGreenFinished(long customerId, SystemCustomerAttributeName attributeName, String value, SuggestionTypeEnum suggestionTypeEnum);
+    Customer registerCustomer(Customer customer);
+    List<Customer> listCustomer(List<Long> idList);
+    Map<Long, List<GenericAttribute>> listCustomerAttribute(CustomerAttributeQuery customerAttributeQuery);
+    Map<Long, List<GenericAttribute>> listAndFillDefaultCustomerAttribute(CustomerAttributeQuery customerAttributeQuery);
 }

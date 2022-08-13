@@ -8,7 +8,7 @@ import java.util.Map;
 
 public interface TencentOssService {
     TencentOssCredentialVO getTencentOssUploadCredentia(long customerId, String extName);
-    String getOjectBrowseUrl(String key);
-    Map<String, String> listOjectBrowseUrl(List<String> objectKeys);
+    String getObjectBrowseUrl(String key);
+    Map<String, String> listObjectBrowseUrl(List<String> objectKeys);
     void upload(TencentOssCredentialVO tencentOssCredentialVO, InputStream inputStream);
 }

@@ -20,6 +20,7 @@ public enum MessageType {
      * 视频
      */
     VIDEO,
+    VOICE,
     /**
      * 卡片
      */

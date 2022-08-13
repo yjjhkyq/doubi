@@ -3,12 +3,11 @@ package com.x.provider.statistic.controller.rpc;
 import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.controller.BaseRpcController;
-import com.x.provider.api.statistic.model.ao.IncMetricValueValueAO;
-import com.x.provider.api.statistic.model.ao.IncMetricValuesAO;
-import com.x.provider.api.statistic.model.ao.ListMetricValueAO;
-import com.x.provider.api.statistic.model.ao.ListMetricValueBatchAO;
-import com.x.provider.api.statistic.model.dto.ListMetricValueDTO;
-import com.x.provider.api.statistic.model.dto.ListMetricValueMapDTO;
+import com.x.provider.api.statistic.model.dto.IncMetricValueRequestDTO;
+import com.x.provider.api.statistic.model.dto.IncMetricValuesRequestDTO;
+import com.x.provider.api.statistic.model.dto.ListMetricValueRequestDTO;
+import com.x.provider.api.statistic.model.dto.ListMetricValueBatchRequestDTO;
+import com.x.provider.api.statistic.model.dto.MetricValueDTO;
 import com.x.provider.api.statistic.service.StatisticTotalRpcService;
 import com.x.provider.statistic.model.domain.StatisticTotal;
 import com.x.provider.statistic.service.StatisticTotalService;
@@ -31,37 +30,30 @@ public class StatisticTotalRpcController extends BaseRpcController implements St
         this.statisticTotalService = statisticTotalService;
     }
 
-    @Override
-    @PostMapping("map")
-    public R<ListMetricValueMapDTO> listStatisticTotalMap(@RequestBody ListMetricValueBatchAO listStatisticTotalAO) {
-        List<StatisticTotal> statisticTotals = statisticTotalService.listStatisticTotalBatch(listStatisticTotalAO);
-        return null;
-    }
-
     @PostMapping("list/batch")
     @Override
-    public R<List<ListMetricValueDTO>> listStatisticTotalBatch(@RequestBody ListMetricValueBatchAO listStatisticTotalBatchAO) {
+    public R<List<MetricValueDTO>> listStatisticTotalBatch(@RequestBody ListMetricValueBatchRequestDTO listStatisticTotalBatchAO) {
         List<StatisticTotal> statisticTotals = statisticTotalService.listStatisticTotalBatch(listStatisticTotalBatchAO);
-        return R.ok(BeanUtil.prepare(statisticTotals, ListMetricValueDTO.class));
+        return R.ok(BeanUtil.prepare(statisticTotals, MetricValueDTO.class));
     }
 
     @Override
     @PostMapping("list")
-    public R<List<ListMetricValueDTO>> listStatisticTotal(@RequestBody ListMetricValueAO listStatTotalAO) {
+    public R<List<MetricValueDTO>> listStatisticTotal(@RequestBody ListMetricValueRequestDTO listStatTotalAO) {
         List<StatisticTotal> statisticTotals = statisticTotalService.listStatisticTotal(listStatTotalAO);
-        return R.ok(BeanUtil.prepare(statisticTotals, ListMetricValueDTO.class));
+        return R.ok(BeanUtil.prepare(statisticTotals, MetricValueDTO.class));
     }
 
     @Override
     @PostMapping("inc")
-    public R<Void> incStatisticTotal(@RequestBody IncMetricValueValueAO addStatisticTotalValueAO) {
+    public R<Void> incStatisticTotal(@RequestBody IncMetricValueRequestDTO addStatisticTotalValueAO) {
         statisticTotalService.incStatTotal(BeanUtil.prepare(addStatisticTotalValueAO, StatisticTotal.class));
         return R.ok();
     }
 
     @Override
     @PostMapping("incs")
-    public R<Void> incStatisticTotals(IncMetricValuesAO incStatisticTotalValuesAO) {
+    public R<Void> incStatisticTotals(IncMetricValuesRequestDTO incStatisticTotalValuesAO) {
         statisticTotalService.incStatTotals(BeanUtil.prepare(incStatisticTotalValuesAO.getIncMetricValues(), StatisticTotal.class));
         return R.ok();
     }

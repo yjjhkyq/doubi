@@ -3,16 +3,11 @@ package com.x.provider.mc.service.impl;
 import cn.hutool.core.util.StrUtil;
 import com.x.core.utils.CompareUtils;
 import com.x.provider.api.mc.enums.ConversationType;
-import com.x.provider.api.mc.model.ao.SendMessageRawAO;
 import com.x.provider.mc.configure.ApplicationConfig;
 import com.x.provider.mc.enums.WebSocketEngineTypeEnum;
-import com.x.provider.mc.model.dto.ConnectInfoDTO;
 import com.x.provider.mc.service.CentrifugoApiService;
 import com.x.provider.mc.service.WebSocketEngineService;
 import org.springframework.stereotype.Service;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @Service("centrifugoWebsocketServiceImpl")
 public class CentrifugoWebsocketServiceImpl implements WebSocketEngineService {

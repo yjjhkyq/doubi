@@ -4,7 +4,7 @@ import com.x.core.utils.BeanUtil;
 import com.x.core.web.api.R;
 import com.x.core.web.controller.BaseFrontendController;
 import com.x.core.web.page.PageList;
-import com.x.provider.api.finance.model.ao.ListSecurityAO;
+import com.x.provider.api.finance.model.dto.ListSecurityRequestDTO;
 import com.x.provider.api.finance.model.dto.SecurityDTO;
 import com.x.provider.api.finance.service.FinanceRpcService;
 import com.x.provider.api.video.enums.TopicSourceTypeEnum;
@@ -68,7 +68,7 @@ public class TopicController extends BaseFrontendController {
         }
         Set<Long> securityIdList = topics.stream().filter(item -> item.getSourceType().equals(TopicSourceTypeEnum.SECURITY.ordinal())).map(Topic::getSourceId).filter(item -> StringUtils.hasText(item))
                 .map(Long::valueOf).collect(Collectors.toSet());
-        Map<Long, SecurityDTO> securityMap = financeRpcService.listSecurity(ListSecurityAO.builder().ids(new ArrayList<>(securityIdList)).build()).stream().collect(Collectors.toMap(SecurityDTO::getId, item -> item));
+        Map<Long, SecurityDTO> securityMap = financeRpcService.listSecurity(ListSecurityRequestDTO.builder().ids(new ArrayList<>(securityIdList)).build()).stream().collect(Collectors.toMap(SecurityDTO::getId, item -> item));
         List<TopicVO> result = new ArrayList<>(topics.size());
         topics.forEach(item -> {
             TopicVO topicVO = BeanUtil.prepare(item, TopicVO.class);

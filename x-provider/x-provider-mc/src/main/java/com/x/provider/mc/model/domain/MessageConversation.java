@@ -16,8 +16,8 @@ public class MessageConversation extends BaseEntity {
     @TableId
     private Long id;
     private Long messageId;
-    private Long groupId;
-    private Long customerId;
+    private String conversationId;
+    private Long ownerCustomerId;
     @TableField("is_read")
-    private Boolean read;
+    private Boolean readed;
 }
